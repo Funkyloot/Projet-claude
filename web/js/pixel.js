@@ -169,8 +169,9 @@ export function skyGradient(ctx, x, y, w, h, stops) {
     }
     const span = Math.max(1e-6, b.at - a.at);
     const local = Math.max(0, Math.min(1, (t - a.at) / span));
-    // 5 paliers de trame par bande : assez pour être doux, assez peu pour rester « pixel ».
-    const step = Math.round(local * 4) / 4;
+    // 9 paliers de trame par bande. Avec 5 seulement, les frontières se
+    // voyaient comme des rayures horizontales sur un grand ciel de téléphone.
+    const step = Math.round(local * 8) / 8;
     ditherRect(ctx, x, y + j, w, 1, a.color, b.color, step);
   }
 }

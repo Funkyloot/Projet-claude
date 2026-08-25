@@ -11,7 +11,7 @@
  * silhouette cernée d'un trait net, comme un sprite dessiné à la main.
  */
 
-import { ellipse, rect, px, curve, clamp, lerp, ease } from './pixel.js';
+import { ellipse, rect, px, clamp, lerp, ease } from './pixel.js';
 
 export const PELAGES = {
   roux: {
@@ -280,14 +280,14 @@ export class Cat {
     const rig = { P, f, legs: [], breathe };
 
     if (this.state === 'dort') {
-      // Chat en boule, vu de côté.
-      rig.body = { x: this.x, y: this.y - 6, rx: 13, ry: 6 + breathe * 0.4 };
-      rig.head = { x: this.x - f * 7, y: this.y - 9, r: 6.5 };
-      rig.earSpread = 5; rig.earH = 4;
-      rig.tail = { curl: true, k: 1 };
+      // Chat en boule. La tête doit dépasser franchement du corps : tant
+      // qu'elle reste dans l'ellipse du dos, la pose se lit comme une limace.
+      rig.body = { x: this.x + f * 2, y: this.y - 5, rx: 11.5, ry: 5.5 + breathe * 0.4 };
+      rig.head = { x: this.x - f * 9, y: this.y - 9.5, r: 6 };
+      rig.earSpread = 4.5; rig.earH = 3.5;
+      rig.tail = { curl: true };
       rig.shadowR = 14;
       rig.eyesShut = true;
-      rig.faceScale = 1;
       return rig;
     }
 
@@ -296,26 +296,36 @@ export class Cat {
       rig.body = { x: this.x, y: this.y - 7, rx: 11, ry: 7 + breathe * 0.4 };
       rig.head = { x: this.x + this.lookOff.x * 2, y: this.y - 16 + this.lookOff.y + purrShake, r: 7.5 };
       rig.earSpread = 5.5; rig.earH = 5;
-      rig.tail = { curl: true, k: 0.7 };
+      rig.tail = { curl: true };
       rig.shadowR = 12;
-      rig.faceScale = 1;
       return rig;
     }
 
     if (this.state === 'etire') {
-      // Étirement : le corps s'allonge puis revient.
+      // Le vrai étirement du chat : pattes avant loin devant, poitrail au
+      // ras du sol, arrière-train relevé — pas un simple allongement.
       const k = ease(clamp(this.stateT / 1.1, 0, 1));
       const stretch = Math.sin(k * Math.PI);
-      rig.body = { x: this.x - f * stretch * 3, y: this.y - 7 + stretch * 1.5, rx: 10 + stretch * 5, ry: 6 - stretch * 1.5 };
-      rig.head = { x: this.x + f * (7 + stretch * 5), y: this.y - 11 + stretch * 2, r: 7 };
-      rig.earSpread = 5.5; rig.earH = 5 + stretch * 2;
-      rig.tail = { curl: false, k: 1, lift: stretch };
-      rig.shadowR = 13;
+      rig.body = {
+        x: this.x - f * stretch * 2,
+        y: this.y - 8 + stretch * 2.5,
+        rx: 10 + stretch * 4,
+        ry: 5.5 - stretch * 0.5,
+      };
+      rig.head = {
+        x: this.x + f * (10 + stretch * 3),
+        y: this.y - 11 + stretch * 2,
+        r: 6.5,
+      };
+      rig.earSpread = 5; rig.earH = 5;
+      rig.tail = { curl: false, lift: 0.4 + stretch * 0.9 };
+      rig.shadowR = 13 + stretch * 3;
       rig.legs = [
-        { x: this.x + f * (5 + stretch * 6), y: this.y, h: 5 - stretch * 2 },
-        { x: this.x - f * (6 + stretch * 2), y: this.y, h: 5 },
+        { x: this.x + f * (8 + stretch * 4), y: this.y, h: 4.5 - stretch * 2.5 },
+        { x: this.x + f * 4, y: this.y, h: 5 - stretch * 2 },
+        { x: this.x - f * 5, y: this.y, h: 6 + stretch * 1.5 },
+        { x: this.x - f * 8, y: this.y, h: 6 + stretch * 2 },
       ];
-      rig.faceScale = 1;
       return rig;
     }
 
@@ -325,16 +335,17 @@ export class Cat {
       rig.body = { x: this.x, y: this.y - 8 - bob, rx: 10.5, ry: 5.5 };
       rig.head = { x: this.x + f * 8, y: this.y - 14 - bob + this.lookOff.y * 0.6, r: 6.5 };
       rig.earSpread = 5; rig.earH = 5;
-      rig.tail = { curl: false, k: 1, lift: 0.5 };
+      rig.tail = { curl: false, lift: 0.5 };
       rig.shadowR = 12;
-      // Quatre pattes en opposition de phase.
+      // Deux paires nettement séparées — avant sous les épaules, arrière sous
+      // les hanches, ventre vide entre les deux. Groupées, quatre pattes de
+      // 3 px se lisent comme les dents d'un peigne.
       rig.legs = [
-        { x: this.x + f * 6, y: this.y, h: 6 - Math.max(0, Math.sin(cycle)) * 3 },
-        { x: this.x + f * 2, y: this.y, h: 6 - Math.max(0, Math.sin(cycle + Math.PI)) * 3 },
-        { x: this.x - f * 3, y: this.y, h: 6 - Math.max(0, Math.sin(cycle + Math.PI * 0.5)) * 3 },
-        { x: this.x - f * 7, y: this.y, h: 6 - Math.max(0, Math.sin(cycle + Math.PI * 1.5)) * 3 },
+        { x: this.x + f * 7, y: this.y, h: 6 - Math.max(0, Math.sin(cycle)) * 3 },
+        { x: this.x + f * 3.5, y: this.y, h: 6 - Math.max(0, Math.sin(cycle + Math.PI)) * 3 },
+        { x: this.x - f * 4.5, y: this.y, h: 6 - Math.max(0, Math.sin(cycle + Math.PI * 0.5)) * 3 },
+        { x: this.x - f * 8, y: this.y, h: 6 - Math.max(0, Math.sin(cycle + Math.PI * 1.5)) * 3 },
       ];
-      rig.faceScale = 1;
       return rig;
     }
 
@@ -347,13 +358,12 @@ export class Cat {
       r: 8,
     };
     rig.earSpread = 6; rig.earH = 5.5;
-    rig.tail = { curl: false, k: 1, side: true };
+    rig.tail = { curl: false, lift: 0.25 };
     rig.shadowR = 11;
     rig.legs = [
       { x: this.x - 5, y: this.y, h: 3, paw: true },
       { x: this.x + 5, y: this.y, h: 3, paw: true },
     ];
-    rig.faceScale = 1;
     return rig;
   }
 
@@ -364,21 +374,7 @@ export class Cat {
     const col = (fill) => outline || fill;
 
     // Queue — derrière tout le reste.
-    const tail = rig.tail;
-    const tx = rig.body.x - f * (rig.body.rx - 1);
-    const ty = rig.body.y + rig.body.ry * 0.35;
-    const sway = Math.sin(this.tailPhase) * (3 + this.tailEnergy * 7);
-    if (tail.curl) {
-      // Queue enroulée autour du corps.
-      curve(ctx, tx, ty, tx - f * 12, ty + 5, rig.body.x + f * (rig.body.rx - 2), ty + 4,
-        col(P.dark), 2 + g);
-    } else {
-      const lift = tail.lift ?? 0.3;
-      curve(ctx, tx, ty,
-        tx - f * 9, ty - 6 - lift * 6 + sway * 0.4,
-        tx - f * 11 + sway * 0.5, ty - 12 - lift * 8 + sway,
-        col(P.dark), 2 + g);
-    }
+    this.drawTail(ctx, rig, col(P.dark), g);
 
     // Pattes arrière (les plus éloignées) — teinte foncée.
     for (let i = rig.legs.length - 1; i >= 2; i--) {
@@ -427,6 +423,43 @@ export class Cat {
     if (!outline) {
       ellipse(ctx, rig.head.x + this.lookOff.x * 0.6, rig.head.y + rig.head.r * 0.34,
         rig.head.r * 0.52, rig.head.r * 0.34, P.light);
+    }
+  }
+
+  /** Queue fuselée, échantillonnée le long d'une Bézier cubique.
+   *
+   *  Un simple trait d'un pixel se lit comme une antenne : c'est l'épaisseur
+   *  qui décroît de la base vers le bout, et la double courbure en S, qui
+   *  font lire « queue de chat ».
+   */
+  drawTail(ctx, rig, color, g) {
+    const f = rig.f;
+    const tail = rig.tail;
+    const x0 = rig.body.x - f * (rig.body.rx - 1.5);
+    const y0 = rig.body.y + rig.body.ry * 0.3;
+    const sway = Math.sin(this.tailPhase) * (2 + this.tailEnergy * 6);
+
+    let p1, p2, p3;
+    if (tail.curl) {
+      // Enroulée : elle part vers l'arrière, longe le flanc et vient
+      // se poser devant les pattes.
+      p1 = { x: x0 - f * 11, y: y0 + 3 };
+      p2 = { x: x0 - f * 6, y: y0 + 7 };
+      p3 = { x: rig.body.x + f * (rig.body.rx - 1), y: y0 + 5 };
+    } else {
+      const lift = tail.lift ?? 0.3;
+      p1 = { x: x0 - f * 8, y: y0 - 3 - lift * 5 };
+      p2 = { x: x0 - f * 11 + sway * 0.4, y: y0 - 10 - lift * 8 };
+      p3 = { x: x0 - f * 7 + sway, y: y0 - 15 - lift * 10 };
+    }
+
+    const pas = 26;
+    for (let i = 0; i <= pas; i++) {
+      const t = i / pas, u = 1 - t;
+      const x = u * u * u * x0 + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x;
+      const y = u * u * u * y0 + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y;
+      const r = lerp(2.1, 0.7, t) + g * 0.9;
+      ellipse(ctx, x, y, r, r, color);
     }
   }
 
