@@ -1,0 +1,20 @@
+{
+  "name": "Calme — compagnon pixel",
+  "short_name": "Calme",
+  "description": "Un chat en pixel art à caresser, deux décors qui vivent, et un guide de respiration. Pour faire redescendre la pression en deux minutes.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1b1636",
+  "theme_color": "#1b1636",
+  "categories": ["health", "lifestyle", "entertainment"],
+  "icons": [
+    { "src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

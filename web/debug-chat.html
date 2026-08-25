@@ -1,0 +1,31 @@
+<!doctype html><meta charset="utf-8"><title>Chat — planche de contrôle</title>
+<style>body{margin:0;background:#e9d6b0;font:12px system-ui}canvas{image-rendering:pixelated;display:block}</style>
+<canvas id="c"></canvas>
+<script type="module">
+import { Cat, PELAGES } from './js/cat.js';
+const ETATS = ['assis','pain','dort','marche','etire'];
+const CELL = 64, SCALE = 5;
+const cols = ETATS.length, rows = Object.keys(PELAGES).length;
+const buf = document.createElement('canvas');
+buf.width = cols*CELL; buf.height = rows*CELL;
+const bx = buf.getContext('2d');
+const c = document.getElementById('c');
+c.width = buf.width*SCALE; c.height = buf.height*SCALE;
+const cx = c.getContext('2d'); cx.imageSmoothingEnabled=false;
+bx.fillStyle='#e9d6b0'; bx.fillRect(0,0,buf.width,buf.height);
+let r=0;
+for (const pel of Object.keys(PELAGES)) {
+  let i=0;
+  for (const et of ETATS) {
+    const cat = new Cat({x: i*CELL+CELL/2, y: r*CELL+CELL-10});
+    cat.pelage = pel; cat.state = et; cat.stateT = et==='etire'?0.55:3; cat.t = 1.1;
+    cat.facing = 1; cat.lookOff={x:0.4,y:0.2};
+    if (et==='marche') cat.t = 0.42;
+    cat.draw(bx);
+    i++;
+  }
+  r++;
+}
+cx.drawImage(buf,0,0,buf.width,buf.height,0,0,c.width,c.height);
+window.__pret = true;
+</script>

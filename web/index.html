@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Calme — un compagnon pixel pour souffler</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="Une petite app pour faire redescendre la pression : un chat en pixel art à caresser, deux décors qui vivent, et un guide de respiration.">
+<meta name="theme-color" content="#1b1636">
+<meta name="color-scheme" content="dark">
+
+<!-- iOS : plein écran une fois posée sur l'écran d'accueil -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Calme">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<canvas id="vue" aria-label="Scène animée avec un chat"></canvas>
+
+<div id="ui">
+
+  <header class="barre haut">
+    <div class="calme" title="Niveau de calme">
+      <span class="calme-piste"><span id="calme-fill"></span></span>
+      <span id="calme-label">0%</span>
+    </div>
+    <div class="actions">
+      <button id="btn-son" class="rond" aria-label="Couper le son">♪</button>
+      <button id="btn-souffle" class="rond" aria-label="Respiration guidée">◎</button>
+      <button id="btn-reglages" class="rond" aria-label="Réglages">⚙</button>
+    </div>
+  </header>
+
+  <div class="astuce" id="astuce">
+    Touche le chat pour le caresser · maintiens pour l'endormir · glisse pour regarder autour
+  </div>
+
+  <nav class="barre bas" id="scenes">
+    <button data-scene="foret" class="pastille actif" aria-pressed="true">Forêt</button>
+    <button data-scene="ville" class="pastille" aria-pressed="false">Ville</button>
+  </nav>
+
+  <!-- Respiration guidée -->
+  <section id="souffle" class="voile" aria-hidden="true">
+    <div class="souffle-boite">
+      <div class="cercle-cadre">
+        <div id="souffle-cercle" class="cercle"></div>
+        <div class="cercle-texte">
+          <div id="souffle-label">Inspire</div>
+          <div id="souffle-compte">5</div>
+        </div>
+      </div>
+      <p id="souffle-cycles" class="sous">Cohérence · 5 s / 5 s</p>
+      <div id="breath-choix" class="choix">
+        <button data-breath="coherence" class="actif">Cohérence</button>
+        <button data-breath="carre">Carrée</button>
+        <button data-breath="478">Dodo</button>
+      </div>
+      <button id="souffle-fin" class="plein">Terminer</button>
+    </div>
+  </section>
+
+  <!-- Réglages -->
+  <section id="reglages" class="feuille" aria-hidden="true">
+    <div class="feuille-corps">
+      <div class="poignee"></div>
+      <h2>Réglages</h2>
+
+      <h3>Pelage</h3>
+      <div id="pelages" class="choix">
+        <button data-pelage="roux" class="actif">Roux</button>
+        <button data-pelage="gris">Gris</button>
+        <button data-pelage="noir">Smoking</button>
+        <button data-pelage="creme">Crème</button>
+      </div>
+
+      <h3>Volume de l'ambiance</h3>
+      <input id="volume" type="range" min="0" max="100" value="60" aria-label="Volume">
+
+      <h3>Temps passé au calme</h3>
+      <p class="gros" id="total-calme">0 min</p>
+
+      <div id="installe" class="installe">
+        <h3>Installer sur l'iPhone</h3>
+        <p>Dans Safari : bouton <strong>Partager</strong> <span class="ico">⬆︎</span> puis
+        <strong>« Sur l'écran d'accueil »</strong>. L'app s'ouvre alors en plein écran,
+        avec son icône, et fonctionne sans réseau.</p>
+      </div>
+
+      <p class="credit">Tout le pixel art et tous les sons de cette app sont générés
+      par le code — aucune image ni aucun fichier audio n'est téléchargé.</p>
+
+      <button id="reglages-fermer" class="plein">Fermer</button>
+    </div>
+  </section>
+
+  <div id="toast"></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+<script>
+  // Empêche le zoom par double-tap, qui casse l'immersion sur iOS.
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  let dernierTap = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - dernierTap < 320) e.preventDefault();
+    dernierTap = now;
+  }, { passive: false });
+  // L'astuce s'efface au premier contact.
+  const astuce = document.getElementById('astuce');
+  const cacher = () => { astuce.classList.add('parti'); };
+  window.addEventListener('touchstart', cacher, { once: true });
+  window.addEventListener('mousedown', cacher, { once: true });
+  setTimeout(cacher, 9000);
+</script>
+</body>
+</html>
