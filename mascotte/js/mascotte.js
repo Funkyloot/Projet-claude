@@ -11,9 +11,16 @@
  * pointent vers une cible. C'est ce qui lui permet de jouer de la guitare,
  * de taper au clavier ou de pousser un panier sans redessiner un sprite
  * par activité.
+ *
+ * Perspective : la référence est vue de trois quarts, et tout le volume
+ * tient dans une seule règle — ce qui s'éloigne est plus sombre. Le flanc
+ * arrière du corps porte une bande de 2 px d'un gris plus sombre, les deux
+ * pattes du fond sont entièrement dans ce gris et décalées vers l'arrière,
+ * le bras du fond aussi. Le reste de la face est d'un seul aplat, sans
+ * dégradé : c'est exactement ce que fait la référence.
  */
 
-import { rect, px, line, ellipse, clamp, lerp } from './pixel.js';
+import { rect, px, line, ellipse, clamp } from './pixel.js';
 
 /* ---------- Palette ---------- */
 
@@ -74,7 +81,7 @@ export function epaule(o) {
   const basCorps = Math.round(o.sol - hautPattes + (o.dy ?? 0));
   return {
     x: Math.round(o.x) + (sens > 0 ? 14 : CORPS_L - 16),
-    y: basCorps - CORPS_H + 6,
+    y: basCorps - CORPS_H + EPAULE_Y,
   };
 }
 
@@ -95,18 +102,23 @@ export function majMascotte(dt) {
 
 /* ---------- Dessin ---------- */
 
-function couleurLigne(j, h) {
-  // Volume : lumière en haut, ombre sous le ventre.
-  if (j === 0) return GRIS.clair;
-  if (j <= 2) return GRIS.clair;
-  if (j <= h - 4) return GRIS.base;
-  if (j <= h - 2) return GRIS.moyen;
-  return GRIS.fonce;
-}
+// Largeur, en pixels, de la bande sombre du flanc arrière.
+const BANDE_ARRIERE = 2;
 
-function dessinerPatte(ctx, x, y, h, couleur, sabot) {
-  rect(ctx, x, y, 2, h, couleur);
-  rect(ctx, x, y + h - 1, 2, 1, sabot);
+// Hauteur de l'épaule dans le corps. Bas placée exprès : sur la référence
+// les bras partent du poitrail, pas du museau.
+const EPAULE_Y = 8;
+
+/** Patte de 2 px. Celles du fond sont d'un seul gris sombre ; celles de
+ *  devant ont la face claire du corps et un pixel d'ombre côté arrière. */
+function dessinerPatte(ctx, x, y, h, sens, loin) {
+  if (h <= 0) return;
+  if (loin) {
+    rect(ctx, x, y, 2, h, GRIS.moyen);
+  } else {
+    rect(ctx, x, y, 2, h, GRIS.base);
+    rect(ctx, x + (sens > 0 ? 0 : 1), y, 1, h, GRIS.moyen);
+  }
 }
 
 /**
@@ -145,25 +157,30 @@ export function dessinerMascotte(ctx, o) {
   const avance = (ph) => (marche ? Math.cos(ph) * 1.5 : 0);
 
   if (hautPattes > 0) {
+    // Les pattes du fond sont décalées d'un cran vers l'arrière : c'est ce
+    // décalage, plus leur gris plus sombre, qui donne la profondeur.
     const pattesLoin = [
-      { x: 5, ph: pas + Math.PI },
-      { x: 11, ph: pas + Math.PI / 2 },
+      { x: 1, ph: pas + Math.PI },
+      { x: 9, ph: pas + Math.PI / 2 },
     ];
     for (const p of pattesLoin) {
       const px_ = x + miroir(p.x, sens);
       const l = leve(p.ph);
-      dessinerPatte(ctx, px_ + Math.round(avance(p.ph)), basCorps, Math.round(hautPattes - l), GRIS.fonce, GRIS.profond);
+      // Un pixel plus courtes : le sol du fond est plus haut, c'est ce qui
+      // sépare les deux paires au lieu d'un peigne de quatre pattes.
+      dessinerPatte(ctx, px_ + Math.round(avance(p.ph)), basCorps, Math.round(hautPattes - l) - 1, sens, true);
     }
   }
 
-  // --- Corps ---
+  // --- Corps : un aplat, plus la bande sombre du flanc arrière ---
   for (let j = 0; j < CORPS_H; j++) {
     const g = sens > 0 ? RETRAIT_G[j] : RETRAIT_D[j];
     const d = sens > 0 ? RETRAIT_D[j] : RETRAIT_G[j];
-    rect(ctx, x + g, hautCorps + j, CORPS_L - g - d, 1, couleurLigne(j, CORPS_H));
+    const w = CORPS_L - g - d;
+    rect(ctx, x + g, hautCorps + j, w, 1, GRIS.base);
+    const bande = Math.min(BANDE_ARRIERE, w);
+    rect(ctx, x + (sens > 0 ? g : CORPS_L - d - bande), hautCorps + j, bande, 1, GRIS.moyen);
   }
-  // Liseré d'ombre sous le ventre, comme sur la référence.
-  rect(ctx, x + 1, basCorps - 1, CORPS_L - 2, 1, GRIS.profond);
 
   // --- Yeux ---
   const ferme = etat.clignement > 0 || o.yeux === 'ferme';
@@ -171,7 +188,7 @@ export function dessinerMascotte(ctx, o) {
     const ex = x + miroir(ox, sens, 3);
     const ey = hautCorps + OEIL_Y;
     if (ferme) {
-      rect(ctx, ex, ey + 1, 3, 1, GRIS.profond);
+      rect(ctx, ex, ey + 1, 3, 1, GRIS.encre);
     } else if (o.yeux === 'content') {
       rect(ctx, ex, ey + 1, 3, 1, GRIS.encre);
       px(ctx, ex, ey, GRIS.encre);
@@ -186,19 +203,19 @@ export function dessinerMascotte(ctx, o) {
   // --- Pattes avant (les deux « proches ») ---
   if (hautPattes > 0) {
     const pattesPres = [
-      { x: 1, ph: pas },
-      { x: 15, ph: pas + (3 * Math.PI) / 2 },
+      { x: 5, ph: pas },
+      { x: 13, ph: pas + (3 * Math.PI) / 2 },
     ];
     for (const p of pattesPres) {
-      if (o.bras && p.x === 15) continue; // la patte avant sert de bras
+      if (o.bras && p.x === 13) continue; // la patte avant sert de bras
       const px_ = x + miroir(p.x, sens);
       const l = leve(p.ph);
-      dessinerPatte(ctx, px_ + Math.round(avance(p.ph)), basCorps, Math.round(hautPattes - l), GRIS.moyen, GRIS.fonce);
+      dessinerPatte(ctx, px_ + Math.round(avance(p.ph)), basCorps, Math.round(hautPattes - l), sens, false);
     }
   } else if (pose === 'assis') {
     // Assise : les pattes avant restent visibles, repliées.
-    rect(ctx, x + miroir(15, sens), basCorps, 2, 1, GRIS.moyen);
-    rect(ctx, x + miroir(1, sens), basCorps, 2, 1, GRIS.fonce);
+    rect(ctx, x + miroir(13, sens), basCorps, 2, 1, GRIS.base);
+    rect(ctx, x + miroir(5, sens), basCorps, 2, 1, GRIS.moyen);
   }
 
   // Crochet : ce qui doit passer devant le corps mais derrière les bras
@@ -206,12 +223,21 @@ export function dessinerMascotte(ctx, o) {
   if (o.entre) o.entre(ctx, { x, hautCorps, basCorps, sens });
 
   // --- Bras ---
+  // Le second bras est celui du fond : épaule reculée d'un cran, un gris
+  // plus sombre, et tracé en premier pour passer derrière l'autre.
   if (o.bras) {
     const epauleX = x + miroir(14, sens, 2);
-    const epauleY = hautCorps + 6;
-    for (const main of o.bras) {
+    const epauleY = hautCorps + EPAULE_Y;
+    for (let i = o.bras.length - 1; i >= 0; i--) {
+      const main = o.bras[i];
       if (!main) continue;
-      dessinerBras(ctx, epauleX, epauleY + (main.epaule ?? 0), main.x, main.y);
+      const loin = i > 0;
+      dessinerBras(
+        ctx,
+        epauleX - (loin ? sens * 2 : 0),
+        epauleY + (main.epaule ?? 0) - (loin ? 1 : 0),
+        main.x, main.y, loin,
+      );
     }
   }
 }
@@ -223,7 +249,7 @@ export function dessinerMascotte(ctx, o) {
  * s'arrête sur le cercle de portée : les segments, eux, ne s'allongent
  * jamais.
  */
-function dessinerBras(ctx, sx, sy, mx, my) {
+function dessinerBras(ctx, sx, sy, mx, my, loin = false) {
   sx = Math.round(sx); sy = Math.round(sy);
   let dx = mx - sx, dy = my - sy;
   let d = Math.hypot(dx, dy);
@@ -240,16 +266,24 @@ function dessinerBras(ctx, sx, sy, mx, my) {
   const cy = Math.round(sy + uy * a + s * ux * h);
   const hx = Math.round(sx + dx), hy = Math.round(sy + dy);
 
-  epais(ctx, sx, sy, cx, cy, GRIS.fonce);
-  line(ctx, cx, cy, hx, hy, GRIS.moyen);
-  line(ctx, cx, cy + 1, hx, hy + 1, GRIS.moyen);
-  rect(ctx, hx - 1, hy - 1, 2, 2, GRIS.clair);
+  // Le bras fait 2 px et reprend la couleur du corps, exactement comme la
+  // référence : celui du fond simplement d'un gris plus sombre.
+  const face = loin ? GRIS.moyen : GRIS.base;
+  segment(ctx, sx, sy, cx, cy, face);
+  segment(ctx, cx, cy, hx, hy, face);
+  rect(ctx, hx - 1, hy - 1, 2, 2, face);
+  if (!loin) px(ctx, hx, hy - 1, GRIS.clair);
 }
 
-function epais(ctx, x0, y0, x1, y1, c) {
-  line(ctx, x0, y0, x1, y1, c);
-  line(ctx, x0, y0 + 1, x1, y1 + 1, c);
+/** Membre de 2 px : l'épaisseur est prise sur l'axe le moins parcouru. */
+function segment(ctx, x0, y0, x1, y1, face) {
+  const horiz = Math.abs(x1 - x0) >= Math.abs(y1 - y0);
+  const ox = horiz ? 0 : 1;
+  const oy = horiz ? 1 : 0;
+  line(ctx, x0, y0, x1, y1, face);
+  line(ctx, x0 + ox, y0 + oy, x1 + ox, y1 + oy, face);
 }
+
 
 /** Miroir horizontal d'une coordonnée locale dans le corps. */
 function miroir(lx, sens, largeur = 2) {

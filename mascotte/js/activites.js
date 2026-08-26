@@ -105,9 +105,13 @@ function guitare(env) {
   dessinerMascotte(ctx, {
     x: bx, sol: env.sol, sens: 1, pose: 'debout',
     souffle: 1.4, dy, yeux: 'content',
-    entre: (c) => dessinerGuitare(c, main, manche),
+    entre: (c) => caisseGuitare(c, main),
     bras: [main, manche],
   });
+
+  // Manche par-dessus les bras, puis les mains redessinées dessus : c'est
+  // l'ordre de la référence, où le manche noir passe entre les doigts.
+  mancheGuitare(ctx, main, manche);
 
   // Notes : elles partent de la tête du manche.
   const tx = manche.x + 4, ty = manche.y - 7;
@@ -118,24 +122,29 @@ function guitare(env) {
   }
 }
 
-/** La guitare est construite entre les deux mains : caisse sous la main qui
- *  gratte, manche qui passe dans celle qui tient les frettes. */
-function dessinerGuitare(ctx, main, manche) {
+/** Caisse : deux disques qui se recouvrent, sous la main qui gratte. */
+function caisseGuitare(ctx, main) {
   const mx = Math.round(main.x), my = Math.round(main.y);
-  // Caisse : deux disques qui se recouvrent, comme sur la référence.
   ellipse(ctx, mx, my + 2, 5, 4, GRIS.encre);
   ellipse(ctx, mx + 1, my - 2, 4, 4, GRIS.encre);
   circle(ctx, mx, my, 1, GRIS.moyen);
-  // Manche : de la caisse jusqu'à la main, puis la tête au-delà.
+}
+
+/** Manche, tête et cordes : de la caisse à la main qui tient les frettes,
+ *  puis la tête au-delà. Les deux mains sont reposées par-dessus. */
+function mancheGuitare(ctx, main, manche) {
+  const mx = Math.round(main.x), my = Math.round(main.y);
   const vx = manche.x - mx, vy = manche.y - my;
   const n = Math.max(1, Math.hypot(vx, vy));
   const tx = Math.round(manche.x + (vx / n) * 4), ty = Math.round(manche.y + (vy / n) * 4);
-  trait2(ctx, mx + 1, my - 2, tx, ty, '#33363c');
+  trait2(ctx, mx + 1, my - 2, tx, ty, '#2f3238');
   line(ctx, mx + 2, my - 3, tx + 1, ty - 1, GRIS.profond);
   rect(ctx, tx, ty - 3, 4, 3, GRIS.base);
   px(ctx, tx, ty - 4, GRIS.encre);
   px(ctx, tx + 2, ty - 4, GRIS.encre);
-  line(ctx, mx, my - 1, tx, ty, GRIS.clair);   // cordes
+  line(ctx, mx, my - 1, tx, ty, GRIS.clair);                       // cordes
+  rect(ctx, Math.round(manche.x) - 1, Math.round(manche.y) - 1, 2, 2, GRIS.moyen);
+  rect(ctx, mx - 1, my - 1, 2, 2, GRIS.clair);
 }
 
 /* ---------- 2. Clavier ---------- */
@@ -151,9 +160,9 @@ function clavier(env) {
 
   // Le clavier vient sous les mains (3 et 7 px de l'épaule) ; le plateau du
   // bureau est calé dessus, et non l'inverse.
-  const gauche = { x: E.x + 1, y: E.y + 3 };
-  const droite = { x: E.x + 6, y: E.y + 3 };
-  const kx = E.x - 1, ky = E.y + 4;
+  const gauche = { x: E.x + 1, y: E.y + 1 };
+  const droite = { x: E.x + 6, y: E.y + 1 };
+  const kx = E.x - 1, ky = E.y + 2;
   const plateauY = ky + 2;
   const bux = kx - 3, buw = Math.min(50, l - bux - 4);
 
@@ -509,9 +518,9 @@ function cuisine(env) {
 
   // Poêle : le manche part de la main, la poêle est juste au-dessus du feu.
   const py = Math.round(main.y);
-  rect(ctx, Math.round(main.x), py + 1, 4, 1, '#4e535a');
-  rect(ctx, Math.round(main.x) + 4, py, 12, 3, '#3a3d43');
-  rect(ctx, Math.round(main.x) + 4, py, 12, 1, '#565b63');
+  rect(ctx, Math.round(main.x), py + 1, 4, 1, '#5c616a');
+  rect(ctx, Math.round(main.x) + 4, py, 12, 3, '#43474e');
+  rect(ctx, Math.round(main.x) + 4, py, 12, 1, '#6b7078');
   const hSaut = cycle < 0.5 ? Math.sin(cycle * Math.PI * 2) * 14 : 0;
   ellipse(ctx, Math.round(main.x) + 10, py - 1 - hSaut, 4, hSaut > 4 ? 1 : 2, DECOR.ambreFonce);
 }

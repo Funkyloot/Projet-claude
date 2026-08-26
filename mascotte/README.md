@@ -25,6 +25,24 @@ corps, yeux, quatre pattes indépendantes, deux bras qui pointent vers une
 cible. C'est ce qui lui permet de tenir une guitare, un livre ou une tasse
 sans qu'il faille redessiner un sprite par activité.
 
+### Une perspective légère
+
+La référence est vue de trois quarts, et tout son volume tient dans une seule
+règle : **ce qui s'éloigne est plus sombre**. C'est repris tel quel.
+
+| Élément | Rendu |
+|---|---|
+| Face du corps | un seul aplat, sans dégradé |
+| Flanc arrière | bande de 2 px, un gris plus sombre |
+| Pattes du fond | entièrement dans ce gris, décalées vers l'arrière et un pixel plus courtes |
+| Pattes de devant | face claire du corps, 1 px d'ombre côté arrière |
+| Bras du fond | même gris sombre, épaule reculée d'un cran |
+
+Les bras font **2 px et reprennent la couleur du corps**, comme sur la
+référence — ce ne sont pas des bâtons d'une autre teinte posés à côté. Ils
+partent du poitrail, pas du museau : c'est ce qui les empêche de se lire
+comme une trompe.
+
 ### Des bras de longueur réelle
 
 Les deux segments du bras ont une longueur **fixe** : 5 px de l'épaule au
