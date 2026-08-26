@@ -43,6 +43,27 @@ référence — ce ne sont pas des bâtons d'une autre teinte posés à côté. 
 partent du poitrail, pas du museau : c'est ce qui les empêche de se lire
 comme une trompe.
 
+### Un référentiel de dimensions
+
+Tout le mobilier est calé sur sa taille à elle, pas sur des fractions
+d'écran. Les hauteurs sont dans `TAILLES` (`mascotte.js`), en pixels
+au-dessus du sol :
+
+| Repère | Hauteur |
+|---|---|
+| Sommet du crâne | 16 |
+| Regard | 12 |
+| Épaule (debout) | 8 |
+| Plan de travail utilisé debout | 7 |
+| Assise (tabouret, fauteuil, lit) | 6 |
+| Table ou bureau utilisé assis | 9 |
+
+Le bureau est donc à hauteur de bureau, le clavier arrive sous ses mains, le
+guéridon monte à la hauteur où la tasse se prend, le chariot lui arrive au
+poitrail. Et les **quatre pattes touchent le sol** : deux paires écartées,
+celle du fond décalée vers l'arrière et plus sombre — la profondeur vient de
+la couleur et du décalage, pas d'une patte qui flotte.
+
 ### Des bras de longueur réelle
 
 Les deux segments du bras ont une longueur **fixe** : 5 px de l'épaule au
@@ -75,12 +96,12 @@ dans la chambre, vert au jardin.
 ## Ce qu'elle sait faire
 
 `Guitare` · `Clavier` · `Magasinage` · `Café` · `Peinture` · `Lecture` ·
-`Cuisine` · `Planche` · `Jardinage` · `Sieste`
+`Cuisine` · `Balade` · `Jardinage` · `Sieste`
 
 Chaque activité a son décor, son rythme et sa petite histoire qui boucle :
 la crêpe retombe toutes les 2,5 s, la toile se remplit puis on repart d'une
-toile blanche, la fleur pousse et refleurit, un article tombe dans le panier
-toutes les 3 s.
+toile blanche, la fleur pousse et refleurit, un article tombe dans le chariot
+toutes les 3 s, une voiture passe dans la rue toutes les 7 s.
 
 ## Utilisation
 
