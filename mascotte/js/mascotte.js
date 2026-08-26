@@ -33,19 +33,54 @@ export const GRIS = {
   encre: '#23262b',
 };
 
+/* Le décor, lui, est en couleur.
+ *
+ * La mascotte est le seul élément gris de l'image : c'est ce qui la détache
+ * sans effort et ce qui rend chaque objet identifiable au premier coup d'œil.
+ * Tout griser reviendrait à demander au regard de trier lui-même le bois, le
+ * métal et la mascotte — exactement ce qu'il ne faut pas.
+ */
 export const DECOR = {
-  murClair: '#3c3f46',
-  murFonce: '#33363c',
-  joint: '#2b2e33',
-  sol: '#282b30',
-  solClair: '#31343a',
-  ombre: '#1e2126',
+  sol: '#2b2622',
+  solClair: '#3a332c',
+  ombre: '#1c1815',
+
+  bois: '#8a5a3b',
+  boisClair: '#a97244',
+  boisFonce: '#5c3a26',
+
   metal: '#7e838b',
   metalClair: '#a9aeb6',
-  bois: '#5b5f66',
-  boisClair: '#767b83',
+  metalFonce: '#565b63',
+
+  rouge: '#c04a35',
+  rougeFonce: '#8b3325',
   ambre: '#e3b25c',
-  ambreFonce: '#a97f34',
+  ambreFonce: '#b07f34',
+  vert: '#5f9b52',
+  vertFonce: '#3d6b38',
+  bleu: '#4d7fb3',
+  bleuFonce: '#2f5480',
+  violet: '#7a5aa8',
+  rose: '#d97a92',
+  creme: '#e8e2d4',
+  cremeFonce: '#c0b8a4',
+  encre: '#1b2028',
+};
+
+/* Ambiances de mur : chaque scène a la sienne, toujours assez sombre pour
+ * que le gris de la mascotte ressorte. [tuile claire, tuile sombre, tuile
+ * moyenne, joint]. */
+export const MURS = {
+  repet:   ['#4a3a63', '#3d3053', '#443659', '#2b2340'],   // salle de répète
+  bureau:  ['#3b4657', '#323b49', '#374253', '#262d38'],
+  magasin: ['#3f4a4a', '#36403f', '#3b4544', '#2a3231'],
+  cafe:    ['#4a3a30', '#3f3129', '#45362d', '#2f251f'],
+  atelier: ['#4c4536', '#413b2e', '#474032', '#302b21'],
+  salon:   ['#39374f', '#312f45', '#35334a', '#262435'],
+  cuisine: ['#3d4a44', '#34403b', '#394540', '#28322e'],
+  jardin:  ['#3c4a38', '#334030', '#374534', '#273120'],
+  chambre: ['#2f3348', '#282b3e', '#2c2f43', '#1f2233'],
 };
 
 /* ---------- Géométrie relevée sur la référence ---------- */

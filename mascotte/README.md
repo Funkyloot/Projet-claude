@@ -60,6 +60,18 @@ guéridon monte à la hauteur où la tasse se prend. Le pinceau, lui, ajoute
 6 px de manche : c'est ce qui met toute la toile à portée sans rallonger le
 bras.
 
+## La mascotte est la seule chose grise
+
+Le décor, lui, est en couleur : bois, cuivre, émail, tissu, terre cuite.
+C'est volontaire et c'est ce qui fait tenir l'image — si tout est gris, le
+regard doit trier lui-même le meuble, l'objet et la mascotte, et elle perd
+ce qui la détache. Là, le gris ne désigne qu'elle.
+
+Chaque scène a son ambiance de mur, toujours sombre et peu saturée pour que
+le gris ressorte devant : violet pour la salle de répète (un clin d'œil à la
+bannière d'origine), bleu ardoise au bureau, brun chaud au café, bleu nuit
+dans la chambre, vert au jardin.
+
 ## Ce qu'elle sait faire
 
 `Guitare` · `Clavier` · `Magasinage` · `Café` · `Peinture` · `Lecture` ·
