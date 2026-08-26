@@ -54,23 +54,23 @@ function sol(env, couleur = DECOR.sol, liseré = DECOR.solClair) {
 }
 
 /** Caisse en volume : face, liseré clair en haut, ombre en bas. */
-function caisse(ctx, x, y, w, h, face = DECOR.bois, dessus = DECOR.boisClair, dessous = DECOR.boisFonce) {
+export function caisse(ctx, x, y, w, h, face = DECOR.bois, dessus = DECOR.boisClair, dessous = DECOR.boisFonce) {
   rect(ctx, x, y, w, h, face);
   rect(ctx, x, y, w, 1, dessus);
   rect(ctx, x, y + h - 1, w, 1, dessous);
 }
 
-function trait2(ctx, x0, y0, x1, y1, c) {
+export function trait2(ctx, x0, y0, x1, y1, c) {
   line(ctx, x0, y0, x1, y1, c);
   line(ctx, x0 + 1, y0, x1 + 1, y1, c);
 }
 
-const BAYER = [
+export const BAYER = [
   [0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5],
 ];
 
 /** Bulles / vapeur qui montent, réparties par une graine fixe. */
-function particules(ctx, x, y, n, t, vitesse, hauteur, c, graine = 3) {
+export function particules(ctx, x, y, n, t, vitesse, hauteur, c, graine = 3) {
   const rng = makeRng(graine);
   for (let i = 0; i < n; i++) {
     const dx = Math.round((rng() - 0.5) * 8);
@@ -101,11 +101,7 @@ function guitare(env) {
 
   // Ampli et câble, derrière la mascotte.
   const ax = Math.round(l * 0.14), ay = env.sol - 16;
-  caisse(ctx, ax, ay, 18, 16, '#2e2a28', '#4a423c', '#1a1716');   // ampli noir
-  rect(ctx, ax + 2, ay + 3, 14, 10, '#151312');                    // grille
-  for (let j = 0; j < 5; j++) rect(ctx, ax + 2, ay + 4 + j * 2, 14, 1, '#211e1d');
-  rect(ctx, ax + 2, ay + 1, 14, 1, DECOR.bois);                    // liseré cuir
-  px(ctx, ax + 15, ay + 2, Math.sin(t * 6) > 0 ? DECOR.rouge : DECOR.rougeFonce);
+  ampli(ctx, ax, ay, t);
   line(ctx, ax + 17, ay + 12, main.x - 3, main.y + 3, '#17151a');  // câble
 
   dessinerMascotte(ctx, {
@@ -128,8 +124,17 @@ function guitare(env) {
   }
 }
 
+/** Ampli 18×16 : caisse noire, grille, liseré cuir, diode qui bat la mesure. */
+export function ampli(ctx, x, y, t) {
+  caisse(ctx, x, y, 18, 16, '#2e2a28', '#4a423c', '#1a1716');
+  rect(ctx, x + 2, y + 3, 14, 10, '#151312');                     // grille
+  for (let j = 0; j < 5; j++) rect(ctx, x + 2, y + 4 + j * 2, 14, 1, '#211e1d');
+  rect(ctx, x + 2, y + 1, 14, 1, DECOR.bois);                     // liseré cuir
+  px(ctx, x + 15, y + 2, Math.sin(t * 6) > 0 ? DECOR.rouge : DECOR.rougeFonce);
+}
+
 /** Caisse : deux disques qui se recouvrent, sous la main qui gratte. */
-function caisseGuitare(ctx, main) {
+export function caisseGuitare(ctx, main) {
   const mx = Math.round(main.x), my = Math.round(main.y);
   ellipse(ctx, mx, my + 2, 5, 4, DECOR.rouge);
   ellipse(ctx, mx + 1, my - 2, 4, 4, DECOR.rouge);
@@ -140,7 +145,7 @@ function caisseGuitare(ctx, main) {
 
 /** Manche, tête et cordes : de la caisse à la main qui tient les frettes,
  *  puis la tête au-delà. Les deux mains sont reposées par-dessus. */
-function mancheGuitare(ctx, main, manche) {
+export function mancheGuitare(ctx, main, manche) {
   const mx = Math.round(main.x), my = Math.round(main.y);
   const vx = manche.x - mx, vy = manche.y - my;
   const n = Math.max(1, Math.hypot(vx, vy));
@@ -188,20 +193,11 @@ function clavier(env) {
   });
 
   // Tabouret : dessiné après, l'assise arrive juste sous le corps.
-  caisse(ctx, bx - 1, assiseY, 20, 2, DECOR.rougeFonce, DECOR.rouge, '#5e2016');
-  rect(ctx, bx + 2, assiseY + 2, 2, env.sol - assiseY - 2, DECOR.metalFonce);
-  rect(ctx, bx + 14, assiseY + 2, 2, env.sol - assiseY - 2, DECOR.metalFonce);
+  tabouret(ctx, bx - 1, assiseY, env.sol - assiseY);
 
-  // Bureau
-  caisse(ctx, bux, plateauY, buw, 2, DECOR.bois, DECOR.boisClair);
-  rect(ctx, bux + 1, plateauY + 2, 2, env.sol - plateauY - 2, DECOR.boisFonce);
-  rect(ctx, bux + buw - 3, plateauY + 2, 2, env.sol - plateauY - 2, DECOR.boisFonce);
+  bureau(ctx, bux, plateauY, buw, env.sol - plateauY);
+  clavierObjet(ctx, kx, ky, t);
 
-  // Clavier : les touches s'allument au rythme de la frappe.
-  caisse(ctx, kx, ky, 13, 2, DECOR.cremeFonce, DECOR.creme, '#8d8674');
-  for (let i = 0; i < 6; i++) {
-    px(ctx, kx + 1 + i * 2, ky, (Math.floor(t * 7) % 6) === i ? DECOR.ambre : '#9a9382');
-  }
   // Les mains repassent par-dessus les touches : on doit voir qu'elle tape.
   dessinerMain(ctx, droite.x, droite.y + frappe2, true);
   dessinerMain(ctx, gauche.x, gauche.y + frappe);
@@ -209,20 +205,47 @@ function clavier(env) {
   // Écran, posé plus loin sur le bureau
   const ex = kx + 18, ey = plateauY - 19;
   rect(ctx, ex + 8, plateauY - 2, 4, 2, DECOR.cremeFonce);
-  caisse(ctx, ex, ey, 20, 17, DECOR.cremeFonce, DECOR.creme, '#8d8674');
-  rect(ctx, ex + 2, ey + 2, 16, 13, DECOR.encre);
+  ecran(ctx, ex, ey, t);
+  rect(ctx, ex + 1, plateauY - 1, 18, 1, '#6b5f4a');   // lueur sur le bois
+
+  tasse(ctx, ex + 24, plateauY - 5, t, true);
+}
+
+/** Tabouret rouge : assise de 2 px, deux pieds jusqu'au sol. */
+export function tabouret(ctx, x, y, hauteur) {
+  caisse(ctx, x, y, 20, 2, DECOR.rougeFonce, DECOR.rouge, '#5e2016');
+  rect(ctx, x + 3, y + 2, 2, hauteur - 2, DECOR.metalFonce);
+  rect(ctx, x + 15, y + 2, 2, hauteur - 2, DECOR.metalFonce);
+}
+
+/** Bureau en bois : plateau de 2 px et deux pieds. */
+export function bureau(ctx, x, y, largeur, hauteur) {
+  caisse(ctx, x, y, largeur, 2, DECOR.bois, DECOR.boisClair);
+  rect(ctx, x + 1, y + 2, 2, hauteur - 2, DECOR.boisFonce);
+  rect(ctx, x + largeur - 3, y + 2, 2, hauteur - 2, DECOR.boisFonce);
+}
+
+/** Clavier ivoire 13×2 : une touche s'allume au rythme de la frappe. */
+export function clavierObjet(ctx, x, y, t) {
+  caisse(ctx, x, y, 13, 2, DECOR.cremeFonce, DECOR.creme, '#8d8674');
+  for (let i = 0; i < 6; i++) {
+    px(ctx, x + 1 + i * 2, y, (Math.floor(t * 7) % 6) === i ? DECOR.ambre : '#9a9382');
+  }
+}
+
+/** Écran crème 20×17 : le code défile, le curseur clignote. */
+export function ecran(ctx, x, y, t) {
+  caisse(ctx, x, y, 20, 17, DECOR.cremeFonce, DECOR.creme, '#8d8674');
+  rect(ctx, x + 2, y + 2, 16, 13, DECOR.encre);
   const rng = makeRng(99);
   const lignes = [];
   for (let i = 0; i < 24; i++) lignes.push({ indent: Math.floor(rng() * 3) * 2, w: 3 + Math.floor(rng() * 9) });
   const defile = Math.floor(t * 3) % lignes.length;
   for (let i = 0; i < 4; i++) {
     const ln = lignes[(defile + i) % lignes.length];
-    rect(ctx, ex + 3 + ln.indent, ey + 4 + i * 3, ln.w, 1, i % 3 === 0 ? DECOR.ambre : '#7fb08a');
+    rect(ctx, x + 3 + ln.indent, y + 4 + i * 3, ln.w, 1, i % 3 === 0 ? DECOR.ambre : '#7fb08a');
   }
-  if (Math.sin(t * 6) > 0) rect(ctx, ex + 3, ey + 15, 2, 1, DECOR.creme);
-  rect(ctx, ex + 1, plateauY - 1, 18, 1, '#6b5f4a');   // lueur sur le bois
-
-  tasse(ctx, ex + 24, plateauY - 5, t, true);
+  if (Math.sin(t * 6) > 0) rect(ctx, x + 3, y + 15, 2, 1, DECOR.creme);
 }
 
 /* ---------- 3. Magasinage ---------- */
@@ -254,12 +277,12 @@ function magasinage(env) {
   panier(ctx, poignee, env.sol, t);
 }
 
-const PRODUITS = [
+export const PRODUITS = [
   DECOR.rouge, DECOR.ambre, DECOR.vert, DECOR.bleu, DECOR.violet,
   DECOR.rose, DECOR.creme, DECOR.ambreFonce, DECOR.bleuFonce, DECOR.vertFonce,
 ];
 
-function rayon(ctx, x, y, i) {
+export function rayon(ctx, x, y, i) {
   const rng = makeRng(20 + i * 7);
   caisse(ctx, x, y, 40, 34, '#2f3a3a', '#41504e', '#212927');
   for (let e = 0; e < 3; e++) {
@@ -277,7 +300,7 @@ function rayon(ctx, x, y, i) {
 
 /** Chariot dimensionné pour elle : cuve de 6 px arrivant au poitrail, roues
  *  posées au sol, barre de poussée dans la main. */
-function panier(ctx, main, sol, t) {
+export function panier(ctx, main, sol, t) {
   const hx = Math.round(main.x), hy = Math.round(main.y);
   const x = hx + 3;              // bord gauche de la cuve
   const haut = sol - 9;          // haut de la cuve
@@ -313,16 +336,7 @@ function cafe(env) {
   const { ctx, l, t } = env;
   mur(env, MURS.cafe);
 
-  const fx = Math.round(l * 0.1), fy = 6;
-  caisse(ctx, fx, fy, 30, 22, DECOR.boisFonce, DECOR.bois, '#3d2618');
-  rect(ctx, fx + 2, fy + 2, 26, 18, '#1d2a3a');          // nuit derrière la vitre
-  rect(ctx, fx + 14, fy + 2, 1, 18, DECOR.boisFonce);
-  const rng = makeRng(5);
-  for (let i = 0; i < 24; i++) {
-    const gx = fx + 3 + Math.floor(rng() * 24);
-    const p = (t * 1.4 + rng()) % 1;
-    rect(ctx, gx, fy + 2 + Math.round(p * 16), 1, 2, '#3f5b78');
-  }
+  fenetrePluie(ctx, Math.round(l * 0.1), 6, t);
   sol(env, '#4a3324', '#5e4230');
 
   const bx = Math.round(l * 0.46);
@@ -342,11 +356,7 @@ function cafe(env) {
   const tasseY = Math.round(lerp(repos.y, bouche.y, monte));
 
   // Guéridon (derrière la tasse, devant le mur)
-  caisse(ctx, repos.x - 2, tableY, 16, 2, DECOR.bois, DECOR.boisClair);
-  rect(ctx, repos.x + 5, tableY + 2, 2, env.sol - tableY - 2, DECOR.metalFonce);
-  rect(ctx, repos.x + 2, env.sol - 1, 8, 1, DECOR.metalFonce);
-  rect(ctx, repos.x + 8, tableY - 2, 6, 2, DECOR.creme);          // assiette
-  rect(ctx, repos.x + 9, tableY - 3, 4, 1, DECOR.ambre);          // viennoiserie
+  gueridon(ctx, repos.x - 2, tableY, env.sol - tableY);
 
   dessinerMascotte(ctx, {
     x: bx, sol: assiseY, sens: 1, pose: 'assis',
@@ -355,15 +365,35 @@ function cafe(env) {
   });
 
   // Tabouret : dessiné après, l'assise arrive juste sous le corps.
-  caisse(ctx, bx - 1, assiseY, 20, 2, DECOR.rougeFonce, DECOR.rouge, '#5e2016');
-  rect(ctx, bx + 2, assiseY + 2, 2, env.sol - assiseY - 2, DECOR.metalFonce);
-  rect(ctx, bx + 14, assiseY + 2, 2, env.sol - assiseY - 2, DECOR.metalFonce);
+  tabouret(ctx, bx - 1, assiseY, env.sol - assiseY);
 
   tasse(ctx, tasseX, tasseY, t, !gorgee);
   dessinerMain(ctx, tasseX - 1, tasseY + 2);
 }
 
-function tasse(ctx, x, y, t, fume) {
+/** Fenêtre 30×22 : cadre bois, nuit derrière la vitre, pluie qui glisse. */
+export function fenetrePluie(ctx, x, y, t) {
+  caisse(ctx, x, y, 30, 22, DECOR.boisFonce, DECOR.bois, '#3d2618');
+  rect(ctx, x + 2, y + 2, 26, 18, '#1d2a3a');
+  rect(ctx, x + 14, y + 2, 1, 18, DECOR.boisFonce);
+  const rng = makeRng(5);
+  for (let i = 0; i < 24; i++) {
+    const gx = x + 3 + Math.floor(rng() * 24);
+    const p = (t * 1.4 + rng()) % 1;
+    rect(ctx, gx, y + 2 + Math.round(p * 16), 1, 2, '#3f5b78');
+  }
+}
+
+/** Guéridon 16×2 sur pied central, avec son assiette et sa viennoiserie. */
+export function gueridon(ctx, x, y, hauteur) {
+  caisse(ctx, x, y, 16, 2, DECOR.bois, DECOR.boisClair);
+  rect(ctx, x + 7, y + 2, 2, hauteur - 2, DECOR.metalFonce);
+  rect(ctx, x + 4, y + hauteur - 1, 8, 1, DECOR.metalFonce);
+  rect(ctx, x + 10, y - 2, 6, 2, DECOR.creme);          // assiette
+  rect(ctx, x + 11, y - 3, 4, 1, DECOR.ambre);          // viennoiserie
+}
+
+export function tasse(ctx, x, y, t, fume) {
   x = Math.round(x); y = Math.round(y);
   rect(ctx, x, y, 5, 5, DECOR.creme);
   rect(ctx, x + 1, y + 1, 3, 1, '#4a2f1e');            // le café
@@ -376,7 +406,7 @@ function tasse(ctx, x, y, t, fume) {
 /* ---------- 5. Peinture ---------- */
 
 // Les couleurs qui apparaissent sur la toile, au fil des coups de pinceau.
-const TEINTES = [
+export const TEINTES = [
   DECOR.bleu, DECOR.bleuFonce, DECOR.vert, DECOR.vertFonce,
   DECOR.ambre, DECOR.rouge, DECOR.rose, DECOR.violet,
 ];
@@ -394,24 +424,11 @@ function peinture(env) {
   // atteignable sans tendre l'épaule.
   const tx = E.x + 4, ty = E.y - 9, tw = 8, th = 12;
 
-  line(ctx, tx + 1, env.sol, tx + 3, ty + 2, DECOR.bois);
-  line(ctx, tx + 8, env.sol, tx + 6, ty + 2, DECOR.bois);
-  line(ctx, tx + 4, env.sol, tx + 4, ty + th, DECOR.boisFonce);
-  caisse(ctx, tx, ty, tw, th, DECOR.creme, '#f4f0e6', DECOR.cremeFonce);
-  rect(ctx, tx - 1, ty + th, tw + 2, 2, DECOR.bois);
-
   const cycle = (t % 8) / 8;
   const avance = clamp(cycle / 0.82, 0, 1);
-  const rng = makeRng(42);
-  const coups = [];
-  for (let i = 0; i < 60; i++) {
-    coups.push({ x: 1 + Math.floor(rng() * (tw - 3)), y: 1 + Math.floor(rng() * (th - 2)), w: 1 + Math.floor(rng() * 3), c: rng() });
-  }
+  const coups = coupsDePinceau(tw, th);
   const n = Math.floor(avance * coups.length);
-  for (let i = 0; i < n; i++) {
-    const c = coups[i];
-    rect(ctx, tx + 1 + c.x, ty + 1 + c.y, c.w, 1, TEINTES[Math.floor(c.c * TEINTES.length)]);
-  }
+  chevalet(ctx, tx, ty, tw, th, env.sol - ty, coups, n);
 
   // Le pinceau fait 6 px de manche : la main s'arrête à 6 px du point peint,
   // ce qui met toute la toile à portée sans allonger le bras.
@@ -438,10 +455,45 @@ function peinture(env) {
   trait2(ctx, main.x, main.y, bout.x - 1, bout.y, DECOR.bois);
   dessinerMain(ctx, main.x, main.y);
   px(ctx, bout.x, bout.y, TEINTES[Math.floor(cible.c * TEINTES.length)]);
-  ellipse(ctx, palette.x + 2, palette.y + 1, 4, 2, DECOR.boisClair);
-  px(ctx, palette.x, palette.y, DECOR.rouge);
-  px(ctx, palette.x + 3, palette.y, DECOR.bleu);
-  px(ctx, palette.x + 5, palette.y + 1, DECOR.ambre);
+  paletteObjet(ctx, palette.x, palette.y);
+}
+
+/** Les coups de pinceau d'une toile, toujours les mêmes : c'est la graine
+ *  qui fait qu'une toile se remplit deux fois de la même façon. */
+export function coupsDePinceau(tw, th) {
+  const rng = makeRng(42);
+  const coups = [];
+  for (let i = 0; i < 60; i++) {
+    coups.push({
+      x: 1 + Math.floor(rng() * (tw - 3)),
+      y: 1 + Math.floor(rng() * (th - 2)),
+      w: 1 + Math.floor(rng() * 3),
+      c: rng(),
+    });
+  }
+  return coups;
+}
+
+/** Chevalet et sa toile, remplie des `n` premiers coups de pinceau. */
+export function chevalet(ctx, x, y, tw, th, hauteur, coups, n) {
+  const sol_ = y + hauteur;
+  line(ctx, x + 1, sol_, x + 3, y + 2, DECOR.bois);
+  line(ctx, x + 8, sol_, x + 6, y + 2, DECOR.bois);
+  line(ctx, x + 4, sol_, x + 4, y + th, DECOR.boisFonce);
+  caisse(ctx, x, y, tw, th, DECOR.creme, '#f4f0e6', DECOR.cremeFonce);
+  rect(ctx, x - 1, y + th, tw + 2, 2, DECOR.bois);
+  for (let i = 0; i < n; i++) {
+    const c = coups[i];
+    rect(ctx, x + 1 + c.x, y + 1 + c.y, c.w, 1, TEINTES[Math.floor(c.c * TEINTES.length)]);
+  }
+}
+
+/** Palette de peintre, 8×4, tenue dans l'autre main. */
+export function paletteObjet(ctx, x, y) {
+  ellipse(ctx, x + 2, y + 1, 4, 2, DECOR.boisClair);
+  px(ctx, x, y, DECOR.rouge);
+  px(ctx, x + 3, y, DECOR.bleu);
+  px(ctx, x + 5, y + 1, DECOR.ambre);
 }
 
 /* ---------- 6. Lecture ---------- */
@@ -455,23 +507,8 @@ function lecture(env) {
   const assiseY = env.sol - TAILLES.assise;
   const E = epaule({ x: bx, sol: assiseY, pose: 'assis', sens: 1 });
 
-  // Lampe sur pied
-  const lx = Math.round(l * 0.18);
-  rect(ctx, lx - 4, env.sol - 1, 9, 1, DECOR.boisFonce);
-  rect(ctx, lx, env.sol - 28, 1, 27, DECOR.ambreFonce);            // pied laiton
-  rect(ctx, lx - 5, env.sol - 34, 11, 6, '#c8863c');               // abat-jour
-  rect(ctx, lx - 5, env.sol - 34, 11, 1, '#e0a355');
-  rect(ctx, lx - 4, env.sol - 29, 9, 1, '#ffe6a8');                // ampoule
-  for (let j = 1; j < 16; j++) {
-    const w = 6 + j;
-    const seuil = 9 - Math.floor(j / 2.5);
-    for (let i = 0; i < w; i++) {
-      const gx = lx - Math.floor(w / 2) + i, gy = env.sol - 28 + j;
-      if (BAYER[gy & 3][gx & 3] < seuil) px(ctx, gx, gy, '#6b5a3c');
-    }
-  }
-
-  caisse(ctx, bx - 8, assiseY - 16, 7, 18, '#4a6b52', '#5f8666', '#2f4a37');   // dossier
+  lampeSalon(ctx, Math.round(l * 0.18), env.sol);
+  fauteuilDossier(ctx, bx - 8, assiseY - 16);
 
   // Livre de poche : les deux mains tiennent les coins bas, à 4 et 7 px.
   const gauche = { x: E.x + 1, y: E.y + 4 };
@@ -486,12 +523,39 @@ function lecture(env) {
     bras: [gauche, { x: droite.x, y: droite.y - (tourne ? 4 : 0) }],
   });
 
-  caisse(ctx, bx - 8, assiseY, 26, 2, '#4a6b52', '#5f8666', '#2f4a37');
-  rect(ctx, bx - 6, assiseY + 2, 3, env.sol - assiseY - 2, DECOR.boisFonce);
-  rect(ctx, bx + 13, assiseY + 2, 3, env.sol - assiseY - 2, DECOR.boisFonce);
+  fauteuilAssise(ctx, bx - 8, assiseY, env.sol - assiseY);
 }
 
-function livre(ctx, x, y, tourne) {
+/** Lampe sur pied : abat-jour ambré, pied laiton, halo tramé au sol. */
+export function lampeSalon(ctx, x, sol_) {
+  rect(ctx, x - 4, sol_ - 1, 9, 1, DECOR.boisFonce);
+  rect(ctx, x, sol_ - 28, 1, 27, DECOR.ambreFonce);            // pied laiton
+  rect(ctx, x - 5, sol_ - 34, 11, 6, '#c8863c');               // abat-jour
+  rect(ctx, x - 5, sol_ - 34, 11, 1, '#e0a355');
+  rect(ctx, x - 4, sol_ - 29, 9, 1, '#ffe6a8');                // ampoule
+  for (let j = 1; j < 16; j++) {
+    const w = 6 + j;
+    const seuil = 9 - Math.floor(j / 2.5);
+    for (let i = 0; i < w; i++) {
+      const gx = x - Math.floor(w / 2) + i, gy = sol_ - 28 + j;
+      if (BAYER[gy & 3][gx & 3] < seuil) px(ctx, gx, gy, '#6b5a3c');
+    }
+  }
+}
+
+/** Dossier du fauteuil, 7×18 : il passe derrière la mascotte. */
+export function fauteuilDossier(ctx, x, y) {
+  caisse(ctx, x, y, 7, 18, '#4a6b52', '#5f8666', '#2f4a37');
+}
+
+/** Assise du fauteuil et ses pieds : ils passent devant. */
+export function fauteuilAssise(ctx, x, y, hauteur) {
+  caisse(ctx, x, y, 26, 2, '#4a6b52', '#5f8666', '#2f4a37');
+  rect(ctx, x + 2, y + 2, 3, hauteur - 2, DECOR.boisFonce);
+  rect(ctx, x + 21, y + 2, 3, hauteur - 2, DECOR.boisFonce);
+}
+
+export function livre(ctx, x, y, tourne) {
   x = Math.round(x); y = Math.round(y);
   rect(ctx, x, y, 9, 8, DECOR.rougeFonce);            // couverture
   rect(ctx, x + 1, y + 1, 3, 6, DECOR.creme);
@@ -523,31 +587,9 @@ function cuisine(env) {
   const planX = main.x + 4;
   const planL = Math.min(46, l - planX - 4);
 
-  caisse(ctx, planX, planY, planL, 3, DECOR.creme, '#f4f0e6', DECOR.cremeFonce);
-  rect(ctx, planX + 2, planY + 3, planL - 4, env.sol - planY - 3, '#4a6b6a');   // meuble
-  for (let i = 0; i * 12 + 10 < planL; i++) {
-    rect(ctx, planX + 4 + i * 12, planY + 7, 8, 1, DECOR.metalClair);           // poignées
-  }
-
-  const flamme = Math.sin(t * 12) > 0 ? 2 : 1;
-  rect(ctx, planX + 3, planY - flamme, 4, flamme, '#e07a2f');
-  rect(ctx, planX + 4, planY - 1, 2, 1, '#f2c14e');
-
-  // Étagère à bocaux, pour habiller le mur.
-  const ey = planY - 24;
-  rect(ctx, planX + 4, ey + 5, 26, 1, DECOR.bois);
-  const bocaux = [DECOR.ambre, DECOR.rouge, DECOR.vert, DECOR.violet];
-  for (let i = 0; i < 4; i++) {
-    const hh = 3 + (i % 3);
-    rect(ctx, planX + 7 + i * 6, ey + 5 - hh, 4, hh, bocaux[i]);
-    rect(ctx, planX + 7 + i * 6, ey + 4 - hh, 4, 1, DECOR.cremeFonce);   // couvercle
-  }
-
-  const cx = planX + planL - 12;
-  rect(ctx, cx, planY - 6, 10, 6, DECOR.rouge);          // casserole émaillée
-  rect(ctx, cx, planY - 6, 10, 1, '#d96a52');
-  rect(ctx, cx - 1, planY - 7, 12, 1, DECOR.metalClair);
-  particules(ctx, cx + 5, planY - 8, 7, t, 0.5, 14, '#9aa8a6', 17);
+  planCuisson(ctx, planX, planY, planL, env.sol - planY, t);
+  etagereBocaux(ctx, planX + 4, planY - 24);
+  casserole(ctx, planX + planL - 12, planY - 6, t);
 
   dessinerMascotte(ctx, {
     x: bx, sol: env.sol, sens: 1, pose: 'debout',
@@ -558,14 +600,50 @@ function cuisine(env) {
 
   // Poêle : le manche remonte de la main jusqu'à la poêle, posée au-dessus
   // du feu. La main reste au poitrail, pas au museau.
-  const mx = Math.round(main.x), my = Math.round(main.y);
+  poele(ctx, main.x, main.y, cycle);
+  dessinerMain(ctx, main.x, main.y);
+}
+
+/** Plan de travail : dessus crème, meuble bleu-vert, poignées, flamme. */
+export function planCuisson(ctx, x, y, largeur, hauteur, t) {
+  caisse(ctx, x, y, largeur, 3, DECOR.creme, '#f4f0e6', DECOR.cremeFonce);
+  rect(ctx, x + 2, y + 3, largeur - 4, hauteur - 3, '#4a6b6a');            // meuble
+  for (let i = 0; i * 12 + 10 < largeur; i++) {
+    rect(ctx, x + 4 + i * 12, y + 7, 8, 1, DECOR.metalClair);              // poignées
+  }
+  const flamme = Math.sin(t * 12) > 0 ? 2 : 1;
+  rect(ctx, x + 3, y - flamme, 4, flamme, '#e07a2f');
+  rect(ctx, x + 4, y - 1, 2, 1, '#f2c14e');
+}
+
+/** Étagère et ses quatre bocaux, 30×8. */
+export function etagereBocaux(ctx, x, y) {
+  rect(ctx, x, y + 5, 26, 1, DECOR.bois);
+  const bocaux = [DECOR.ambre, DECOR.rouge, DECOR.vert, DECOR.violet];
+  for (let i = 0; i < 4; i++) {
+    const hh = 3 + (i % 3);
+    rect(ctx, x + 3 + i * 6, y + 5 - hh, 4, hh, bocaux[i]);
+    rect(ctx, x + 3 + i * 6, y + 4 - hh, 4, 1, DECOR.cremeFonce);          // couvercle
+  }
+}
+
+/** Casserole émaillée 12×7, et sa vapeur. */
+export function casserole(ctx, x, y, t) {
+  rect(ctx, x, y, 10, 6, DECOR.rouge);
+  rect(ctx, x, y, 10, 1, '#d96a52');
+  rect(ctx, x - 1, y - 1, 12, 1, DECOR.metalClair);
+  particules(ctx, x + 5, y - 2, 7, t, 0.5, 14, '#9aa8a6', 17);
+}
+
+/** Poêle tenue par la main : manche en bois, crêpe qui saute. */
+export function poele(ctx, mainX, mainY, cycle) {
+  const mx = Math.round(mainX), my = Math.round(mainY);
   const py = my - 3;
-  trait2(ctx, mx, my, mx + 3, py + 1, DECOR.boisFonce);                   // manche
+  trait2(ctx, mx, my, mx + 3, py + 1, DECOR.boisFonce);                    // manche
   rect(ctx, mx + 4, py, 12, 3, '#2a2724');
   rect(ctx, mx + 4, py, 12, 1, '#3d3936');
   const hSaut = cycle < 0.5 ? Math.sin(cycle * Math.PI * 2) * 14 : 0;
   ellipse(ctx, mx + 10, py - 1 - hSaut, 4, hSaut > 4 ? 1 : 2, '#d9a154');
-  dessinerMain(ctx, main.x, main.y);
 }
 
 /* ---------- 8. Balade en ville ---------- */
@@ -625,7 +703,7 @@ function balade(env) {
 
 /** Rangée d'immeubles qui défile. Le plan proche a des vitrines éclairées
  *  au rez-de-chaussée : c'est ce qui donne son échelle à la rue. */
-function immeubles(ctx, env, base, hMax, hMin, vitesse, largeur, graine, proche) {
+export function immeubles(ctx, env, base, hMax, hMin, vitesse, largeur, graine, proche) {
   const { l, t } = env;
   const defile = (t * vitesse) % largeur;
   const rng = makeRng(graine);
@@ -653,7 +731,7 @@ function immeubles(ctx, env, base, hMax, hMin, vitesse, largeur, graine, proche)
 }
 
 /** Lampadaire : mât, tête, et halo tramé qui tombe sur le trottoir. */
-function lampadaire(ctx, env, x) {
+export function lampadaire(ctx, env, x) {
   const haut = env.sol - 24;
   rect(ctx, x, haut + 2, 2, env.sol - haut - 2, '#3a3f52');
   rect(ctx, x - 2, env.sol - 1, 6, 1, '#31354a');
@@ -670,7 +748,7 @@ function lampadaire(ctx, env, x) {
 }
 
 /** Une voiture passe sur la chaussée toutes les sept secondes. */
-function voiture(ctx, env, base, t, l) {
+export function voiture(ctx, env, base, t, l) {
   const cycle = (t % 7) / 7;
   if (cycle > 0.62) return;
   const x = Math.round(lerp(-20, l + 20, cycle / 0.62));
@@ -705,25 +783,8 @@ function jardinage(env) {
   const bec = { x: main.x + 9, y: main.y - 2 - incline * 2 };
   const potX = Math.round(bec.x + 3), potY = env.sol - 9;
 
-  caisse(ctx, potX, potY, 16, 9, '#b5643c', '#cd7c4c', '#7d3f24');   // terre cuite
-  rect(ctx, potX + 1, potY + 1, 14, 2, '#4a3524');                   // terreau
-
   // La fleur pousse en 5 s, puis on recommence.
-  const pousse = ease(clamp(cycle / 0.7, 0, 1));
-  const tige = Math.round(pousse * 20);
-  const fx = potX + 8;
-  for (let j = 0; j < tige; j++) px(ctx, fx + Math.round(Math.sin(j * 0.4) * 1.5), potY - j, DECOR.vertFonce);
-  if (tige > 8) {
-    rect(ctx, fx + 2, potY - 8, 3, 1, DECOR.vert);
-    rect(ctx, fx - 4, potY - 12, 3, 1, DECOR.vert);
-  }
-  if (pousse > 0.75) {
-    const ouv = ease(clamp((pousse - 0.75) / 0.25, 0, 1));
-    const fy = potY - tige - 2;
-    const r = 1 + ouv * 3;
-    ellipse(ctx, fx, fy, r, r, DECOR.rose);
-    circle(ctx, fx, fy, Math.max(1, r - 2), DECOR.ambre);
-  }
+  potFleur(ctx, potX, potY, ease(clamp(cycle / 0.7, 0, 1)));
 
   dessinerMascotte(ctx, {
     x: bx, sol: env.sol, sens: 1, pose: 'debout',
@@ -743,8 +804,28 @@ function jardinage(env) {
   }
 }
 
+/** Pot en terre cuite 16×9 et sa fleur, à un stade de pousse de 0 à 1. */
+export function potFleur(ctx, x, y, pousse) {
+  caisse(ctx, x, y, 16, 9, '#b5643c', '#cd7c4c', '#7d3f24');   // terre cuite
+  rect(ctx, x + 1, y + 1, 14, 2, '#4a3524');                   // terreau
+  const tige = Math.round(pousse * 20);
+  const fx = x + 8;
+  for (let j = 0; j < tige; j++) px(ctx, fx + Math.round(Math.sin(j * 0.4) * 1.5), y - j, DECOR.vertFonce);
+  if (tige > 8) {
+    rect(ctx, fx + 2, y - 8, 3, 1, DECOR.vert);
+    rect(ctx, fx - 4, y - 12, 3, 1, DECOR.vert);
+  }
+  if (pousse > 0.75) {
+    const ouv = ease(clamp((pousse - 0.75) / 0.25, 0, 1));
+    const fy = y - tige - 2;
+    const r = 1 + ouv * 3;
+    ellipse(ctx, fx, fy, r, r, DECOR.rose);
+    circle(ctx, fx, fy, Math.max(1, r - 2), DECOR.ambre);
+  }
+}
+
 /** L'arrosoir est accroché à la main : (x, y) est le point tenu. */
-function arrosoir(ctx, x, y, incline) {
+export function arrosoir(ctx, x, y, incline) {
   x = Math.round(x) - 1; y = Math.round(y) - 3 + incline;
   rect(ctx, x, y + 2, 9, 7, '#3f7d78');                    // zinc peint en vert d'eau
   rect(ctx, x, y + 2, 9, 1, '#57a09a');
@@ -764,11 +845,7 @@ function sieste(env) {
   const bx = Math.round(l * 0.4);
   const litY = env.sol - TAILLES.assise;
 
-  caisse(ctx, bx - 8, litY, 40, 4, DECOR.bois, DECOR.boisClair, DECOR.boisFonce);
-  rect(ctx, bx - 8, litY + 4, 40, 2, DECOR.boisFonce);
-  rect(ctx, bx - 10, litY - 8, 3, 12, DECOR.boisClair);
-  rect(ctx, bx + 32, litY - 5, 3, 9, DECOR.boisClair);
-  rect(ctx, bx - 6, litY - 4, 10, 4, DECOR.creme);            // oreiller
+  lit(ctx, bx - 10, litY);
 
   dessinerMascotte(ctx, {
     x: bx, sol: litY, sens: 1, pose: 'couche',
@@ -776,15 +853,30 @@ function sieste(env) {
   });
 
   // Couverture : elle s'arrête sous le museau, on doit voir qu'elle dort.
-  rect(ctx, bx + 2, litY - 6, 22, 6, '#3f5b86');
-  rect(ctx, bx + 2, litY - 6, 22, 1, '#547aa8');
-  for (let i = 0; i < 3; i++) rect(ctx, bx + 4 + i * 7, litY - 5, 3, 5, '#4a6a99');
+  couverture(ctx, bx + 2, litY - 6);
 
   for (let i = 0; i < 3; i++) {
     const p = ((t * 0.4 + i * 0.33) % 1);
     drawText(ctx, 'Z', bx + 20 + Math.round(p * 14), Math.round(litY - 16 - p * 22),
       p > 0.7 ? '#4c5878' : '#8fa4c8');
   }
+}
+
+/** Lit 45×12 : cadre en bois, deux montants, oreiller. (x, y) = coin haut
+ *  gauche du montant de tête, y = hauteur du matelas. */
+export function lit(ctx, x, y) {
+  caisse(ctx, x + 2, y, 40, 4, DECOR.bois, DECOR.boisClair, DECOR.boisFonce);
+  rect(ctx, x + 2, y + 4, 40, 2, DECOR.boisFonce);
+  rect(ctx, x, y - 8, 3, 12, DECOR.boisClair);
+  rect(ctx, x + 42, y - 5, 3, 9, DECOR.boisClair);
+  rect(ctx, x + 4, y - 4, 10, 4, DECOR.creme);            // oreiller
+}
+
+/** Couverture 22×6, à rayures. */
+export function couverture(ctx, x, y) {
+  rect(ctx, x, y, 22, 6, '#3f5b86');
+  rect(ctx, x, y, 22, 1, '#547aa8');
+  for (let i = 0; i < 3; i++) rect(ctx, x + 2 + i * 7, y + 1, 3, 5, '#4a6a99');
 }
 
 /* ---------- Catalogue ---------- */

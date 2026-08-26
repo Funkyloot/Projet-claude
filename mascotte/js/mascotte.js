@@ -125,6 +125,15 @@ export function epaule(o) {
 
 const etat = { t: 0, clignement: 0, prochainClignement: 2.5, phase: 0 };
 
+/** Pour les outils de rendu : fige l'horloge interne, pour que la même
+ *  image soit toujours produite au même instant. */
+export function reglerMascotte(t, clignement = false) {
+  etat.t = t;
+  etat.phase = t;
+  etat.clignement = clignement ? 0.1 : 0;
+  etat.prochainClignement = 1e9;
+}
+
 export function majMascotte(dt) {
   etat.t += dt;
   etat.phase += dt;
