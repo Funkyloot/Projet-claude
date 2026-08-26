@@ -1,0 +1,794 @@
+{
+  "planches": [
+    {
+      "fichier": "mascotte/debout-droite.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 8,
+      "lignes": 4,
+      "legendes": [
+        [
+          "o0",
+          "o1",
+          "o2",
+          "o3",
+          "o4",
+          "o5",
+          "o6",
+          "o7"
+        ],
+        [
+          "m0",
+          "m1",
+          "m2",
+          "m3",
+          "m4",
+          "m5",
+          "m6",
+          "m7"
+        ],
+        [
+          "c0",
+          "c1",
+          "c2",
+          "c3",
+          "c4",
+          "c5",
+          "c6",
+          "c7"
+        ],
+        [
+          "f0",
+          "f1",
+          "f2",
+          "f3",
+          "f4",
+          "f5",
+          "f6",
+          "f7"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/marche-droite.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 8,
+      "lignes": 1,
+      "legendes": [
+        [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/assis-droite.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 4,
+      "lignes": 1,
+      "legendes": [
+        [
+          "ouver",
+          "mi",
+          "conte",
+          "ferme"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/couche-droite.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 4,
+      "lignes": 1,
+      "legendes": [
+        [
+          "D0",
+          "D1",
+          "D2",
+          "D3"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/debout-gauche.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 8,
+      "lignes": 4,
+      "legendes": [
+        [
+          "o0",
+          "o1",
+          "o2",
+          "o3",
+          "o4",
+          "o5",
+          "o6",
+          "o7"
+        ],
+        [
+          "m0",
+          "m1",
+          "m2",
+          "m3",
+          "m4",
+          "m5",
+          "m6",
+          "m7"
+        ],
+        [
+          "c0",
+          "c1",
+          "c2",
+          "c3",
+          "c4",
+          "c5",
+          "c6",
+          "c7"
+        ],
+        [
+          "f0",
+          "f1",
+          "f2",
+          "f3",
+          "f4",
+          "f5",
+          "f6",
+          "f7"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/marche-gauche.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 8,
+      "lignes": 1,
+      "legendes": [
+        [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/assis-gauche.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 4,
+      "lignes": 1,
+      "legendes": [
+        [
+          "ouver",
+          "mi",
+          "conte",
+          "ferme"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/couche-gauche.png",
+      "caseLargeur": 26,
+      "caseHauteur": 22,
+      "colonnes": 4,
+      "lignes": 1,
+      "legendes": [
+        [
+          "D0",
+          "D1",
+          "D2",
+          "D3"
+        ]
+      ]
+    },
+    {
+      "fichier": "mascotte/bras.png",
+      "caseLargeur": 34,
+      "caseHauteur": 22,
+      "colonnes": 12,
+      "lignes": 2,
+      "legendes": [
+        [
+          "P0",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+          "P5",
+          "P6",
+          "P7",
+          "P8",
+          "P9",
+          "P10",
+          "P11"
+        ],
+        [
+          "L0",
+          "L1",
+          "L2",
+          "L3",
+          "L4",
+          "L5",
+          "L6",
+          "L7",
+          "L8",
+          "L9",
+          "L10",
+          "L11"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/guitare.png",
+      "caseLargeur": 30,
+      "caseHauteur": 26,
+      "colonnes": 8,
+      "lignes": 1,
+      "legendes": [
+        [
+          "G0",
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5",
+          "G6",
+          "G7"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/ampli.png",
+      "caseLargeur": 20,
+      "caseHauteur": 18,
+      "colonnes": 2,
+      "lignes": 1,
+      "legendes": [
+        [
+          "A0",
+          "A1"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/clavier.png",
+      "caseLargeur": 15,
+      "caseHauteur": 5,
+      "colonnes": 6,
+      "lignes": 1,
+      "legendes": [
+        [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/ecran.png",
+      "caseLargeur": 22,
+      "caseHauteur": 19,
+      "colonnes": 8,
+      "lignes": 1,
+      "legendes": [
+        [
+          "E0",
+          "E1",
+          "E2",
+          "E3",
+          "E4",
+          "E5",
+          "E6",
+          "E7"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/bureau.png",
+      "caseLargeur": 24,
+      "caseHauteur": 14,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "bureau"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/tabouret.png",
+      "caseLargeur": 22,
+      "caseHauteur": 10,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "tabouret"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/gueridon.png",
+      "caseLargeur": 18,
+      "caseHauteur": 16,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "guerid"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/fauteuil.png",
+      "caseLargeur": 30,
+      "caseHauteur": 24,
+      "colonnes": 2,
+      "lignes": 1,
+      "legendes": [
+        [
+          "dossier",
+          "assise"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/lit.png",
+      "caseLargeur": 48,
+      "caseHauteur": 16,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "lit"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/couverture.png",
+      "caseLargeur": 24,
+      "caseHauteur": 8,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "couvert"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/tasse.png",
+      "caseLargeur": 10,
+      "caseHauteur": 14,
+      "colonnes": 6,
+      "lignes": 1,
+      "legendes": [
+        [
+          "C0",
+          "C1",
+          "C2",
+          "C3",
+          "C4",
+          "C5"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/chariot.png",
+      "caseLargeur": 24,
+      "caseHauteur": 34,
+      "colonnes": 6,
+      "lignes": 1,
+      "legendes": [
+        [
+          "P0",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+          "P5"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/rayon.png",
+      "caseLargeur": 42,
+      "caseHauteur": 36,
+      "colonnes": 3,
+      "lignes": 1,
+      "legendes": [
+        [
+          "R0",
+          "R1",
+          "R2"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/livre.png",
+      "caseLargeur": 11,
+      "caseHauteur": 10,
+      "colonnes": 2,
+      "lignes": 1,
+      "legendes": [
+        [
+          "livre",
+          "page"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/chevalet.png",
+      "caseLargeur": 14,
+      "caseHauteur": 30,
+      "colonnes": 8,
+      "lignes": 1,
+      "legendes": [
+        [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5",
+          "T6",
+          "T7"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/palette.png",
+      "caseLargeur": 10,
+      "caseHauteur": 6,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "palette"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/plan-cuisson.png",
+      "caseLargeur": 48,
+      "caseHauteur": 16,
+      "colonnes": 2,
+      "lignes": 1,
+      "legendes": [
+        [
+          "F0",
+          "F1"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/etagere-bocaux.png",
+      "caseLargeur": 32,
+      "caseHauteur": 10,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "bocaux"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/casserole.png",
+      "caseLargeur": 14,
+      "caseHauteur": 18,
+      "colonnes": 4,
+      "lignes": 1,
+      "legendes": [
+        [
+          "V0",
+          "V1",
+          "V2",
+          "V3"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/poele.png",
+      "caseLargeur": 22,
+      "caseHauteur": 24,
+      "colonnes": 8,
+      "lignes": 1,
+      "legendes": [
+        [
+          "P0",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+          "P5",
+          "P6",
+          "P7"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/pot-fleur.png",
+      "caseLargeur": 20,
+      "caseHauteur": 36,
+      "colonnes": 8,
+      "lignes": 1,
+      "legendes": [
+        [
+          "F0",
+          "F1",
+          "F2",
+          "F3",
+          "F4",
+          "F5",
+          "F6",
+          "F7"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/arrosoir.png",
+      "caseLargeur": 18,
+      "caseHauteur": 14,
+      "colonnes": 2,
+      "lignes": 1,
+      "legendes": [
+        [
+          "droit",
+          "incline"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/lampe-salon.png",
+      "caseLargeur": 14,
+      "caseHauteur": 38,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "lampe"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/lampadaire.png",
+      "caseLargeur": 32,
+      "caseHauteur": 32,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "halo"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/voiture.png",
+      "caseLargeur": 22,
+      "caseHauteur": 10,
+      "colonnes": 1,
+      "lignes": 1,
+      "legendes": [
+        [
+          "voiture"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/fenetre.png",
+      "caseLargeur": 32,
+      "caseHauteur": 24,
+      "colonnes": 6,
+      "lignes": 1,
+      "legendes": [
+        [
+          "P0",
+          "P1",
+          "P2",
+          "P3",
+          "P4",
+          "P5"
+        ]
+      ]
+    },
+    {
+      "fichier": "objets/note.png",
+      "caseLargeur": 10,
+      "caseHauteur": 8,
+      "colonnes": 2,
+      "lignes": 1,
+      "legendes": [
+        [
+          "note",
+          "note2"
+        ]
+      ]
+    },
+    {
+      "fichier": "palette/palette.png",
+      "caseLargeur": 28,
+      "caseHauteur": 10,
+      "colonnes": 6,
+      "lignes": 5,
+      "legendes": [
+        [
+          "gris clair",
+          "gris base",
+          "gris moyen",
+          "gris fonce",
+          "gris profond",
+          "gris encre"
+        ],
+        [
+          "sol",
+          "solClair",
+          "ombre",
+          "bois",
+          "boisClair",
+          "boisFonce"
+        ],
+        [
+          "metal",
+          "metalClair",
+          "metalFonce",
+          "rouge",
+          "rougeFonce",
+          "ambre"
+        ],
+        [
+          "ambreFonce",
+          "vert",
+          "vertFonce",
+          "bleu",
+          "bleuFonce",
+          "violet"
+        ],
+        [
+          "rose",
+          "creme",
+          "cremeFonce",
+          "encre"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/guitare.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Guitare — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/clavier.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Clavier — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/magasinage.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Magasinage — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/cafe.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Café — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/peinture.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Peinture — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/lecture.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Lecture — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/cuisine.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Cuisine — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/balade.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Balade — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/jardinage.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Jardinage — 8 images sur 4 s"
+        ]
+      ]
+    },
+    {
+      "fichier": "scenes/sieste.png",
+      "caseLargeur": 104,
+      "caseHauteur": 59,
+      "colonnes": 1,
+      "lignes": 8,
+      "legendes": [
+        [
+          "Sieste — 8 images sur 4 s"
+        ]
+      ]
+    }
+  ]
+}
