@@ -25,6 +25,23 @@ corps, yeux, quatre pattes indépendantes, deux bras qui pointent vers une
 cible. C'est ce qui lui permet de tenir une guitare, un livre ou une tasse
 sans qu'il faille redessiner un sprite par activité.
 
+### Des bras de longueur réelle
+
+Les deux segments du bras ont une longueur **fixe** : 5 px de l'épaule au
+coude, 4 px du coude à la main. Le coude est placé par intersection de deux
+cercles (cinématique inverse à deux os) et plie toujours vers le bas. Un bras
+ne s'étire donc jamais pour atteindre quelque chose : si une cible sort du
+cercle de portée, c'est la main qui s'arrête dessus.
+
+La conséquence, c'est que **ce sont les objets qui viennent à portée**, pas
+l'inverse. Chaque scène part de la position de l'épaule et pose ses
+accessoires autour : la guitare se construit entre les deux mains, le clavier
+se glisse sous les doigts et le bureau se cale dessus, le panier accroche sa
+poignée dans la main, le plan de travail arrive à hauteur de poêle, le
+guéridon monte à la hauteur où la tasse se prend. Le pinceau, lui, ajoute
+6 px de manche : c'est ce qui met toute la toile à portée sans rallonger le
+bras.
+
 ## Ce qu'elle sait faire
 
 `Guitare` · `Clavier` · `Magasinage` · `Café` · `Peinture` · `Lecture` ·

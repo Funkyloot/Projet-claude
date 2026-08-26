@@ -52,9 +52,31 @@ export const MASCOTTE_H = CORPS_H + PATTE_H;
 const RETRAIT_G = [2, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0];
 const RETRAIT_D = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
 
+// Bras : deux segments de longueur FIXE. Le bras ne s'étire jamais pour
+// atteindre un objet — c'est l'objet qui doit être posé à portée. `PORTEE`
+// est la distance maximale entre l'épaule et la main, bras tendu.
+export const BRAS_HAUT = 5;    // épaule -> coude
+export const BRAS_AVANT = 4;   // coude -> main
+export const PORTEE = BRAS_HAUT + BRAS_AVANT - 1;
+
 // Yeux : deux fentes de 3×2, sur la sixième ligne du corps.
 const OEIL_Y = 3;
 const OEIL_X = [5, 14];
+
+/**
+ * Position de l'épaule pour une pose donnée. Les activités s'en servent pour
+ * placer leurs accessoires : la guitare, le clavier, la tasse et le reste
+ * sont posés à moins de PORTEE de ce point.
+ */
+export function epaule(o) {
+  const sens = o.sens ?? 1;
+  const hautPattes = o.pose === 'assis' ? 1 : o.pose === 'couche' ? 0 : PATTE_H;
+  const basCorps = Math.round(o.sol - hautPattes + (o.dy ?? 0));
+  return {
+    x: Math.round(o.x) + (sens > 0 ? 14 : CORPS_L - 16),
+    y: basCorps - CORPS_H + 6,
+  };
+}
 
 /* ---------- État interne (clignement, respiration) ---------- */
 
@@ -194,16 +216,34 @@ export function dessinerMascotte(ctx, o) {
   }
 }
 
-/** Bras en deux segments : épaule -> coude -> main. */
+/**
+ * Bras en deux segments de longueur constante. Le coude est placé par
+ * intersection de deux cercles (cinématique inverse à deux os) et pointe
+ * toujours vers le bas. Si la cible est hors de portée, c'est la main qui
+ * s'arrête sur le cercle de portée : les segments, eux, ne s'allongent
+ * jamais.
+ */
 function dessinerBras(ctx, sx, sy, mx, my) {
   sx = Math.round(sx); sy = Math.round(sy);
-  mx = Math.round(mx); my = Math.round(my);
-  const cx = Math.round(lerp(sx, mx, 0.55));
-  const cy = Math.round(lerp(sy, my, 0.55) + 1.5);
+  let dx = mx - sx, dy = my - sy;
+  let d = Math.hypot(dx, dy);
+  const max = BRAS_HAUT + BRAS_AVANT - 0.5;
+  if (d > max) { const k = max / d; dx *= k; dy *= k; d = max; }
+  d = Math.max(1.5, d);
+  const ux = dx / d, uy = dy / d;
+
+  // Distance épaule -> projection du coude, et hauteur du coude.
+  const a = (d * d + BRAS_HAUT * BRAS_HAUT - BRAS_AVANT * BRAS_AVANT) / (2 * d);
+  const h = Math.sqrt(Math.max(0, BRAS_HAUT * BRAS_HAUT - a * a));
+  const s = ux >= 0 ? 1 : -1;            // le coude tombe vers le bas
+  const cx = Math.round(sx + ux * a - s * uy * h);
+  const cy = Math.round(sy + uy * a + s * ux * h);
+  const hx = Math.round(sx + dx), hy = Math.round(sy + dy);
+
   epais(ctx, sx, sy, cx, cy, GRIS.fonce);
-  line(ctx, cx, cy, mx, my, GRIS.moyen);
-  line(ctx, cx, cy + 1, mx, my + 1, GRIS.moyen);
-  rect(ctx, mx - 1, my - 1, 2, 2, GRIS.clair);
+  line(ctx, cx, cy, hx, hy, GRIS.moyen);
+  line(ctx, cx, cy + 1, hx, hy + 1, GRIS.moyen);
+  rect(ctx, hx - 1, hy - 1, 2, 2, GRIS.clair);
 }
 
 function epais(ctx, x0, y0, x1, y1, c) {
