@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "_lisezmoi": "Squelette à remplir. Tout est facultatif : chaque entrée absente laisse le rendu dessiné en place. Voir ASSETS.md à la racine du dépôt pour la signification des champs.",
+  "scenes": {
+    "foret": { "layers": [] },
+    "ville": { "layers": [] }
+  },
+  "chat": null,
+  "audio": {},
+  "police": null
+}

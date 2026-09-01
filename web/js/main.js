@@ -13,6 +13,7 @@ import { ForestScene } from './scene-forest.js';
 import { CityScene } from './scene-city.js';
 import { Ambience } from './audio.js';
 import { UI } from './ui.js';
+import { Assets } from './assets.js';
 
 const CLE = 'calme.reglages.v1';
 
@@ -53,6 +54,7 @@ class App {
 
     this.bindGestes();
     this.bindCycleDeVie();
+    this.chargerAssets();
 
     this.last = performance.now();
     requestAnimationFrame((t) => this.frame(t));
@@ -85,6 +87,32 @@ class App {
         volume: this.volume, breath: this.ui.breathType,
       }));
     } catch { /* mode privé : on continue sans sauvegarder */ }
+  }
+
+  /** Les assets sont facultatifs et arrivent après le premier affichage :
+   *  on démarre sur le rendu dessiné, et on bascule si des fichiers existent.
+   */
+  async chargerAssets() {
+    const a = await new Assets().charger();
+    this.assets = a;
+
+    for (const [id, scene] of Object.entries(this.scenes)) {
+      const couches = a.couches(id);
+      if (couches) scene.couches = couches;
+    }
+    if (a.chat) this.cat.feuille = a.chat;
+    if (Object.keys(a.audio).length) this.ambience.setPistes(a.audio);
+
+    if (a.police) {
+      try {
+        const f = new FontFace(a.police.nom, `url(${a.police.url})`);
+        await f.load();
+        document.fonts.add(f);
+        document.documentElement.style.setProperty('--police-pixel', a.police.nom);
+      } catch {
+        console.warn('[assets] police illisible, on garde la police système');
+      }
+    }
   }
 
   /* ---------- Commandes ---------- */

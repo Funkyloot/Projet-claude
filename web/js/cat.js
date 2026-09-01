@@ -73,6 +73,7 @@ export class Cat {
     this.particles = [];         // cœurs, Zzz, notes
     this.onPurr = null;          // callback audio
     this.onPet = null;
+    this.feuille = null;         // planche de sprites, si des assets existent
   }
 
   get palette() { return PELAGES[this.pelage] || PELAGES.roux; }
@@ -253,6 +254,13 @@ export class Cat {
   /* ---------- Rendu ---------- */
 
   draw(ctx) {
+    // Une planche de sprites fournie prend le pas sur le squelette dessiné.
+    // Si elle ne couvre pas la posture courante, on retombe dessus sans bruit.
+    if (this.feuille && this.drawFeuille(ctx)) {
+      this.drawParticles(ctx);
+      return;
+    }
+
     const P = this.palette;
     const rig = this.buildRig();
 
@@ -424,6 +432,49 @@ export class Cat {
       ellipse(ctx, rig.head.x + this.lookOff.x * 0.6, rig.head.y + rig.head.r * 0.34,
         rig.head.r * 0.52, rig.head.r * 0.34, P.light);
     }
+  }
+
+  /** Dessine une image de la planche de sprites.
+   *
+   *  Chaque posture cherche son animation, puis se rabat sur une posture
+   *  voisine : une planche téléchargée n'aura presque jamais les cinq.
+   *  Renvoie false si rien ne convient, pour laisser la main au squelette.
+   */
+  drawFeuille(ctx) {
+    const REPLIS = {
+      assis: ['assis'],
+      pain: ['pain', 'assis'],
+      dort: ['dort', 'pain', 'assis'],
+      marche: ['marche', 'assis'],
+      etire: ['etire', 'assis'],
+    };
+    const f = this.feuille;
+    let anim = null;
+    for (const nom of REPLIS[this.state] || ['assis']) {
+      if (f.animations[nom]) { anim = f.animations[nom]; break; }
+    }
+    if (!anim) return false;
+
+    const cases = Math.max(1, anim.cases || 1);
+    const frame = Math.floor(this.t * (anim.ips || 6)) % cases;
+    const lc = f.largeurCase, hc = f.hauteurCase;
+    const sx = frame * lc, sy = (anim.ligne || 0) * hc;
+    const dx = Math.round(this.x - lc / 2), dy = Math.round(this.y - hc);
+
+    ctx.globalAlpha = 0.22;
+    ellipse(ctx, this.x, this.y + 0.5, lc * 0.34, 1.5, this.palette.outline);
+    ctx.globalAlpha = 1;
+
+    if (this.facing < 0) {
+      ctx.save();
+      ctx.translate(dx + lc, dy);
+      ctx.scale(-1, 1);
+      ctx.drawImage(f.img, sx, sy, lc, hc, 0, 0, lc, hc);
+      ctx.restore();
+    } else {
+      ctx.drawImage(f.img, sx, sy, lc, hc, dx, dy, lc, hc);
+    }
+    return true;
   }
 
   /** Queue fuselée, échantillonnée le long d'une Bézier cubique.

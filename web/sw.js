@@ -12,6 +12,7 @@ const FICHIERS = [
   './styles.css',
   './manifest.webmanifest',
   './js/main.js',
+  './js/assets.js',
   './js/pixel.js',
   './js/cat.js',
   './js/scene-forest.js',

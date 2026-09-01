@@ -35,6 +35,27 @@ export class Ambience {
     this.nodes = {};
     this.birdTimer = 0;
     this.chimeTimer = 0;
+    this.urls = {};        // boucles fournies par les assets, si elles existent
+    this.pistes = {};      // éléments <audio> créés à la demande
+  }
+
+  /** Déclare les boucles enregistrées disponibles (voir assets.js). */
+  setPistes(urls) {
+    this.urls = urls || {};
+    if (this.ready) this.setScene(this.scene);
+  }
+
+  /** Crée ou réutilise l'élément audio d'une boucle. */
+  piste(nom) {
+    if (!this.urls[nom]) return null;
+    if (!this.pistes[nom]) {
+      const a = new Audio(this.urls[nom]);
+      a.loop = true;
+      a.preload = 'auto';
+      a.volume = 0;
+      this.pistes[nom] = a;
+    }
+    return this.pistes[nom];
   }
 
   /** À appeler depuis un gestionnaire d'événement tactile. */
@@ -111,8 +132,24 @@ export class Ambience {
   setScene(id) {
     this.scene = id;
     if (!this.ready) return;
+
+    // Une vraie prise de son bat toujours le bruit synthétisé : si une
+    // boucle existe pour cette scène, on la joue et on coupe le lit de bruit.
+    for (const [nom, a] of Object.entries(this.pistes)) {
+      if (nom !== id) { a.pause(); a.volume = 0; }
+    }
+    const enregistree = this.piste(id);
+    if (enregistree) {
+      enregistree.volume = this.muted ? 0 : this.volume * 0.55;
+      enregistree.play().catch(() => { /* lecture refusée : le bruit prend le relais */ });
+    }
+
     const { bp, bedGain, lfo, lfoGain } = this.nodes;
     const now = this.ctx.currentTime;
+    if (enregistree && !enregistree.paused) {
+      bedGain.gain.setTargetAtTime(0, now, 1.2);
+      return;
+    }
     if (id === 'ville') {
       // Pluie : bande passante haute, souffle dense et régulier.
       bp.frequency.setTargetAtTime(1500, now, 1.5);
@@ -132,6 +169,13 @@ export class Ambience {
 
   setPurr(level) {
     if (!this.ready) return;
+    const ronron = this.piste('ronron');
+    if (ronron) {
+      ronron.volume = this.muted ? 0 : Math.min(0.5, level * 0.5) * this.volume;
+      if (level > 0.05 && ronron.paused) ronron.play().catch(() => {});
+      if (level <= 0.05 && !ronron.paused) ronron.pause();
+      return;
+    }
     const g = Math.min(0.10, level * 0.10);
     this.purrGain.gain.setTargetAtTime(g, this.ctx.currentTime, 0.12);
     this.purrDepth.gain.setTargetAtTime(0.4 + level * 0.3, this.ctx.currentTime, 0.2);
@@ -140,11 +184,18 @@ export class Ambience {
   setMuted(m) {
     this.muted = m;
     if (this.ready) this.master.gain.setTargetAtTime(m ? 0 : this.volume, this.ctx.currentTime, 0.15);
+    // Les boucles enregistrées ne passent pas par le master : elles ont leur
+    // propre volume, qu'il faut donc suivre à la main.
+    for (const a of Object.values(this.pistes)) if (m) a.volume = 0;
+    if (!m) this.setScene(this.scene);
   }
 
   setVolume(v) {
     this.volume = v;
     if (this.ready && !this.muted) this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.1);
+    for (const [nom, a] of Object.entries(this.pistes)) {
+      if (!a.paused && nom !== 'ronron') a.volume = this.muted ? 0 : v * 0.55;
+    }
   }
 
   /** Note douce, gamme pentatonique : n'importe quelle combinaison sonne juste. */

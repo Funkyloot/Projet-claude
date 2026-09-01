@@ -10,6 +10,7 @@
  */
 
 import { rect, px, ellipse, line, skyGradient, ditherRect, makeRng, clamp, lerp } from './pixel.js';
+import { dessinerCouches } from './assets.js';
 
 const C = {
   ciel: [
@@ -50,15 +51,19 @@ export class ForestScene {
     this.motes = [];
     this.built = false;
     this.worldW = 520;   // largeur du monde bouclé, en pixels virtuels
+    this.couches = null; // couches d'images, si des assets ont été fournis
   }
 
   build(W, H) {
     const rng = makeRng(20260814);
     this.W = W; this.H = H;
 
-    // Le sol est placé aux deux tiers bas de l'écran.
-    this.groundY = Math.round(H * 0.78);
+    this.groundY = Math.round(H * 0.80);
     this.bounds = { left: 10, right: W - 10 };
+    // Tout est dimensionné par rapport à la hauteur d'écran. Avec des
+    // tailles fixes en pixels, un écran de téléphone se retrouvait aux
+    // trois quarts vide, tout l'intérêt tassé dans la bande du bas.
+    const k = H / 420;
 
     // --- Montagnes : deux crêtes générées par marche aléatoire ---
     this.ridges = [];
@@ -76,20 +81,50 @@ export class ForestScene {
 
     // --- Arbres, répartis sur trois plans ---
     this.trees = [[], [], []];
-    const counts = [14, 9, 5];
+    // Assez d'arbres pour que les couronnes se touchent et forment une
+    // masse continue. Trop espacées, elles se lisent comme des sucettes.
+    const counts = [22, 15, 9];
+    // Troncs courts, couronnes larges : c'est le rapport qui fait « forêt »
+    // plutôt que « champignons ».
+    const hauteurs = [0.11, 0.19, 0.32];   // fraction de la hauteur d'écran
     for (let layer = 0; layer < 3; layer++) {
       for (let i = 0; i < counts[layer]; i++) {
-        const scale = lerp(0.55, 1.35, layer / 2) * lerp(0.85, 1.2, rng());
+        const scale = lerp(0.75, 1.75, layer / 2) * lerp(0.85, 1.2, rng()) * k;
         this.trees[layer].push({
           x: (i / counts[layer]) * this.worldW + rng() * 26,
           scale,
-          trunkH: Math.round(lerp(22, 52, layer / 2) * lerp(0.8, 1.15, rng())),
+          trunkH: Math.round(H * hauteurs[layer] * lerp(0.82, 1.18, rng())),
           lean: (rng() - 0.5) * 0.5,
           blobs: this.makeCanopy(rng, scale),
           seed: Math.floor(rng() * 1e6),
         });
       }
       this.trees[layer].sort((a, b) => a.x - b.x);
+    }
+
+    // --- Voûte de feuillage ---
+    // Des couronnes accrochées hors champ, au-dessus du bord haut, qui
+    // retombent dans l'image. C'est ce qui ferme le cadre et donne la
+    // sensation d'être *sous* les arbres plutôt que devant.
+    // Deux rangs : le premier couvre le bord haut sans laisser de trou, le
+    // second retombe plus bas et casse la ligne, sinon la voûte se lit
+    // comme une frise décorative collée en haut de l'écran.
+    this.voute = [];
+    for (let i = 0; i < 13; i++) {
+      this.voute.push({
+        x: (i / 13) * this.worldW + rng() * 26,
+        y: -6 + rng() * 10 * k,
+        blobs: this.makeCanopy(rng, (1.9 + rng() * 0.6) * k),
+        branche: false,
+      });
+    }
+    for (let i = 0; i < 6; i++) {
+      this.voute.push({
+        x: (i / 6) * this.worldW + rng() * 60,
+        y: (22 + rng() * 16) * k,
+        blobs: this.makeCanopy(rng, (2.2 + rng() * 0.8) * k),
+        branche: rng() < 0.7,
+      });
     }
 
     // --- Touffes d'herbe au sol ---
@@ -179,6 +214,14 @@ export class ForestScene {
   draw(ctx, W, H) {
     if (!this.built) this.build(W, H);
 
+    // Si des assets ont été fournis, ils remplacent tout le décor dessiné.
+    // Les feuilles et la vignette de drawForeground continuent d'être
+    // ajoutées par-dessus : c'est ce qui garde la scène vivante.
+    if (this.couches) {
+      dessinerCouches(ctx, this.couches, W, H, this.camX, this.groundY);
+      return;
+    }
+
     // 1. Ciel
     skyGradient(ctx, 0, 0, W, this.groundY + 4, C.ciel);
 
@@ -213,7 +256,10 @@ export class ForestScene {
     // 7. Arbres du premier plan (le chat marche entre eux)
     this.drawTreeLayer(ctx, W, 2, 0.85);
 
-    // 8. Poussières dans la lumière
+    // 8. Voûte de feuillage retombant du bord haut
+    this.drawVoute(ctx, W);
+
+    // 9. Poussières dans la lumière
     ctx.globalAlpha = 0.5;
     for (const m of this.motes) {
       if (Math.sin(m.ph) > 0.1) px(ctx, m.x, m.y, '#fff3cf');
@@ -245,6 +291,32 @@ export class ForestScene {
     ditherRect(ctx, 0, 0, W, 10, '#8a5a3c', '#8a5a3c', 0.5);
     ditherRect(ctx, 0, H - 8, W, 8, '#8a5a3c', '#8a5a3c', 0.5);
     ctx.globalAlpha = 1;
+  }
+
+  /** Feuillage en surplomb, accroché au bord supérieur de l'écran. */
+  drawVoute(ctx, W) {
+    const pal = { clair: '#d59450', moyen: '#b9702f', sombre: '#8f5124' };
+    const off = this.camX * 1.05;   // plus rapide que tout le reste : c'est le plan le plus proche
+    const wind = this.wind();
+
+    for (const c of this.voute) {
+      const x = ((c.x - off) % this.worldW + this.worldW) % this.worldW;
+      for (const wrap of [0, -this.worldW, this.worldW]) {
+        const cx = x + wrap + wind * 3;
+        if (cx < -46 || cx > W + 46) continue;
+        if (c.branche) {
+          // Une branche qui redescend depuis le hors-champ, pour rattacher
+          // la retombée au reste de la voûte.
+          line(ctx, cx - 3, -2, cx + 2, c.y + 4, pal.sombre);
+          line(ctx, cx - 2, -2, cx + 3, c.y + 4, pal.sombre);
+        }
+        for (const b of c.blobs) ellipse(ctx, cx + b.dx, c.y + b.dy + 8, b.rx, b.ry, pal.sombre);
+        for (const b of c.blobs) ellipse(ctx, cx + b.dx, c.y + b.dy + 7, b.rx * 0.9, b.ry * 0.82, pal.moyen);
+        for (const b of c.blobs) {
+          ellipse(ctx, cx + b.dx + b.rx * 0.2, c.y + b.dy + 5, b.rx * 0.45, b.ry * 0.38, pal.clair);
+        }
+      }
+    }
   }
 
   drawRidge(ctx, W, H, pts, par, col, shade) {
@@ -294,8 +366,9 @@ export class ForestScene {
     const topY = baseY - tree.trunkH;
     const swayAmt = wind * (2 + layer * 1.6);
 
-    // Tronc : légèrement penché, il s'affine vers le haut.
-    const wTrunk = Math.max(2, Math.round(2 + layer * 1.6));
+    // Tronc : légèrement penché, il s'affine vers le haut. Un tronc d'un
+    // ou deux pixels sous une grande couronne donne un cure-dent.
+    const wTrunk = Math.max(2, Math.round((2 + layer * 3) * (this.H / 420)));
     for (let i = 0; i < tree.trunkH; i++) {
       const t = i / tree.trunkH;
       const y = baseY - i;

@@ -11,6 +11,7 @@
 
 import { rect, px, ellipse, line, circle, skyGradient, ditherRect, makeRng, clamp, lerp } from './pixel.js';
 import { drawText, textWidth } from './microfont.js';
+import { dessinerCouches } from './assets.js';
 
 const C = {
   ciel: [
@@ -62,15 +63,19 @@ export class CityScene {
     this.built = false;
     this.worldW = 620;
     this.bus = { x: -80, active: false, wait: 4 };
+    this.couches = null; // couches d'images, si des assets ont été fournis
   }
 
   build(W, H) {
     const rng = makeRng(4926);
     this.W = W; this.H = H;
 
-    this.streetY = Math.round(H * 0.88);      // niveau de la chaussée
-    this.groundY = Math.round(H * 0.80);      // le trottoir, où marche le chat
-    this.facadeTop = Math.round(H * 0.40);
+    this.streetY = Math.round(H * 0.87);      // niveau de la chaussée
+    this.groundY = Math.round(H * 0.82);      // le trottoir, où marche le chat
+    // Les façades ne démarrent qu'à mi-hauteur : au-dessus, on laisse le
+    // ciel, la lune et la skyline respirer. Plus haut, les immeubles
+    // devenaient des tours de vingt étages sur un écran de téléphone.
+    this.facadeTop = Math.round(H * 0.52);
     this.bounds = { left: 8, right: W - 8 };
 
     // --- Skyline lointaine : immeubles simples avec fenêtres allumées ---
@@ -159,6 +164,13 @@ export class CityScene {
   draw(ctx, W, H) {
     if (!this.built) this.build(W, H);
 
+    // Décor fourni en images : il remplace tout le dessin ci-dessous. La
+    // pluie de drawForeground reste, elle, toujours dessinée.
+    if (this.couches) {
+      dessinerCouches(ctx, this.couches, W, H, this.camX, this.groundY);
+      return;
+    }
+
     // 1. Ciel + étoiles + lune
     skyGradient(ctx, 0, 0, W, this.facadeTop + 20, C.ciel);
     for (const s of this.stars) {
@@ -193,9 +205,16 @@ export class CityScene {
     for (let x = -((this.camX * 0.9) % 12); x < W; x += 12) {
       rect(ctx, x, this.streetY + 5, 5, 1, C.bande);
     }
-    // Dalles du trottoir
-    for (let x = -((this.camX * 0.9) % 11); x < W; x += 11) {
-      rect(ctx, x, this.groundY + 2, 1, this.streetY - this.groundY - 2, C.trottoirClair);
+    // Bordure du trottoir : une simple arête éclairée au-dessus d'une face
+    // dans l'ombre. Les joints verticaux réguliers qu'il y avait ici se
+    // lisaient comme les barreaux d'une palissade, quelle que soit leur
+    // couleur — c'est la répétition sur toute la hauteur qui trompe l'œil.
+    ditherRect(ctx, 0, this.groundY + 3, W, this.streetY - this.groundY - 3,
+      C.trottoir, C.rue, 0.55);
+    // Quelques bouches d'égout pour rompre la ligne.
+    for (let i = 0; i < 3; i++) {
+      const gx = ((i * 131 - this.camX * 0.9) % W + W) % W;
+      for (let j = 0; j < 4; j++) rect(ctx, gx, this.groundY + 5 + j * 2, 7, 1, C.rue);
     }
 
     // 6. Réverbères
@@ -285,17 +304,17 @@ export class CityScene {
     const par = 0.9;
     const off = (this.camX * par) % this.worldW;
 
-    // Bloc de fond continu : la ville ne doit jamais laisser voir le ciel
-    // entre deux bâtiments au niveau de la rue.
-    rect(ctx, 0, top + 6, W, this.groundY - top - 6, C.facadeOmbre);
+    // Bloc de fond, calé sur le plus bas des trois toits : au-dessus, les
+    // silhouettes se découpent sur le ciel au lieu de former un mur plat.
+    rect(ctx, 0, top + 42, W, this.groundY - top - 42, C.facadeOmbre);
 
     // On répète un motif de 3 bâtiments sur toute la largeur.
     const motif = 210;
     const start = -((off % motif) + motif) % motif;
     for (let bx = start - motif; bx < W + motif; bx += motif) {
       this.drawGare(ctx, bx, top, 96);
-      this.drawImmeubleCafe(ctx, bx + 100, top - 6, 62);
-      this.drawImmeublePub(ctx, bx + 164, top + 8, 44);
+      this.drawImmeubleCafe(ctx, bx + 100, top + 16, 62);
+      this.drawImmeublePub(ctx, bx + 164, top + 40, 44);
     }
   }
 
@@ -305,9 +324,11 @@ export class CityScene {
     rect(ctx, x, top + 10, w, bottom - top - 10, C.facade);
     rect(ctx, x, top + 10, 1, bottom - top - 10, C.facadeClair);
 
-    // Toit
+    // Toit à deux pentes : large à la base, effilé vers le faîte. En
+    // inversant le rapport, on obtenait un V qui se lisait comme deux ailes
+    // noires de part et d'autre de l'horloge.
     for (let i = 0; i < 12; i++) {
-      const iw = Math.round(w * (i / 12));
+      const iw = Math.round(w * (1 - i / 12));
       rect(ctx, x + (w - iw) / 2, top + 10 - i, iw, 1, C.toit);
     }
     rect(ctx, x, top + 10, w, 2, C.pierre);
@@ -339,22 +360,29 @@ export class CityScene {
       rect(ctx, ax + aw, ay, 1, ah, C.pierre);
     }
 
-    // Horloge de gare — à la vraie heure.
-    const cx = x + w / 2, cy = top + 6;
-    circle(ctx, cx, cy, 5, C.pierre);
-    circle(ctx, cx, cy, 4, '#f4ecd8');
+    // Horloge de gare — à la vraie heure. En dessous de 6 px de rayon, les
+    // deux aiguilles fusionnent en un coin sombre et le cadran se lit comme
+    // un Pac-Man ; d'où la taille et les repères des heures.
+    const cx = x + w / 2, cy = top + 4;
+    circle(ctx, cx, cy, 7, C.pierre);
+    circle(ctx, cx, cy, 5.5, '#f4ecd8');
+    for (const a of [0, 1, 2, 3]) {
+      const ang = (a / 4) * Math.PI * 2;
+      px(ctx, cx + Math.cos(ang) * 4, cy + Math.sin(ang) * 4, '#8d7f9e');
+    }
     const now = new Date();
     const hA = ((now.getHours() % 12) + now.getMinutes() / 60) / 12 * Math.PI * 2 - Math.PI / 2;
     const mA = (now.getMinutes() / 60) * Math.PI * 2 - Math.PI / 2;
-    line(ctx, cx, cy, cx + Math.cos(hA) * 2, cy + Math.sin(hA) * 2, '#2b2248');
-    line(ctx, cx, cy, cx + Math.cos(mA) * 3.2, cy + Math.sin(mA) * 3.2, '#2b2248');
+    line(ctx, cx, cy, cx + Math.cos(hA) * 2.6, cy + Math.sin(hA) * 2.6, '#2b2248');
+    line(ctx, cx, cy, cx + Math.cos(mA) * 4.2, cy + Math.sin(mA) * 4.2, '#2b2248');
+    px(ctx, cx, cy, '#2b2248');
 
     // Marquise et bandeau lumineux au-dessus de l'entrée.
     rect(ctx, x + 4, this.groundY - 20, w - 8, 2, C.pierre);
     ctx.globalAlpha = 0.35;
     rect(ctx, x + 4, this.groundY - 18, w - 8, 3, C.halo);
     ctx.globalAlpha = 1;
-    drawText(ctx, 'GARE DU NORD', x + w / 2 - textWidth('GARE DU NORD') / 2, this.groundY - 28, C.neonJaune);
+    drawText(ctx, 'GARE', x + w / 2 - textWidth('GARE') / 2, this.groundY - 28, C.neonJaune);
   }
 
   /** Immeuble voisin : un café éclairé, avec une silhouette et la météo. */
@@ -401,11 +429,20 @@ export class CityScene {
     this.drawNuage(ctx, x + w - 21, vy + 12);
 
     // Enseigne néon verticale.
+    // Enseigne néon. Elle tient entièrement dans la façade : quand elle
+    // débordait, le bâtiment voisin — dessiné après — en mangeait la moitié.
+    // Le halo se pose autour de la plaque, jamais par-dessus les lettres.
     const flick = Math.sin(this.t * 9) > -0.9 ? 1 : 0.4;
+    const lw = textWidth('CAFE');
+    const sx = x + w - lw - 7, sy = top + 5;
+    ctx.globalAlpha = 0.18 * flick;
+    rect(ctx, sx - 2, sy - 2, lw + 8, 13, C.neonRose);
+    ctx.globalAlpha = 1;
+    rect(ctx, sx, sy, lw + 4, 9, '#241b3a');          // plaque de fond
+    rect(ctx, sx, sy, lw + 4, 1, C.neonRose);
+    rect(ctx, sx, sy + 8, lw + 4, 1, C.neonRose);
     ctx.globalAlpha = flick;
-    drawText(ctx, 'CAFE', x + w - 6, top + 8, C.neonRose);
-    ctx.globalAlpha = 0.2 * flick;
-    rect(ctx, x + w - 8, top + 6, 7, 20, C.neonRose);
+    drawText(ctx, 'CAFE', sx + 2, sy + 2, C.neonRose);
     ctx.globalAlpha = 1;
   }
 

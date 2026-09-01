@@ -94,19 +94,45 @@ Régénérer les icônes :
 node tools/gen-icons.mjs
 ```
 
+## Assets : deux Claude, un dépôt
+
+Le rendu procédural n'était pas un choix esthétique au départ mais une
+contrainte : l'environnement de développement est derrière un proxy à liste
+blanche qui bloque `opengameart.org`, `itch.io`, `kenney.nl`, `craftpix.net`
+et `pixabay.com`.
+
+Le travail est donc partagé. Un Claude tourne sur le serveur personnel, qui
+a Internet en grand : il télécharge les assets libres et les dépose dans
+`web/assets/`. L'autre code. GitHub sert de pont. Le brief complet est dans
+[`ASSETS.md`](ASSETS.md).
+
+`web/js/assets.js` lit `web/assets/manifest.json` au démarrage et bascule sur
+les images trouvées. Tout y est facultatif :
+
+- une entrée absente ou un fichier illisible → le rendu dessiné reste ;
+- une scène dont une seule couche manque est rejetée **en entier**, pour ne
+  jamais afficher un décor moitié image moitié dessin ;
+- une planche de sprites qui ne couvre pas une posture du chat laisse le
+  squelette reprendre la main pour celle-là ;
+- une boucle sonore enregistrée remplace le bruit synthétisé de sa scène.
+
+On peut donc remplir le manifeste morceau par morceau sans jamais casser
+l'écran.
+
 ## État
 
-Fonctionnel de bout en bout, testé dans Chromium au format iPhone 15 sans
-erreur console.
+Fonctionnel de bout en bout. Testé dans Chromium au format iPhone 15,
+console sans erreur, les deux scènes et la respiration vérifiées à l'image.
 
 Reste à faire :
 
-- La queue du chat est trop fine (1 px) et trop raide — la retravailler en
-  courbe épaisse et fuselée.
-- La pose de sommeil est illisible : la tête se noie dans le corps.
-- Les pattes de marche se lisent comme un peigne, il faut les écarter.
-- La composition des deux scènes laisse trop de ciel vide sur un écran de
-  téléphone : il faut monter les canopées et plafonner la hauteur des
-  immeubles.
-- L'horloge de la gare se lit comme un Pac-Man.
-- Coque SwiftUI/WKWebView pour un build natif via Xcode.
+- **Coque SwiftUI/WKWebView** pour produire un vrai binaire via Xcode. La
+  PWA couvre l'usage quotidien ; ceci ne sert qu'à une éventuelle
+  distribution sur l'App Store.
+- **Les assets**, en attente du serveur.
+- La forêt garde une bande de ciel entre la voûte et les couronnes. C'est
+  discutable — ça aère et met le soleil en valeur — mais si on veut la
+  fermer, il faut allonger les troncs et descendre le second rang de la
+  voûte.
+- La grille de fenêtres de l'immeuble au café est très régulière ; elle
+  gagnerait à être irrégulière en largeur d'étage.
