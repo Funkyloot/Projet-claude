@@ -1,0 +1,15 @@
+{
+  "name": "calme",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Un compagnon pixel pour souffler — PWA installable sur iOS",
+  "scripts": {
+    "icones": "node tools/gen-icons.mjs",
+    "monofichier": "node tools/build-monofichier.mjs",
+    "servir": "cd web && python3 -m http.server 8777"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

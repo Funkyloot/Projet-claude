@@ -51,6 +51,18 @@ L'app est une PWA : pas besoin de Mac, ni de Xcode, ni de compte développeur.
 3. Elle apparaît avec son icône et s'ouvre en plein écran, sans barre de
    navigateur. Le service worker la rend utilisable sans réseau.
 
+### Version en un seul fichier
+
+`dist/calme.html` contient toute l'app — code, styles, icône — dans un seul
+fichier de 96 ko. On peut l'ouvrir directement depuis le disque, l'envoyer
+par message, ou la déposer sur n'importe quel hébergement. La version de
+`web/` reste la référence ; celle-ci en est un tirage :
+
+```bash
+npm install
+npm run monofichier
+```
+
 ### Servir l'app
 
 N'importe quel serveur de fichiers statiques suffit. En local :

@@ -93,6 +93,10 @@ class App {
    *  on démarre sur le rendu dessiné, et on bascule si des fichiers existent.
    */
   async chargerAssets() {
+    // La version en un seul fichier n'a aucun dossier assets/ à côté d'elle,
+    // et sous file:// la requête serait de toute façon refusée par CORS.
+    if (window.__CALME_MONOFICHIER || location.protocol === 'file:') return;
+
     const a = await new Assets().charger();
     this.assets = a;
 
@@ -300,7 +304,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // Service worker : c'est lui qui rend l'app utilisable sans réseau une
   // fois posée sur l'écran d'accueil.
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  // La version en un seul fichier n'a pas de sw.js à côté d'elle.
+  if (!window.__CALME_MONOFICHIER && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./sw.js').catch(() => { /* hors ligne, tant pis */ });
   }
 });
