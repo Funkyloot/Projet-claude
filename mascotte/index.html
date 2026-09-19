@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15171b">
+<title>La mascotte grise</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 18 16%27 shape-rendering=%27crispEdges%27%3E%3Crect width=%2718%27 height=%2716%27 fill=%27%2315171b%27/%3E%3Crect x=%271%27 y=%272%27 width=%2716%27 height=%2710%27 fill=%27%23a7abb2%27/%3E%3Crect x=%271%27 y=%272%27 width=%2716%27 height=%273%27 fill=%27%23c9ccd2%27/%3E%3Crect x=%275%27 y=%275%27 width=%273%27 height=%272%27 fill=%27%2323262b%27/%3E%3Crect x=%2712%27 y=%275%27 width=%273%27 height=%272%27 fill=%27%2323262b%27/%3E%3Crect x=%272%27 y=%2712%27 width=%272%27 height=%273%27 fill=%27%238a8f97%27/%3E%3Crect x=%2713%27 y=%2712%27 width=%272%27 height=%273%27 fill=%27%238a8f97%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="entete">
+    <h1>La mascotte grise</h1>
+    <p class="sous-titre">Même silhouette, même grille de pixels — en gris.</p>
+  </header>
+
+  <main class="scene-cadre">
+    <canvas id="scene" aria-label="Scène animée en pixel art"></canvas>
+  </main>
+
+  <p id="indice" class="indice"></p>
+
+  <nav id="activites" class="puces" aria-label="Activités"></nav>
+
+  <footer class="pied">
+    <button id="auto" class="bouton" type="button" aria-pressed="false">Enchaînement : non</button>
+    <span class="raccourcis">← → pour changer · espace pour enchaîner · un clic sur la scène passe à la suite</span>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

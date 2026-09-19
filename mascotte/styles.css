@@ -1,0 +1,128 @@
+/* Interface volontairement discrète : tout le regard doit aller à la scène. */
+
+:root {
+  --fond: #15171b;
+  --fond-2: #1e2127;
+  --trait: #2f333a;
+  --texte: #d4d7dc;
+  --texte-doux: #8d939b;
+  --accent: #c9ccd2;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+}
+
+.entete { text-align: center; }
+
+h1 {
+  margin: 0;
+  font-size: clamp(18px, 3.4vw, 26px);
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.sous-titre {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--texte-doux);
+}
+
+.scene-cadre {
+  width: min(100%, 960px);
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--trait);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #101216;
+  box-shadow: 0 18px 40px -24px #000;
+}
+
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.indice {
+  margin: 0;
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--texte-doux);
+  text-align: center;
+}
+
+.puces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  max-width: 960px;
+}
+
+.puce, .bouton {
+  appearance: none;
+  border: 1px solid var(--trait);
+  background: var(--fond-2);
+  color: var(--texte-doux);
+  border-radius: 999px;
+  padding: 7px 13px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+}
+
+.puce:hover, .bouton:hover { border-color: #4a4f57; color: var(--texte); }
+
+.puce[aria-current="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #14161a;
+}
+
+.bouton[aria-pressed="true"] {
+  background: #3a3f47;
+  color: var(--texte);
+  border-color: #4a4f57;
+}
+
+.pied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 14px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.raccourcis { font-size: 12px; color: #6c727a; }
+
+@media (max-width: 520px) {
+  .raccourcis { display: none; }
+  .scene-cadre { aspect-ratio: 4 / 3; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puce, .bouton { transition: none; }
+}

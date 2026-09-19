@@ -1,5 +1,8 @@
 # Calme — un compagnon pixel pour souffler
 
+> Le dépôt contient aussi **[`mascotte/`](mascotte/README.md)** — la mascotte
+> grise en pixel art, une app web où elle enchaîne dix activités.
+
 Une petite app iOS pour faire redescendre la pression : un chat en pixel art
 qu'on caresse, deux décors qui vivent tout seuls, et un guide de respiration.
 
