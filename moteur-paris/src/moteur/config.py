@@ -19,6 +19,8 @@ class Reglages(BaseSettings):
     mise_max_pct: float = Field(0.03, gt=0, le=0.05)
     valeur_min: float = Field(0.03, ge=0)
     age_max_cote_s: int = Field(60, gt=0)
+    # Au-delà, une value ou un surebet est marqué « risque d'annulation » (section 8)
+    seuil_suspect: float = Field(0.10, gt=0)
 
     database_url: str = "sqlite:///data/moteur.db"
 

@@ -3,9 +3,13 @@
 Programme d'analyse de paris sportifs qui tourne en continu sur un serveur local.
 La conception complète est dans [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 
-**État : étape 0 terminée.** Socle en place : configuration, base de données (matchs, cotes,
-journal des paris, capital), suivi du capital avec arrêt automatique, service qui tourne en continu,
-Docker. Aucun module d'analyse n'est encore branché.
+**État : étapes 0 et 1 terminées** (feuille de route, section 15 du cahier des charges).
+
+- Étape 0 : configuration, base de données (matchs, cotes, journal des paris, capital), suivi du
+  capital avec arrêt automatique, service qui tourne en continu, Docker.
+- Étape 1 : calculateur de la section 4 (probabilité implicite, marge, probabilités sans marge,
+  espérance, Kelly fractionné plafonné et arrondi, surebet), avec signalement des erreurs
+  « trop belles » de la section 8.
 
 ## Installation sur le serveur (Linux)
 
@@ -60,6 +64,8 @@ pytest
 |---|---|
 | `moteur init` | Crée la base et le dépôt initial (100 $ par défaut) |
 | `moteur etat` | Affiche mode, capital, seuil d'arrêt, clés configurées |
+| `moteur value --proba 0.52 --cote 2.05` | Espérance et mise conseillée pour un pari |
+| `moteur surebet 5.00 1.30 --total 50` | Vérifie une combinaison et répartit les mises |
 | `moteur veille` | Service en continu (lancé automatiquement par Docker) |
 
 ## Structure
@@ -70,6 +76,7 @@ moteur-paris/
 ├── src/moteur/
 │   ├── config.py           réglages (.env), règles de mise vérifiées au démarrage
 │   ├── db.py               schéma : matchs, cotes, paris, capital
+│   ├── calcul.py           formules de la section 4, règles de mise de la section 9
 │   ├── capital.py          solde, dépôt initial, arrêt automatique
 │   └── cli.py              commandes init / etat / veille
 ├── tests/                  tests automatiques
@@ -79,6 +86,6 @@ moteur-paris/
 
 ## Prochaines étapes
 
-1. Calculateur : probabilités implicites, marge, value, Kelly, surebet.
 2. Téléchargement de l'historique football (20 ans).
-3. Premier modèle Poisson / Dixon-Coles + backtest chronologique.
+3. Premier modèle Poisson / Dixon-Coles + grille de scores + backtest chronologique.
+4. Journal des paris et mode simulation.

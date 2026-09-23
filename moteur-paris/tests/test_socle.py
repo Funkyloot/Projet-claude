@@ -67,3 +67,13 @@ def test_cli_init_et_etat(tmp_path, monkeypatch, capsys):
     assert main(["etat"]) == 0
     assert "100.00 $" in capsys.readouterr().out
     reglages.cache_clear()
+
+
+def test_cli_calculateur(capsys):
+    assert main(["surebet", "5.00", "1.30", "--total", "50"]) == 0
+    sortie = capsys.readouterr().out
+    assert "10.32 $" in sortie and "39.68 $" in sortie and "51.59 $" in sortie
+    assert main(["value", "--proba", "0.52", "--cote", "2.05", "--capital", "100"]) == 0
+    assert "1.50 $" in capsys.readouterr().out
+    assert main(["value", "--proba", "0.45", "--cote", "2.0"]) == 0
+    assert "Ne pas jouer" in capsys.readouterr().out
