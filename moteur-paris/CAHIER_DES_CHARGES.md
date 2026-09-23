@@ -255,7 +255,10 @@ cote finale, le modèle a un avantage réel, avant même que les résultats le m
 | Élément | Choix |
 |---|---|
 | Système | Linux |
-| Ressources | 16 Go RAM entièrement dédiés, 256 Go disque |
+| Machine | Dell OptiPlex, Intel Core i5 8ᵉ génération (probablement 6 cœurs avec UHD 630, ou 4 cœurs / 8 threads avec UHD 620) |
+| Ressources | 16 Go RAM (passés de 8 à 16 Go) entièrement dédiés, 256 Go disque |
+| Calcul | **Processeur uniquement** : la puce Intel UHD n'est pas utilisée. Modèles adaptés : Poisson, Elo, LightGBM, bayésien, Monte-Carlo vectorisé (numpy/numba), parallélisés sur tous les cœurs. Pas de gros apprentissage profond. |
+| Durées estimées | Entraînement 20 ans de football : quelques minutes à 1 h selon le modèle · tournoi de modèles + backtests : 2 à 6 h la nuit · recalcul en direct : quelques secondes |
 | Déploiement | Docker Compose, redémarrage automatique (`restart: always`) |
 | Coupures courant / internet | Reprise automatique + signalement dans le rapport ; onduleur (UPS) conseillé |
 | Accès distant | Tailscale |
@@ -314,4 +317,4 @@ Bilan final : profit réel, CLV, performance par chasseur, décision de continue
 - Choix du fournisseur d'API de cotes (couverture de 22bet, prix).
 - Clé API Anthropic et budget mensuel.
 - Stabilité du courant et d'internet sur le lieu du serveur.
-- Processeur du serveur (impact sur la durée des entraînements nocturnes).
+- Modèle exact du Core i5 (`lscpu`) pour affiner les durées de calcul.
