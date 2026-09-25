@@ -4,7 +4,7 @@ Fonctions pures, sans base ni réseau : tous les modules s'appuient dessus.
 """
 
 from dataclasses import dataclass
-from math import floor
+from math import floor, log1p, sqrt
 
 # Paires (ou triplets) d'issues qui couvrent 100 % des résultats d'un match (section 4).
 COMPLEMENTAIRES: list[tuple[str, ...]] = [
@@ -75,6 +75,34 @@ def esperance(proba: float, cote: float) -> float:
 def kelly(proba: float, cote: float) -> float:
     """Fraction de Kelly complète f* = (p × cote − 1) / (cote − 1), jamais négative."""
     return max(0.0, esperance(proba, cote) / (cote - 1))
+
+
+def kelly_general(issues: list[tuple[float, float]], plafond: float = 0.99) -> float:
+    """Fraction de Kelly pour un pari à plusieurs issues (handicaps asiatiques, remboursements).
+
+    `issues` : couples (probabilité, gain net par dollar misé), ex. [(0.5, 1.05), (0.1, 0), (0.4, -1)].
+    Maximise E[log(1 + f × gain)] par section dorée (la fonction est concave).
+    """
+    issues = [(p, g) for p, g in issues if p > 0]
+    if not issues or sum(p * g for p, g in issues) <= 0:
+        return 0.0
+    pire = min(g for _, g in issues)
+    haut = plafond if pire >= 0 else min(plafond, 0.999 / -pire)
+
+    def croissance(f: float) -> float:
+        return sum(p * log1p(f * g) for p, g in issues)
+
+    nombre_or = (sqrt(5) - 1) / 2
+    a, b = 0.0, haut
+    c, d = b - nombre_or * (b - a), a + nombre_or * (b - a)
+    for _ in range(80):
+        if croissance(c) > croissance(d):
+            b, d = d, c
+            c = b - nombre_or * (b - a)
+        else:
+            a, c = c, d
+            d = a + nombre_or * (b - a)
+    return max(0.0, (a + b) / 2)
 
 
 def arrondi_naturel(montant: float) -> float:

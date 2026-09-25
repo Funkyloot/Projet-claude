@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titre %}Moteur de paris{% endblock %}</title>
+<style>
+:root{--fond:#F4F6F3;--surface:#fff;--encre:#17211C;--doux:#5A665F;--trait:#DCE2DD;--accent:#1E6B47;--accent-doux:#E2EFE7;
+--alerte:#9A5B12;--alerte-doux:#FBF0E0;--erreur:#A33A2B;--erreur-doux:#F9E6E2;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--fond:#0F1512;--surface:#18201C;--encre:#E6ECE8;--doux:#9AA8A0;--trait:#2B3530;
+--accent:#5CC08E;--accent-doux:#1B3127;--alerte:#E0A95A;--alerte-doux:#33281A;--erreur:#EE8573;--erreur-doux:#3A221E;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+header{background:var(--surface);border-bottom:1px solid var(--trait);position:sticky;top:0;z-index:5}
+.barre{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.marque{font-weight:700;letter-spacing:-.01em;margin-right:8px}
+nav{display:flex;flex-wrap:wrap;gap:2px}
+nav a{padding:6px 10px;border-radius:6px;text-decoration:none;color:var(--doux)}
+nav a.actif{background:var(--accent-doux);color:var(--accent);font-weight:600}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 60px;display:grid;gap:18px}
+h1{font-size:24px;margin:0;letter-spacing:-.01em}
+h2{font-size:17px;margin:0 0 10px}
+.carte{background:var(--surface);border:1px solid var(--trait);border-radius:10px;padding:16px}
+.grille{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.chiffre{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.doux{color:var(--doux)} .petit{font-size:13px}
+.message{padding:12px 14px;border-radius:8px;background:var(--accent-doux);white-space:pre-line}
+.message.erreur{background:var(--erreur-doux);color:var(--erreur)}
+.pastille{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--accent-doux);color:var(--accent)}
+.pastille.alerte{background:var(--alerte-doux);color:var(--alerte)} .pastille.erreur{background:var(--erreur-doux);color:var(--erreur)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--trait);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--doux);font-weight:600}
+.defile{overflow-x:auto}
+form.ligne{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+label{display:grid;gap:4px;font-size:13px;color:var(--doux)}
+input,select,textarea{font:inherit;color:var(--encre);background:var(--fond);border:1px solid var(--trait);border-radius:6px;padding:8px 10px;min-width:0}
+input:focus,select:focus,textarea:focus,button:focus{outline:2px solid var(--accent);outline-offset:1px}
+textarea{width:100%;min-height:140px;font-family:ui-monospace,Menlo,monospace;font-size:13px}
+button{font:inherit;font-weight:600;border:0;border-radius:6px;padding:8px 14px;background:var(--accent);color:#fff;cursor:pointer}
+@media (prefers-color-scheme:dark){button{color:#0F1512}}
+button.secondaire{background:var(--accent-doux);color:var(--accent)}
+button[disabled]{opacity:.45;cursor:not-allowed}
+button.danger{background:var(--erreur-doux);color:var(--erreur)}
+.champs{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.aide{font-size:12px;color:var(--doux)}
+.signal{border-top:1px solid var(--trait);padding:12px 0;display:grid;gap:6px}
+.signal:first-of-type{border-top:0}
+.progression{height:8px;background:var(--trait);border-radius:99px;overflow:hidden}
+.progression span{display:block;height:100%;background:var(--accent)}
+pre{white-space:pre-wrap;font-size:13px;background:var(--fond);padding:12px;border-radius:8px;border:1px solid var(--trait)}
+</style>
+</head>
+<body>
+{% if page != "connexion" %}
+<header><div class="barre">
+<span class="marque">Moteur de paris</span>
+<nav>
+{% for cle, nom in [("tableau","Tableau de bord"),("journal","Journal"),("fiche","Fiche de match"),("outils","Outils"),("donnees","Données"),("reglages","Réglages"),("bilan","Bilan")] %}
+<a href="{{ '/' if cle == 'tableau' else '/' ~ cle }}" class="{{ 'actif' if page == cle }}">{{ nom }}</a>
+{% endfor %}
+</nav>
+<form method="post" action="/deconnexion" style="margin-left:auto"><button class="secondaire" type="submit">Déconnexion</button></form>
+</div></header>
+{% endif %}
+<main>
+{% if msg %}<div class="message">{{ msg }}</div>{% endif %}
+{% if erreur %}<div class="message erreur">{{ erreur }}</div>{% endif %}
+{% block contenu %}{% endblock %}
+</main>
+</body>
+</html>

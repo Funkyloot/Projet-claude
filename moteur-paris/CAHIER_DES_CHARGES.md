@@ -1,7 +1,17 @@
 # Cahier des charges — Moteur d'analyse de paris sportifs
 
 > Document de conception. Il reprend toutes les décisions prises pendant la phase de discussion.
-> Rien n'est codé à ce stade : chaque module sera développé et testé l'un après l'autre.
+> État : étapes 0 à 8 et 11 codées et testées (voir section 15), plus l'interface web de réglage.
+
+## 0. Décisions ajoutées après la première version
+
+| Décision | Conséquence |
+|---|---|
+| **Football en priorité** | 2es divisions et championnats moyens (Championship, League One/Two, écossais, 2. Bundesliga, Serie B, Segunda, Ligue 2, Eredivisie, Belgique, Portugal, Turquie, Grèce). Les grands championnats servent à régler le modèle, pas à parier. Tennis ensuite si la simulation est positive. |
+| **Sans API Claude** | L'abonnement Claude ne donne pas de crédits API. Le programme fonctionne entièrement sans : rapport par modèle de texte, vérifications par règles. Claude sert à construire le programme et au bilan hebdomadaire, collé à la main dans une conversation. |
+| **Tout se règle dans l'interface web** | Token Telegram, clé d'API de cotes, championnats, capital, seuils, fuseau, historique, backtest, alias d'équipes : rien à modifier dans le code ni dans `.env`. |
+| **Cote minimale** | Chaque signal donne la cote au-dessus de laquelle le pari a au moins 3 % de value. Suffit quand la cote exacte de 22bet n'est pas disponible dans une source autorisée. |
+| **Machine** | Dell OptiPlex, Core i5 8ᵉ génération (≈ 3 GHz, 6 cœurs, UHD 630), 16 Go, 256 Go, Linux. |
 
 ---
 
@@ -38,7 +48,7 @@ avec un rapport quotidien obligatoire.
 
 ### Inclus
 - Sport réel, **pré-match** en priorité (live plus tard, avec prudence).
-- Football en premier, puis tennis, basket, hockey.
+- **Football d'abord**, 2es divisions et championnats moyens (section 0). Tennis ensuite, basket peut-être.
 - Tous les types de marchés : 1X2, double chance, plus/moins, les deux équipes marquent, score exact,
   mi-temps/fin, handicaps, cartons, corners, combinés sur un même match.
 
@@ -199,7 +209,19 @@ Un signal devient une recommandation seulement si :
 
 ---
 
-## 10. Module 5 — Rôle de Claude (API Anthropic)
+## 10. Module 5 — Rôle de Claude
+
+**Décision : pas d'API par défaut** (section 0). Remplacements retenus :
+
+| Tâche prévue | Remplacement gratuit |
+|---|---|
+| Rapport quotidien | Modèle de texte rempli par le programme |
+| Vérifier chaque pari | Filtres automatiques : référence Pinnacle, désaccord maximal, cote « trop belle » |
+| Bilan hebdomadaire | Page « Bilan » : texte compact à coller dans une conversation Claude |
+| Construire et améliorer le programme | Claude Code avec l'abonnement |
+| Blessures, compositions, presse locale | Plus tard : API football gratuite ou petit modèle local (Ollama) |
+
+L'API reste possible plus tard, payée par les gains, avec un plafond de dépenses. Tableau d'origine :
 
 | Tâche | Fréquence |
 |---|---|
@@ -222,9 +244,17 @@ Toute proposition de Claude est testée en backtest avant activation.
 - Rapport quotidien (même si aucun pari).
 - Commandes : `/capital`, `/journal`, `/stop`, `/simulation`, `/reel`.
 
-### Tableau de bord web
-- Paris du jour, calculateur, historique, courbe du capital, performance par chasseur.
-- Accessible à distance via **Tailscale** uniquement (aucun port ouvert sur internet).
+### Interface web (port 8080, protégée par mot de passe)
+- **Tableau de bord** : capital, statistiques, paris recommandés avec « Je joue ? » (cote vue sur 22bet)
+  et enregistrement du pari réel, bascule simulation / réel (verrouillée), alertes.
+- **Journal** : tous les paris, saisie manuelle d'un score manquant.
+- **Fiche de match** : prix juste et cote minimale de tous les marchés.
+- **Outils** : value, surebet, promotions (pari gratuit, remboursement, cote boostée).
+- **Données** : téléchargement de l'historique et backtest avec progression, marchés validés par championnat.
+- **Réglages** : Telegram (liaison par code), API de cotes (vérification), championnats, capital et mises,
+  modèle, calendrier, alias d'équipes, mot de passe. Validés avant enregistrement, appliqués sans redémarrage.
+- **Bilan** : texte hebdomadaire à copier dans Claude.
+- Accès hors de chez soi via **Tailscale** uniquement (aucun port ouvert sur internet).
 
 ### Rapport quotidien (contenu)
 - Paris recommandés ou « rien de bon aujourd'hui » (avec la raison).
@@ -255,17 +285,17 @@ cote finale, le modèle a un avantage réel, avant même que les résultats le m
 | Élément | Choix |
 |---|---|
 | Système | Linux |
-| Machine | Dell OptiPlex, Intel Core i5 8ᵉ génération (probablement 6 cœurs avec UHD 630, ou 4 cœurs / 8 threads avec UHD 620) |
+| Machine | Dell OptiPlex, Intel Core i5 8ᵉ génération (≈ 3 GHz, 6 cœurs, UHD 630 non utilisée pour les calculs) |
 | Ressources | 16 Go RAM (passés de 8 à 16 Go) entièrement dédiés, 256 Go disque |
 | Calcul | **Processeur uniquement** : la puce Intel UHD n'est pas utilisée. Modèles adaptés : Poisson, Elo, LightGBM, bayésien, Monte-Carlo vectorisé (numpy/numba), parallélisés sur tous les cœurs. Pas de gros apprentissage profond. |
 | Durées estimées | Entraînement 20 ans de football : quelques minutes à 1 h selon le modèle · tournoi de modèles + backtests : 2 à 6 h la nuit · recalcul en direct : quelques secondes |
-| Déploiement | Docker Compose, redémarrage automatique (`restart: always`) |
+| Déploiement | Docker Compose, redémarrage automatique (`restart: always`), interface sur le port 8080 |
 | Coupures courant / internet | Reprise automatique + signalement dans le rapport ; onduleur (UPS) conseillé |
 | Accès distant | Tailscale |
 | Telegram | Mode « polling » : aucun port à ouvrir, pas besoin d'IP fixe |
 | Sauvegardes | Chaque nuit (base + journal) vers disque externe ou cloud |
 | Budget disque | ~20-50 Go pour données et modèles ; reste pour sauvegardes et logs |
-| Secrets | Clés API dans un fichier `.env` non versionné |
+| Secrets | Saisis dans l'interface, stockés dans la base locale, jamais réaffichés en clair |
 
 ---
 
@@ -282,23 +312,27 @@ Bilan final : profit réel, CLV, performance par chasseur, décision de continue
 
 ## 15. Feuille de route de développement
 
-| Étape | Contenu | Livrable testable |
+| Étape | Contenu | État |
 |---|---|---|
-| 0 | Structure du projet, Docker, configuration, base de données | Le serveur démarre |
-| 1 | Calculateur (probabilités implicites, marge, value, Kelly, surebet) | Tests unitaires |
-| 2 | Téléchargement de l'historique football | Base remplie sur 20 ans |
-| 3 | Modèle Poisson / Dixon-Coles + grille de scores + backtest walk-forward | Log-loss, calibration, profit historique |
-| 4 | Journal, gestion du capital, mode simulation | Capital simulé suivi |
-| 5 | Bot Telegram + rapport quotidien (sans Claude) | Rapport reçu chaque jour |
-| 6 | Branchement des cotes en direct (API) + correspondance des matchs | Cotes 22bet en base |
-| 7 | Chasseurs A et B | Premières recommandations en simulation |
-| 8 | Intégration Claude (vérification, presse, rapport) | Rapport enrichi |
-| 9 | Tournoi de modèles (Elo, ML, bayésien, ensembles) | Classement automatique des modèles |
-| 10 | Chasseurs C à K | Poids mesuré par chasseur |
-| 11 | Tableau de bord web + Tailscale | Accès distant |
-| 12 | Tennis, puis autres sports | — |
+| 0 | Structure du projet, Docker, configuration, base de données | ✅ fait |
+| 1 | Calculateur (probabilités implicites, marge, value, Kelly, surebet) | ✅ fait |
+| 2 | Téléchargement de l'historique football (football-data.co.uk, 20 ans + matchs à venir) | ✅ fait, à lancer sur le serveur |
+| 3 | Dixon-Coles + grille de scores + backtest walk-forward + coffre-fort | ✅ fait |
+| 4 | Journal, gestion du capital, mode simulation, plafonds, arrêt automatique | ✅ fait |
+| 5 | Bot Telegram + rapport quotidien (sans Claude) | ✅ fait |
+| 6 | Cotes en direct (The Odds API, optionnel) + correspondance des équipes | ✅ fait, clé à saisir |
+| 7 | Chasseurs A, B (et L, J) | ✅ fait |
+| 8 | Claude : bilan hebdomadaire à coller (sans API) | ✅ fait |
+| 9 | Tournoi de modèles élargi (Elo, LightGBM, bayésien) | À faire : aujourd'hui Dixon-Coles × Pinnacle, ξ et poids choisis par le backtest |
+| 10 | Chasseurs C à I, K (combinés, compositions, motivation, cartons, corners, physique, cash-out) | À faire |
+| 11 | Interface web + Tailscale | ✅ interface faite ; Tailscale à installer sur le serveur |
+| 12 | Tennis, puis autres sports | À faire |
 
----
+**Règle de validation d'un marché** (filtre n° 3 de la section 9) : sur un championnat, une famille de
+marchés (1X2, plus/moins, handicap) est validée si elle a au moins 30 paris dans le coffre-fort, un ROI
+positif à la fois en développement et dans le coffre-fort, et une CLV moyenne positive quand elle est connue.
+Les réglages (ξ, poids du modèle) sont choisis sur la log-loss, jamais sur le profit. Un signal hors marché
+validé reste « en observation » : enregistré et mesuré, jamais recommandé.
 
 ## 16. Risques connus
 
@@ -314,7 +348,6 @@ Bilan final : profit réel, CLV, performance par chasseur, décision de continue
 
 ## 17. Questions ouvertes
 
-- Choix du fournisseur d'API de cotes (couverture de 22bet, prix).
-- Clé API Anthropic et budget mensuel.
-- Stabilité du courant et d'internet sur le lieu du serveur.
-- Modèle exact du Core i5 (`lscpu`) pour affiner les durées de calcul.
+- Couverture de 22bet par une API de cotes autorisée (bouton « Vérifier l'API ») ; sinon cote minimale.
+- Stabilité du courant et d'internet sur le lieu du serveur (onduleur conseillé).
+- Premiers résultats du backtest sur les vraies données : quels championnats et marchés sont validés.

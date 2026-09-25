@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Journal</h1>
+{% if a_regler %}
+<div class="carte"><h2>Scores à saisir</h2>
+<p class="doux petit">Normalement récupérés automatiquement chaque jour. Saisissez-les ici si un match manque.</p>
+{% for m in a_regler %}
+<form class="ligne" method="post" action="/match/{{ m.id }}/resultat" style="padding:6px 0">
+<span style="min-width:260px">#{{ m.id }} {{ m.libelle }} · {{ m.competition|ligue }} · {{ m.debut|local }}</span>
+<label>Score<input name="score" id="score-{{ m.id }}" placeholder="2-1" size="5" required></label>
+<button class="secondaire" type="submit">Régler</button>
+</form>
+{% endfor %}
+</div>
+{% endif %}
+<div class="carte defile"><h2>Paris (100 derniers)</h2>
+<table>
+<thead><tr><th>#</th><th>Mode</th><th>Match</th><th>Pari</th><th>Cote</th><th>Mise</th><th>Résultat</th><th>CLV</th></tr></thead>
+<tbody>
+{% for p, libelle in paris %}
+<tr><td>{{ p.id }}</td><td>{{ 'réel' if p.mode == 'reel' else 'simul.' }}</td>
+<td>{{ p.match.libelle }}<div class="doux petit">{{ p.match.debut|local }}{% if p.match.score %} · {{ p.match.score }}{% endif %}</div></td>
+<td>{{ libelle }}<div class="doux petit">{{ p.source_cote }}</div></td>
+<td>{{ p.cote_prise|cote }}</td><td>{{ p.mise|argent }}</td>
+<td>{% if p.statut == 'en_cours' %}<span class="pastille alerte">en cours</span>{% else %}{{ p.statut|replace('_', ' ') }} {{ p.gain_net|argent }}{% endif %}</td>
+<td>{{ p.clv|pct }}</td></tr>
+{% else %}<tr><td colspan="8" class="doux">Aucun pari pour l'instant.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

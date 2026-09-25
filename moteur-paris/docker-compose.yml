@@ -17,10 +17,19 @@ services:
   moteur:
     build: .
     restart: always
-    env_file: .env
+    # Aucun fichier .env n'est nécessaire : tout se règle dans l'interface web.
+    # Un fichier .env reste possible pour qui préfère (voir .env.example).
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MOTEUR_DATABASE_URL: postgresql+psycopg://moteur:${POSTGRES_PASSWORD:-moteur}@db:5432/moteur
+      MOTEUR_DOSSIER_DONNEES: /app/data
     depends_on:
       db:
         condition: service_healthy
+    ports:
+      - "8080:8080"   # interface web : http://<adresse-du-serveur>:8080
     volumes:
       - ./data:/app/data
     # 16 Go au total : ~2 Go pour PostgreSQL, le reste pour les calculs, marge pour le système.
