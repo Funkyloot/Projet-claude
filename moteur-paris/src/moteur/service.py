@@ -13,6 +13,7 @@ que le service exécute ici.
 """
 
 import logging
+import os
 import random
 import subprocess
 import sys
@@ -275,8 +276,13 @@ class Service:
         journal = self.r.dossier / "backtest" / "dernier.log"
         journal.parent.mkdir(parents=True, exist_ok=True)
         with open(journal, "w", encoding="utf-8") as sortie:
+            # Priorité basse : le PC reste fluide, le backtest passe après tout le reste.
+            if sys.platform == "win32":
+                options = {"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.BELOW_NORMAL_PRIORITY_CLASS}
+            else:
+                options = {"preexec_fn": lambda: os.nice(10)}
             self.backtest = subprocess.Popen([sys.executable, "-m", "moteur", "backtest", "--activer"],
-                                             stdout=sortie, stderr=subprocess.STDOUT)
+                                             stdout=sortie, stderr=subprocess.STDOUT, **options)
         with self.sessions() as s:
             ecrire_etat(s, "job:backtest", quand.isoformat())
         self._envoyer("Backtest lancé en arrière-plan (plusieurs minutes à quelques heures).")

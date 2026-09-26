@@ -7,7 +7,14 @@ Conception complète : [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 **Tout se règle dans l'interface web** : token Telegram, clé d'API de cotes, championnats,
 capital, seuils, téléchargement de l'historique, backtest, alias d'équipes. Aucun fichier à modifier.
 
-## Installation simple (double-clic)
+## Installation Windows (double-clic)
+
+Double-cliquer sur `Installer Moteur de paris.bat` : installe Python officiel si besoin (winget),
+un environnement isolé dans `%LOCALAPPDATA%\MoteurDeParis`, et les icônes (bureau, menu Démarrer,
+démarrage avec Windows). `bureau/lanceur.pyw` démarre le service sans console et ouvre l'interface
+dans une fenêtre Edge/Chrome en mode application. Backtest en priorité basse, un cœur toujours libre.
+
+## Installation Linux (double-clic)
 
 Voir [LISEZ-MOI.txt](LISEZ-MOI.txt) : décompresser le dossier sur le bureau, double-cliquer sur
 « Installer Moteur de paris », puis sur l'icône « Moteur de paris » du bureau. L'installateur

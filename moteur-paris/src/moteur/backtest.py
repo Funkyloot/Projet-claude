@@ -301,7 +301,8 @@ def lancer(hist: pd.DataFrame, ligues: list[str], o: OptionsBacktest, travailleu
     for ligue in ligues:
         sup = LIGUES.get(ligue, ("", None))[1]
         taches.append((ligue, hist[hist["ligue"] == ligue], hist[hist["ligue"] == sup] if sup else None, o))
-    travailleurs = travailleurs or os.cpu_count() or 1
+    # Toujours au moins un cœur libre pour que l'ordinateur reste utilisable
+    travailleurs = travailleurs or max(1, (os.cpu_count() or 2) - 1)
     if travailleurs == 1 or len(taches) == 1:
         return [_tache(t) for t in taches]
     with ProcessPoolExecutor(max_workers=travailleurs) as pool:

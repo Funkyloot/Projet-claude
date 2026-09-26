@@ -1,27 +1,37 @@
-MOTEUR DE PARIS — installation en 3 étapes (Linux : Ubuntu, Debian, Mint…)
+MOTEUR DE PARIS — installation
 
-1. Décompressez MoteurDeParis.zip sur votre bureau.
-   Vous obtenez le dossier « MoteurDeParis ».
+=== WINDOWS 10 / 11 ===
 
-2. Installation (une seule fois, quelques minutes, internet nécessaire) :
-   ouvrez le dossier et double-cliquez sur « Installer Moteur de paris ».
-   Si le double-clic ouvre un éditeur de texte au lieu d'installer : clic droit sur le fichier
-   › « Autoriser le lancement », puis double-cliquez à nouveau.
-   Autre méthode : clic droit dans le dossier › « Ouvrir dans un terminal », puis tapez :
-       bash installer.sh
-   Votre mot de passe peut être demandé (installation de Python ou démarrage automatique).
+1. Décompressez MoteurDeParis.zip (clic droit › « Extraire tout »).
 
-3. Double-cliquez sur l'icône « Moteur de paris » qui apparaît sur le bureau.
-   (La première fois, Ubuntu peut demander : clic droit › « Autoriser le lancement ».)
-   L'application s'ouvre dans une fenêtre. Créez votre mot de passe, puis suivez
+2. Ouvrez le dossier et double-cliquez sur « Installer Moteur de paris.bat ».
+   Une seule fois, quelques minutes, internet nécessaire.
+   - Si Windows affiche « Windows a protégé votre ordinateur » : « Informations complémentaires »
+     › « Exécuter quand même » (le fichier vient d'internet et n'est pas signé, c'est normal).
+   - Si Python n'est pas installé, l'installateur l'installe depuis la source officielle
+     (winget de Microsoft, Python de python.org). Une fenêtre peut demander votre accord.
+   - Si Windows demande l'accès au réseau pour Python : cochez « Réseaux privés ».
+
+3. Double-cliquez sur l'icône « Moteur de paris » du bureau (aussi dans le menu Démarrer).
+   L'application s'ouvre dans sa propre fenêtre. Créez votre mot de passe, puis suivez
    « Pour commencer » sur le tableau de bord.
 
-Bon à savoir
-- Le programme tourne en arrière-plan jour et nuit, même fenêtre fermée.
-  Pour l'arrêter : double-cliquez sur arreter.sh (ou « bash arreter.sh » dans un terminal).
+L'application est installée dans %LOCALAPPDATA%\MoteurDeParis (vos données : sous-dossier data).
+Le dossier décompressé n'est plus nécessaire après l'installation.
+Pour l'arrêter : menu Démarrer › « Arrêter Moteur de paris ».
+Pour mettre à jour : décompressez la nouvelle version et relancez l'installateur (données conservées).
+
+Consommation : presque rien en temps normal (le moteur attend). Le seul calcul lourd est le
+backtest (au premier lancement, puis le dimanche à 2 h) : il tourne en priorité basse et laisse
+toujours un cœur libre. Vous pouvez jouer en même temps ; si un jeu très lourd rame pendant ce
+calcul, arrêtez le moteur le temps de jouer.
+
+=== LINUX (Ubuntu, Debian, Mint…) ===
+
+Double-cliquez sur « Installer Moteur de paris.desktop » (ou « bash installer.sh » dans un terminal),
+puis sur l'icône « Moteur de paris » du bureau. Arrêt : arreter.sh.
+
+=== Bon à savoir ===
 - Tout se règle dans l'application (page Réglages) : Telegram, championnats, capital, seuils.
-- Vos données restent dans le dossier « data ». Ne supprimez pas le dossier MoteurDeParis.
 - Depuis le téléphone, sur le même Wi-Fi : http://adresse-du-pc:8080
-  (l'adresse s'obtient avec la commande « hostname -I »).
-- Sources utilisées : paquets officiels de votre distribution (apt), dépôt officiel Python (PyPI),
-  données publiques football-data.co.uk. Rien d'autre n'est téléchargé.
+- Sources utilisées : Python officiel, dépôt officiel PyPI, données publiques football-data.co.uk.
