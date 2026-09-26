@@ -263,6 +263,7 @@ def cmd_veille(args) -> int:
         log.info("Le moteur tourne déjà : cette deuxième copie s'arrête.")
         return 0
     service = _service()
+    service.nettoyer_taches()
     arreter = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: arreter.set())
     signal.signal(signal.SIGINT, lambda *_: arreter.set())

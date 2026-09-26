@@ -165,10 +165,13 @@ def test_taches_interrompues_nettoyees(reglages_test, sessions):
     from moteur.taches import suivre
 
     with sessions() as s:
-        suivre(s, "analyse", "en_cours", "En cours…")
-    Service(reglages_test, sessions, reseau=False)
+        suivre(s, "backtest", "en_cours", "Lancé en arrière-plan.")
+    autre = Service(reglages_test, sessions, reseau=False)  # ex. le backtest lui-même qui démarre
     with sessions() as s:
-        assert etat_taches(s)["analyse"]["etat"] == "erreur"
+        assert etat_taches(s)["backtest"]["etat"] == "en_cours"  # surtout pas « interrompu »
+    autre.nettoyer_taches()  # démarrage du service principal
+    with sessions() as s:
+        assert etat_taches(s)["backtest"]["etat"] == "erreur"
 
 
 def test_rapport_backtest_affichable_sous_windows(capsys):

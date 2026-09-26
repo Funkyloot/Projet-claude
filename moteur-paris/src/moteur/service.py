@@ -97,10 +97,11 @@ class Service:
         self.backtest: subprocess.Popen | None = None
         self._tentative_donnees: datetime | None = None
         self.recharger()
-        self._nettoyer_taches()
 
-    def _nettoyer_taches(self) -> None:
-        """Au démarrage, une tâche restée « en cours » a été interrompue (PC éteint, arrêt…)."""
+    def nettoyer_taches(self) -> None:
+        """Au démarrage du service principal seulement : une tâche restée « en cours » a été
+        interrompue (PC éteint, arrêt…). Pas dans les autres commandes : le backtest, lancé à
+        part, marquerait sinon sa propre tâche comme interrompue."""
         from .taches import ACTIONS
 
         with self.sessions() as s:
