@@ -94,3 +94,29 @@ def test_lancer_rapport_et_parametres(ligue_simulee, tmp_path):
     assert set(contenu["ligues"]) == {"E1", "E2"} and "poids_modele" in contenu["ligues"]["E1"]
     ecrire_parametres(resultats, tmp_path, datetime(2026, 9, 26, tzinfo=timezone.utc))
     assert (tmp_path / "parametres.precedent.json").exists()
+
+
+def test_progression_et_repli_sequentiel(ligue_simulee, monkeypatch):
+    import moteur.backtest as bt
+
+    vus = []
+    autre = ligue_simulee.assign(ligue="E2")
+    donnees = pd.concat([ligue_simulee, autre])
+
+    class PoolCasse:
+        def __init__(self, *a, **k):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def map(self, *a):
+            raise bt.BrokenProcessPool("processus tué")
+
+    monkeypatch.setattr(bt, "ProcessPoolExecutor", PoolCasse)
+    res = bt.lancer(donnees, ["E1", "E2"], RAPIDE, travailleurs=2, progression=lambda f, t, l: vus.append((f, t, l)))
+    assert [r.ligue for r in res] == ["E1", "E2"] and all(r.params for r in res)
+    assert vus == [(1, 2, "E1"), (2, 2, "E2")]

@@ -14,6 +14,7 @@ import logging
 import math
 import os
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -296,17 +297,43 @@ def _tache(args) -> ResultatLigue:
         return ResultatLigue(ligue, erreur=str(e))
 
 
-def lancer(hist: pd.DataFrame, ligues: list[str], o: OptionsBacktest, travailleurs: int | None = None) -> list[ResultatLigue]:
+def lancer(
+    hist: pd.DataFrame,
+    ligues: list[str],
+    o: OptionsBacktest,
+    travailleurs: int | None = None,
+    progression=None,
+) -> list[ResultatLigue]:
+    """Un tournoi par championnat. `progression(fait, total, ligue)` est appelée après chacun.
+
+    Sous Windows, les processus parallèles du backtest plantaient (BrokenProcessPool) : on y
+    calcule un championnat après l'autre. Ailleurs, en parallèle, avec repli séquentiel si besoin.
+    """
     taches = []
     for ligue in ligues:
         sup = LIGUES.get(ligue, ("", None))[1]
         taches.append((ligue, hist[hist["ligue"] == ligue], hist[hist["ligue"] == sup] if sup else None, o))
-    # Toujours au moins un cœur libre pour que l'ordinateur reste utilisable
-    travailleurs = travailleurs or max(1, (os.cpu_count() or 2) - 1)
-    if travailleurs == 1 or len(taches) == 1:
-        return [_tache(t) for t in taches]
-    with ProcessPoolExecutor(max_workers=travailleurs) as pool:
-        return list(pool.map(_tache, taches))
+    if travailleurs is None:
+        # Toujours au moins un cœur libre pour que l'ordinateur reste utilisable
+        travailleurs = 1 if os.name == "nt" else max(1, (os.cpu_count() or 2) - 1)
+    resultats: dict[str, ResultatLigue] = {}
+
+    def noter(res: ResultatLigue) -> None:
+        resultats[res.ligue] = res
+        if progression:
+            progression(len(resultats), len(taches), res.ligue)
+
+    if travailleurs > 1 and len(taches) > 1:
+        try:
+            with ProcessPoolExecutor(max_workers=travailleurs) as pool:
+                for res in pool.map(_tache, taches):
+                    noter(res)
+        except BrokenProcessPool:
+            log.warning("Calcul parallèle impossible : on continue un championnat après l'autre.")
+    for t in taches:
+        if t[0] not in resultats:
+            noter(_tache(t))
+    return [resultats[t[0]] for t in taches]
 
 
 def _pct(x) -> str:
@@ -360,9 +387,9 @@ def ecrire_parametres(resultats: list[ResultatLigue], dossier: Path, quand: date
 
 
 def executer(hist: pd.DataFrame, ligues: list[str], o: OptionsBacktest, dossier: Path, activer: bool,
-             travailleurs: int | None = None) -> tuple[list[ResultatLigue], Path]:
+             travailleurs: int | None = None, progression=None) -> tuple[list[ResultatLigue], Path]:
     quand = datetime.now(timezone.utc)
-    resultats = lancer(hist, ligues, o, travailleurs)
+    resultats = lancer(hist, ligues, o, travailleurs, progression)
     sortie = Path(dossier) / "backtest"
     sortie.mkdir(parents=True, exist_ok=True)
     md = sortie / f"backtest-{quand:%Y%m%d-%H%M}.md"

@@ -130,6 +130,7 @@ def cmd_historique(args) -> int:
 def cmd_backtest(args) -> int:
     from .backtest import OptionsBacktest, executer
     from .donnees import football_data
+    from .donnees.football_data import LIGUES
 
     r = _reglages()
     ligues = args.ligues or r.liste_ligues
@@ -144,8 +145,16 @@ def cmd_backtest(args) -> int:
         mise_max_pct=r.mise_max_pct,
         grille_xi=tuple(_nombre(x) for x in args.xi.split(",")) if args.xi else OptionsBacktest.grille_xi,
     )
-    print(f"Backtest de {len(ligues)} championnat(s) sur {args.travailleurs or 'tous les'} cœur(s)…")
-    _, rapport = executer(hist, ligues, o, r.dossier, args.activer, args.travailleurs)
+    from .taches import suivre
+
+    def progression(fait: int, total: int, ligue: str) -> None:
+        texte = f"{fait} championnat(s) sur {total} (dernier : {LIGUES.get(ligue, (ligue,))[0]})"
+        print(texte, flush=True)
+        with _session() as s:
+            suivre(s, "backtest", "en_cours", texte, fait, total)
+
+    print(f"Backtest de {len(ligues)} championnat(s)…", flush=True)
+    _, rapport = executer(hist, ligues, o, r.dossier, args.activer, args.travailleurs, progression)
     print(rapport.read_text(encoding="utf-8"))
     print(f"\nRapport : {rapport}" + ("\nRéglages activés : data/parametres.json" if args.activer else ""))
     return 0
