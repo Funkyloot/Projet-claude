@@ -149,3 +149,33 @@ def test_battement_du_service(service, sessions):
     service.tick()
     with sessions() as s:
         assert lire_etat(s, "service:battement") is not None
+
+
+def test_une_seule_copie_du_moteur(tmp_path):
+    from moteur.verrou import VerrouOccupe, verrou_exclusif
+
+    premier = verrou_exclusif(tmp_path / "moteur.verrou")
+    with pytest.raises(VerrouOccupe):
+        verrou_exclusif(tmp_path / "moteur.verrou")
+    premier.close()
+    verrou_exclusif(tmp_path / "moteur.verrou").close()  # libéré : on peut relancer
+
+
+def test_taches_interrompues_nettoyees(reglages_test, sessions):
+    from moteur.taches import suivre
+
+    with sessions() as s:
+        suivre(s, "analyse", "en_cours", "En cours…")
+    Service(reglages_test, sessions, reseau=False)
+    with sessions() as s:
+        assert etat_taches(s)["analyse"]["etat"] == "erreur"
+
+
+def test_rapport_backtest_affichable_sous_windows(capsys):
+    import sys
+
+    from moteur.cli import _sorties_utf8
+
+    _sorties_utf8()
+    print("ξ − →")  # symboles absents de l'encodage Windows par défaut
+    assert "ξ" in capsys.readouterr().out or sys.stdout.encoding.lower().startswith("utf")

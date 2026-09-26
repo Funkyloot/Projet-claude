@@ -159,3 +159,9 @@ def test_outils(connecte):
 
 def test_sante_sans_connexion(client):
     assert client.get("/sante").json() == {"ok": True}
+
+
+def test_page_donnees_se_rafraichit_pendant_un_calcul(connecte, sessions):
+    assert 'http-equiv="refresh"' not in connecte.get("/donnees").text
+    connecte.post("/action/analyse", data={"retour_vers": "/donnees"})
+    assert 'http-equiv="refresh"' in connecte.get("/donnees").text

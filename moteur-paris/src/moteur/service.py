@@ -97,6 +97,17 @@ class Service:
         self.backtest: subprocess.Popen | None = None
         self._tentative_donnees: datetime | None = None
         self.recharger()
+        self._nettoyer_taches()
+
+    def _nettoyer_taches(self) -> None:
+        """Au démarrage, une tâche restée « en cours » a été interrompue (PC éteint, arrêt…)."""
+        from .taches import ACTIONS
+
+        with self.sessions() as s:
+            for action in ACTIONS:
+                etat = lire_etat(s, f"tache:{action}", {})
+                if etat.get("etat") == "en_cours":
+                    suivre(s, action, "erreur", "Interrompu (redémarrage du moteur). Relancez si besoin.")
 
     # --- réglages ----------------------------------------------------------------
 
@@ -169,6 +180,8 @@ class Service:
             erreurs += [erreur_fixtures] if erreur_fixtures else []
             if erreurs:
                 self._alerte(f"Téléchargement : {len(erreurs)} erreur(s), ex. {erreurs[0]}", quand)
+        with self.sessions() as s:
+            suivre(s, "historique", "en_cours", "Lecture des fichiers téléchargés…")
         self.charger_donnees()
         with self.sessions() as s:
             regles = regler_depuis_resultats(s, self.hist, quand)

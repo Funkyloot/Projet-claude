@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block entete %}{% if taches.values()|selectattr('etat', 'in', ['en_cours', 'en_attente'])|list %}<meta http-equiv="refresh" content="5">{% endif %}{% endblock %}
 {% block contenu %}
 <h1>Données et backtest</h1>
 <div class="grille">
@@ -13,7 +14,7 @@
 <button type="submit" class="{{ '' if cle == 'historique' and not historique else 'secondaire' }}">
 {{ {'historique': "Télécharger / mettre à jour l'historique", 'backtest': 'Lancer le backtest', 'analyse': 'Analyser maintenant'}[cle] }}</button></form>
 {% if cle == 'historique' %}<p class="aide">Depuis {{ r.saison_depuis }}, championnats suivis et divisions supérieures. Premier téléchargement : quelques minutes.</p>{% endif %}
-{% if cle == 'backtest' %}<p class="aide">Utilise tous les cœurs du processeur. Quelques minutes à une heure. Se relance seul chaque dimanche à 2 h.</p>{% endif %}
+{% if cle == 'backtest' %}<p class="aide">En priorité basse, un cœur toujours libre. Quelques minutes à une heure. Se relance seul chaque dimanche à 2 h.</p>{% endif %}
 </div>
 {% endif %}{% endfor %}
 </div>

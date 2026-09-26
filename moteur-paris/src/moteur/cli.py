@@ -255,6 +255,13 @@ def cmd_veille(args) -> int:
 
     from .web.app import creer_app
 
+    from .verrou import VerrouOccupe, verrou_exclusif
+
+    try:
+        verrou = verrou_exclusif(reglages().dossier / "moteur.verrou")
+    except VerrouOccupe:
+        log.info("Le moteur tourne déjà : cette deuxième copie s'arrête.")
+        return 0
     service = _service()
     arreter = threading.Event()
     signal.signal(signal.SIGTERM, lambda *_: arreter.set())
@@ -267,6 +274,7 @@ def cmd_veille(args) -> int:
         threading.Thread(target=serveur.run, name="web", daemon=True).start()
         log.info("Interface web : http://<adresse-du-serveur>:%s", service.r.port_web)
     service.boucle(arreter.is_set)
+    verrou.close()
     return 0
 
 
@@ -282,7 +290,18 @@ def cmd_web(_args) -> int:
     return 0
 
 
+def _sorties_utf8() -> None:
+    """Windows écrit par défaut en cp1252 : les symboles (ξ, →, −) feraient planter l'affichage."""
+    for flux in (sys.stdout, sys.stderr):
+        if flux is not None and hasattr(flux, "reconfigure"):
+            try:
+                flux.reconfigure(encoding="utf-8", errors="replace")
+            except (ValueError, OSError):
+                pass
+
+
 def main(argv: list[str] | None = None) -> int:
+    _sorties_utf8()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(prog="moteur", description="Moteur d'analyse de paris sportifs")
     parser.add_argument("--version", action="version", version=f"moteur {__version__}")

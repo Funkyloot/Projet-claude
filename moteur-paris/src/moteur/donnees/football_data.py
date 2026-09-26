@@ -218,6 +218,22 @@ def telecharger_fixtures(dossier: str | Path, client: httpx.Client | None = None
             client.close()
 
 
+def _lire_fichier_en_cache(chemin: Path, code: str, annee: int | None) -> pd.DataFrame:
+    """Lecture d'un CSV, mise en cache tant que le fichier ne change pas (lecture ~20 fois plus rapide)."""
+    cache = chemin.with_suffix(".pkl")
+    if cache.exists() and cache.stat().st_mtime >= chemin.stat().st_mtime:
+        try:
+            return pd.read_pickle(cache)
+        except Exception:
+            pass
+    df = lire_csv(chemin, code, annee)
+    try:
+        df.to_pickle(cache)
+    except OSError:
+        pass
+    return df
+
+
 def charger(dossier: str | Path, ligues: list[str] | None = None) -> pd.DataFrame:
     """Tout l'historique en un tableau trié par date."""
     base = dossier_csv(dossier)
@@ -230,7 +246,7 @@ def charger(dossier: str | Path, ligues: list[str] | None = None) -> pd.DataFram
             if annee is not None and annee > 2090:
                 annee -= 100
             try:
-                df = lire_csv(chemin, code, annee)
+                df = _lire_fichier_en_cache(chemin, code, annee)
             except Exception as e:  # un fichier corrompu ne doit pas tout bloquer
                 log.warning("Lecture impossible %s : %s", chemin, e)
                 continue

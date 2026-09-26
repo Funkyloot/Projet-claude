@@ -130,3 +130,13 @@ def test_client_odds_lit_les_credits():
     assert client.cotes("XX") == []  # championnat non couvert : aucun appel
     assert ClientOdds.credits_par_appel("h2h,totals,spreads", "eu") == 3
     assert ClientOdds.credits_par_appel("h2h", bookmakers="pinnacle,onexbet") == 1
+
+
+def test_cache_de_lecture(tmp_path):
+    dossier = tmp_path / "football-data" / "E1"
+    dossier.mkdir(parents=True)
+    (dossier / "2425.csv").write_text(CSV_RECENT)
+    premier = fd.charger(tmp_path, ["E1"])
+    assert (dossier / "2425.pkl").exists()
+    assert fd.charger(tmp_path, ["E1"]).equals(premier)
+    assert fd.etat_historique(tmp_path)["E1"]["saisons"] == 1  # le cache n'est pas compté comme une saison
