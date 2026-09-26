@@ -56,7 +56,7 @@ pre{white-space:pre-wrap;font-size:13px;background:var(--fond);padding:12px;bord
 <body>
 {% if page != "connexion" %}
 <header><div class="barre">
-<span class="marque">Moteur de paris</span>
+<span class="marque">Moteur de paris <span class="doux petit" style="font-weight:400">v{{ version }}</span></span>
 <nav>
 {% for cle, nom in [("tableau","Tableau de bord"),("journal","Journal"),("fiche","Fiche de match"),("outils","Outils"),("donnees","Données"),("reglages","Réglages"),("bilan","Bilan")] %}
 <a href="{{ '/' if cle == 'tableau' else '/' ~ cle }}" class="{{ 'actif' if page == cle }}">{{ nom }}</a>

@@ -20,6 +20,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
+from .. import __version__
 from ..analyse import charger_parametres
 from ..calcul import analyser_value, marge, mise_conseillee, surebet
 from ..capital import solde
@@ -151,7 +152,7 @@ def creer_app(service: Service) -> FastAPI:
 
     def page(request: Request, nom: str, **contexte) -> HTMLResponse:
         contexte.update(msg=request.query_params.get("msg"), erreur=request.query_params.get("erreur"),
-                        page=nom, r=reglages_actuels(), maintenant=service.horloge())
+                        page=nom, r=reglages_actuels(), maintenant=service.horloge(), version=__version__)
         return gabarits.TemplateResponse(request, f"{nom}.html", contexte)
 
     def retour(url: str, msg: str | None = None, erreur: str | None = None) -> RedirectResponse:
