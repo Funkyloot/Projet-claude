@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Installer Moteur de paris
+Comment=Installation unique : prépare l'application et crée l'icône sur le bureau
+Exec=bash -c 'cd "$(dirname "%k")" && bash ./installer.sh; echo; read -rp "Appuyez sur Entrée pour fermer…"'
+Icon=system-software-install
+Terminal=true

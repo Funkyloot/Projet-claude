@@ -1,0 +1,27 @@
+MOTEUR DE PARIS — installation en 3 étapes (Linux : Ubuntu, Debian, Mint…)
+
+1. Décompressez MoteurDeParis.zip sur votre bureau.
+   Vous obtenez le dossier « MoteurDeParis ».
+
+2. Installation (une seule fois, quelques minutes, internet nécessaire) :
+   ouvrez le dossier et double-cliquez sur « Installer Moteur de paris ».
+   Si le double-clic ouvre un éditeur de texte au lieu d'installer : clic droit sur le fichier
+   › « Autoriser le lancement », puis double-cliquez à nouveau.
+   Autre méthode : clic droit dans le dossier › « Ouvrir dans un terminal », puis tapez :
+       bash installer.sh
+   Votre mot de passe peut être demandé (installation de Python ou démarrage automatique).
+
+3. Double-cliquez sur l'icône « Moteur de paris » qui apparaît sur le bureau.
+   (La première fois, Ubuntu peut demander : clic droit › « Autoriser le lancement ».)
+   L'application s'ouvre dans une fenêtre. Créez votre mot de passe, puis suivez
+   « Pour commencer » sur le tableau de bord.
+
+Bon à savoir
+- Le programme tourne en arrière-plan jour et nuit, même fenêtre fermée.
+  Pour l'arrêter : double-cliquez sur arreter.sh (ou « bash arreter.sh » dans un terminal).
+- Tout se règle dans l'application (page Réglages) : Telegram, championnats, capital, seuils.
+- Vos données restent dans le dossier « data ». Ne supprimez pas le dossier MoteurDeParis.
+- Depuis le téléphone, sur le même Wi-Fi : http://adresse-du-pc:8080
+  (l'adresse s'obtient avec la commande « hostname -I »).
+- Sources utilisées : paquets officiels de votre distribution (apt), dépôt officiel Python (PyPI),
+  données publiques football-data.co.uk. Rien d'autre n'est téléchargé.

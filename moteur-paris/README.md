@@ -7,7 +7,15 @@ Conception complète : [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
 **Tout se règle dans l'interface web** : token Telegram, clé d'API de cotes, championnats,
 capital, seuils, téléchargement de l'historique, backtest, alias d'équipes. Aucun fichier à modifier.
 
-## Installation (une seule fois)
+## Installation simple (double-clic)
+
+Voir [LISEZ-MOI.txt](LISEZ-MOI.txt) : décompresser le dossier sur le bureau, double-cliquer sur
+« Installer Moteur de paris », puis sur l'icône « Moteur de paris » du bureau. L'installateur
+(`installer.sh`) crée un environnement Python isolé, installe un service qui tourne en continu
+(systemd utilisateur) et l'icône du bureau ; `lancer.sh` ouvre l'interface, `arreter.sh` l'arrête.
+Base SQLite dans `data/`.
+
+## Installation avec Docker (alternative)
 
 Sur le serveur Linux :
 
