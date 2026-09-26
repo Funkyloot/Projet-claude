@@ -17,8 +17,8 @@ import pandas as pd
 
 log = logging.getLogger(__name__)
 
-URL_SAISON = "https://www.football-data.co.uk/mmz4281/{saison}/{code}.csv"
-URL_FIXTURES = "https://www.football-data.co.uk/fixtures.csv"
+URL_SAISON = "https://football-data.co.uk/mmz4281/{saison}/{code}.csv"
+URL_FIXTURES = "https://football-data.co.uk/fixtures.csv"
 AGENT = "moteur-paris/0.2 (usage personnel)"
 
 # code : (nom affiché, division supérieure pour les a priori promus / relégués)
@@ -166,14 +166,19 @@ def telecharger(
     client = client or httpx.Client(timeout=30, headers={"User-Agent": AGENT}, follow_redirects=True)
     try:
         for fait, (code, annee, chemin) in enumerate(a_faire, start=1):
-            try:
-                r = client.get(URL_SAISON.format(saison=code_saison(annee), code=code))
-                if r.status_code != 404:  # 404 : championnat pas encore couvert cette saison-là
-                    r.raise_for_status()
-                    chemin.parent.mkdir(parents=True, exist_ok=True)
-                    chemin.write_bytes(r.content)
-            except httpx.HTTPError as e:
-                erreurs.append(f"{code} {code_saison(annee)} : {e}")
+            for essai in range(3):  # le site coupe parfois une connexion : on réessaie
+                try:
+                    r = client.get(URL_SAISON.format(saison=code_saison(annee), code=code))
+                    if r.status_code != 404:  # 404 : championnat pas encore couvert cette saison-là
+                        r.raise_for_status()
+                        chemin.parent.mkdir(parents=True, exist_ok=True)
+                        chemin.write_bytes(r.content)
+                    break
+                except httpx.HTTPError as e:
+                    if essai == 2:
+                        erreurs.append(f"{code} {code_saison(annee)} : {e}")
+                    else:
+                        time.sleep(2 * (essai + 1))
             if progression:
                 progression(fait, len(a_faire))
             if pause_s and fait < len(a_faire):

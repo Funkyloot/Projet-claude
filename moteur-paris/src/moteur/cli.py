@@ -303,6 +303,7 @@ def _sorties_utf8() -> None:
 def main(argv: list[str] | None = None) -> int:
     _sorties_utf8()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # une ligne par fichier téléchargé, c'est trop
     parser = argparse.ArgumentParser(prog="moteur", description="Moteur d'analyse de paris sportifs")
     parser.add_argument("--version", action="version", version=f"moteur {__version__}")
     sous = parser.add_subparsers(dest="commande", required=True)

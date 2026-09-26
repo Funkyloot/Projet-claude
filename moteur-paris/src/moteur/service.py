@@ -163,8 +163,11 @@ class Service:
     # --- tâches ----------------------------------------------------------------
 
     def charger_donnees(self) -> None:
+        debut = time.monotonic()
         self.hist = football_data.charger(self.r.dossier, self.ligues_historique)
         self.fixtures = football_data.charger_fixtures(self.r.dossier)
+        log.info("Historique chargé : %s matchs, %s à venir, en %.1f s.", len(self.hist), len(self.fixtures),
+                 time.monotonic() - debut)
 
     def maj_donnees(self, quand: datetime) -> int:
         """Télécharge ce qui manque, recharge l'historique, règle les paris terminés."""
@@ -223,6 +226,14 @@ class Service:
         return evenements
 
     def analyser(self, quand: datetime) -> list[Recommandation]:
+        debut = time.monotonic()
+        nouvelles = self._analyser(quand)
+        log.info("Analyse : %s match(s), %s signal(aux), %s nouveau(x) validé(s) en %.1f s.",
+                 self.derniere_analyse.get("nb_matchs", 0), self.derniere_analyse.get("nb_signaux", 0),
+                 len(nouvelles), time.monotonic() - debut)
+        return nouvelles
+
+    def _analyser(self, quand: datetime) -> list[Recommandation]:
         if self.hist.empty:
             self.charger_donnees()
         maj = datetime.fromtimestamp(
@@ -359,6 +370,7 @@ class Service:
             demandes = prendre_demandes(s)
         faites = []
         for action in demandes:
+            log.info("Action demandée depuis l'interface : %s", action)
             with self.sessions() as s:
                 suivre(s, action, "en_cours", "En cours…")
             try:
