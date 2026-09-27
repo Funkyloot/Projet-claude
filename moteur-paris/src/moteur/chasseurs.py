@@ -226,7 +226,7 @@ def chasseur_surebet(ctx: ContexteMatch, f: Filtre, exclus: tuple[str, ...] = ()
         if not all(s in meilleures for s in combi):
             continue
         s = surebet([meilleures[x][0] for x in combi], 100.0, f.seuil_suspect)
-        if s.est_surebet:
+        if s.est_surebet and s.profit >= 0.005:  # sous 0,5 %, les arrondis de cote suffisent à l'annuler
             jambes = [(x, meilleures[x][1], meilleures[x][0], m) for x, m in zip(combi, s.mises)]
             resultats.append(Surebet(ctx.ligue, ctx.dom, ctx.ext, ctx.debut, jambes, s.profit, s.suspect))
     return resultats

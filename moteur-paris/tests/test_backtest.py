@@ -120,3 +120,20 @@ def test_progression_et_repli_sequentiel(ligue_simulee, monkeypatch):
     res = bt.lancer(donnees, ["E1", "E2"], RAPIDE, travailleurs=2, progression=lambda f, t, l: vus.append((f, t, l)))
     assert [r.ligue for r in res] == ["E1", "E2"] and all(r.params for r in res)
     assert vus == [(1, 2, "E1"), (2, 2, "E2")]
+
+
+def test_validation_globale(ligue_simulee):
+    from moteur.backtest import PARIS_MIN_GLOBAL, validation_globale
+
+    resultats = lancer(pd.concat([ligue_simulee, ligue_simulee.assign(ligue="E2")]), ["E1", "E2"], RAPIDE, travailleurs=1)
+    bilan = validation_globale(resultats, RAPIDE)
+    assert set(bilan["familles"]) == {"1x2", "total", "ah"}
+    for famille, v in bilan["familles"].items():
+        valide = famille in bilan["valides"]
+        assert valide == (v["coffre"]["n"] >= PARIS_MIN_GLOBAL and v["coffre"]["roi"] > 0 and v["dev"]["roi"] > 0
+                          and (v["coffre"]["clv"] is None or v["coffre"]["clv"] >= 0))
+        if valide:
+            assert all(famille in r.marches_valides for r in resultats)
+    texte = rapport_markdown(resultats, RAPIDE, datetime(2026, 9, 27, tzinfo=timezone.utc), bilan)
+    assert "Tous championnats réunis" in texte
+    texte.encode("cp1252")  # affichable sous Windows

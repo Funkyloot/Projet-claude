@@ -41,7 +41,7 @@ class Reglages(BaseSettings):
     # Périmètre et modèles
     ligues: str = LIGUES_PAR_DEFAUT
     saison_depuis: int = Field(2005, ge=1993)
-    horizon_h: int = Field(48, gt=0)
+    horizon_h: int = Field(96, gt=0)  # 4 jours : le week-end est visible dès le jeudi
     poids_modele: float = Field(0.3, ge=0, le=1)
     prix_backtest: Literal["moy", "max", "b365"] = "moy"
 

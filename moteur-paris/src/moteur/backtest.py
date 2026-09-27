@@ -37,7 +37,8 @@ GRILLE_XI = (0.001, 0.0019, 0.004)
 GRILLE_POIDS = (0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0)
 SAISONS_COFFRE = 2
 SAISONS_CHAUFFE = 2
-PARIS_MIN_COFFRE = 30
+PARIS_MIN_COFFRE = 30  # par championnat
+PARIS_MIN_GLOBAL = 50  # tous championnats réunis, par famille de marchés
 
 
 def _selection(suffixe: str, ah_ligne) -> Selection | None:
@@ -218,6 +219,8 @@ class ResultatLigue:
     capital_coffre: dict = field(default_factory=dict)
     marches_valides: list[str] = field(default_factory=list)
     erreur: str | None = None
+    paris_dev: pd.DataFrame | None = field(default=None, repr=False)
+    paris_coffre: pd.DataFrame | None = field(default=None, repr=False)
 
     def en_dict(self) -> dict:
         d = {"ligue": self.ligue, "log_loss": self.log_loss, "dev": self.dev, "coffre": self.coffre,
@@ -280,12 +283,42 @@ def tournoi_ligue(ligue: str, df: pd.DataFrame, df_sup: pd.DataFrame | None, o: 
         rd = resume_paris(p_dev[p_dev["famille"] == famille])
         rc = resume_paris(p_cof[p_cof["famille"] == famille])
         res.dev[famille], res.coffre[famille] = rd, rc
-        clv_ok = rc["clv"] is None or rc["clv"] >= 0
-        if rc["n"] >= PARIS_MIN_COFFRE and (rc["roi"] or 0) > 0 and (rd["roi"] or 0) > 0 and clv_ok:
+        if famille_valide(rd, rc, PARIS_MIN_COFFRE):
             res.marches_valides.append(famille)
+    res.paris_dev, res.paris_coffre = p_dev, p_cof
     valides = p_cof[p_cof["famille"].isin(res.marches_valides)]
     res.capital_coffre = simuler_capital(valides, o.capital, o.fraction_kelly, o.mise_max_pct)
     return res
+
+
+def famille_valide(dev: dict, coffre: dict, n_min: int) -> bool:
+    """Même règle partout : assez de paris, gagnant en développement ET dans le coffre-fort, CLV ≥ 0."""
+    clv_ok = coffre["clv"] is None or coffre["clv"] >= 0
+    return coffre["n"] >= n_min and (coffre["roi"] or 0) > 0 and (dev["roi"] or 0) > 0 and clv_ok
+
+
+def validation_globale(resultats: list[ResultatLigue], o: OptionsBacktest) -> dict:
+    """Championnat par championnat, les paris sont trop rares pour conclure (souvent moins de 10
+    dans le coffre-fort). On juge donc aussi chaque famille de marchés sur tous les championnats
+    réunis ; une famille validée ainsi l'est pour tous les championnats testés."""
+    ok = [r for r in resultats if r.paris_coffre is not None]
+    if not ok:
+        return {}
+    dev = pd.concat([r.paris_dev for r in ok]).sort_values("date", kind="stable")
+    cof = pd.concat([r.paris_coffre for r in ok]).sort_values("date", kind="stable")
+    bilan = {"familles": {}, "valides": []}
+    for famille in ("1x2", "total", "ah"):
+        rd, rc = resume_paris(dev[dev["famille"] == famille]), resume_paris(cof[cof["famille"] == famille])
+        bilan["familles"][famille] = {"dev": rd, "coffre": rc}
+        if famille_valide(rd, rc, PARIS_MIN_GLOBAL):
+            bilan["valides"].append(famille)
+    for r in ok:
+        r.marches_valides = sorted(set(r.marches_valides) | set(bilan["valides"]))
+        valides = r.paris_coffre[r.paris_coffre["famille"].isin(r.marches_valides)]
+        r.capital_coffre = simuler_capital(valides, o.capital, o.fraction_kelly, o.mise_max_pct)
+    bilan["capital_coffre"] = simuler_capital(cof[cof["famille"].isin(bilan["valides"])], o.capital,
+                                              o.fraction_kelly, o.mise_max_pct)
+    return bilan
 
 
 def _tache(args) -> ResultatLigue:
@@ -340,14 +373,15 @@ def _pct(x) -> str:
     return "—" if x is None else f"{x:+.1%}".replace(".", ",")
 
 
-def rapport_markdown(resultats: list[ResultatLigue], o: OptionsBacktest, quand: datetime) -> str:
+def rapport_markdown(resultats: list[ResultatLigue], o: OptionsBacktest, quand: datetime,
+                     bilan_global: dict | None = None) -> str:
     lignes = [
         f"# Backtest du {quand:%d/%m/%Y %H:%M} UTC",
         "",
         f"Prix utilisés : `{o.prix}` · value minimale {o.valeur_min:.0%} · coffre-fort : "
         f"{SAISONS_COFFRE} dernières saisons · capital simulé {o.capital:.0f} $.",
         "",
-        "| Ligue | ξ | Poids modèle | Log-loss mélange / réf. / modèle | Coffre 1X2 | Coffre +/- | Coffre AH | Capital coffre | Validé |",
+        "| Ligue | xi | Poids modèle | Log-loss mélange / réf. / modèle | Coffre 1X2 | Coffre +/- | Coffre AH | Capital coffre | Validé |",
         "|---|---|---|---|---|---|---|---|---|",
     ]
     for r in resultats:
@@ -367,6 +401,24 @@ def rapport_markdown(resultats: list[ResultatLigue], o: OptionsBacktest, quand: 
             f"{cel('1x2')} | {cel('total')} | {cel('ah')} | "
             f"{r.capital_coffre.get('capital_final', '—')} $ | {', '.join(r.marches_valides) or 'rien'} |"
         )
+    if bilan_global:
+        lignes += ["", "## Tous championnats réunis", "",
+                   "| Marché | Développement | Coffre-fort | Validé |", "|---|---|---|---|"]
+        noms = {"1x2": "1X2 / double chance", "total": "Plus / moins de buts", "ah": "Handicap asiatique"}
+        for famille, v in bilan_global["familles"].items():
+            d, c = v["dev"], v["coffre"]
+            lignes.append(f"| {noms[famille]} | {d['n']} paris, ROI {_pct(d['roi'])} | "
+                          f"{c['n']} paris, ROI {_pct(c['roi'])}, CLV {_pct(c['clv'])} | "
+                          f"{'oui' if famille in bilan_global['valides'] else 'non'} |")
+        cap = bilan_global.get("capital_coffre", {})
+        lignes.append("")
+        if bilan_global["valides"]:
+            lignes.append(f"Capital simulé sur le coffre-fort avec les marchés validés : {o.capital:.0f} $ → "
+                          f"{cap.get('capital_final')} $ (pire baisse {_pct(-(cap.get('pire_baisse') or 0))}).")
+        else:
+            lignes.append(f"Aucune famille ne remplit les critères (au moins {PARIS_MIN_GLOBAL} paris dans le "
+                          "coffre-fort, gagnante en développement et dans le coffre-fort, CLV positive). "
+                          "Le moteur reste en observation : c'est la protection qui joue.")
     lignes += [
         "",
         "Lecture : une log-loss plus basse = des probabilités plus justes. Si « réf. » est la plus basse,",
@@ -390,10 +442,11 @@ def executer(hist: pd.DataFrame, ligues: list[str], o: OptionsBacktest, dossier:
              travailleurs: int | None = None, progression=None) -> tuple[list[ResultatLigue], Path]:
     quand = datetime.now(timezone.utc)
     resultats = lancer(hist, ligues, o, travailleurs, progression)
+    bilan_global = validation_globale(resultats, o)
     sortie = Path(dossier) / "backtest"
     sortie.mkdir(parents=True, exist_ok=True)
     md = sortie / f"backtest-{quand:%Y%m%d-%H%M}.md"
-    md.write_text(rapport_markdown(resultats, o, quand), encoding="utf-8")
+    md.write_text(rapport_markdown(resultats, o, quand, bilan_global), encoding="utf-8")
     (sortie / f"backtest-{quand:%Y%m%d-%H%M}.json").write_text(
         json.dumps([r.en_dict() for r in resultats], indent=2, ensure_ascii=False), encoding="utf-8")
     if activer:
