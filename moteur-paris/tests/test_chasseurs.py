@@ -118,3 +118,18 @@ def test_fusion_des_cotes_api(scenario):
     matchs, alertes = fusionner_api(matchs, [ev, inconnu], {"E1": {m.dom, m.ext}}, Correspondance())
     assert len(m.cotes) == avant + 1
     assert len(alertes) == 1 and "Inconnu United" in alertes[0]
+
+
+def test_apercu_dit_pourquoi_une_option_est_bloquee():
+    from moteur.chasseurs import meilleure_option
+
+    marche = grille_dc(1.5, 1.0)
+    modele = grille_dc(0.6, 2.2)  # contredit le marché
+    cotes = _cotes_justes(marche, "pinnacle", 0.02) + _cotes_justes(marche, "moyenne", 0.0, {Selection("1x2", "2"): 5.0})
+    a = meilleure_option(_ctx(modele, cotes), Filtre(poids_modele=0.9, seuil_desaccord=0.1))
+    assert a.statut != "recommande"
+    g = grille_dc(1.5, 1.0, -0.05)
+    prix = round(1.06 / proba_plus(g), 2)
+    cotes = _cotes_justes(g, "pinnacle", 0.02) + _cotes_justes(g, "moyenne", 0.05, {Selection("total", "plus", 2.5): prix})
+    assert meilleure_option(_ctx(g, cotes), Filtre(familles_validees=frozenset({"total"}))).statut == "recommande"
+    assert meilleure_option(_ctx(g, cotes), Filtre()).statut == "observation"

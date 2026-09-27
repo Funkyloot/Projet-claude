@@ -148,6 +148,61 @@ def chasseur_value(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:
     return candidats
 
 
+@dataclass
+class Apercu:
+    """Option la plus proche d'une value pour un match (affichée même si elle est négative)."""
+
+    ligue: str
+    dom: str
+    ext: str
+    debut: datetime
+    libelle: str
+    cote: float
+    source: str
+    cote_juste: float
+    cote_min: float
+    ev: float
+    statut: str  # recommande | observation | contredit | trop_belle | sous_seuil
+
+
+def meilleure_option(ctx: ContexteMatch, f: Filtre) -> Apercu | None:
+    """Applique les mêmes filtres que le chasseur B et dit pourquoi l'option est retenue ou non."""
+    ref, _ = grille_reference(ctx, f)
+    if ctx.grille_modele is None and ref is None:
+        return None
+    grille = melanger(ctx.grille_modele, ref, f.poids_modele) if ctx.grille_modele is not None else ref
+    vmin = f.valeur_min if ref is not None else 2 * f.valeur_min
+    prix = {sel: (c, MOYENNE) for sel, c in (_cotes_de(ctx, MOYENNE) or _cotes_de(ctx, BET365)).items()}
+    if f.bookmaker_cible:
+        prix.update({sel: (c, f.bookmaker_cible) for sel, c in _cotes_de(ctx, f.bookmaker_cible).items()})
+    options = []
+    for sel, (cote, source) in prix.items():
+        W, L = gain_perte(grille, sel)
+        if W <= 0:
+            continue
+        ev = esperance(W, L, cote)
+        contredit = False
+        if ref is not None and ctx.grille_modele is not None:
+            ecart = proba_effective(*gain_perte(ctx.grille_modele, sel)) - proba_effective(*gain_perte(ref, sel))
+            contredit = abs(ecart) > f.seuil_desaccord
+        if contredit:
+            statut = "contredit"
+        elif ev > f.seuil_suspect:
+            statut = "trop_belle"
+        elif ev < vmin:
+            statut = "sous_seuil"
+        elif sel.famille in f.familles_validees and ref is not None:
+            statut = "recommande"
+        else:
+            statut = "observation"
+        options.append(Apercu(ctx.ligue, ctx.dom, ctx.ext, ctx.debut, sel.libelle(ctx.dom, ctx.ext), cote, source,
+                              cote_juste(W, L), cote_minimale(W, L, vmin), ev, statut))
+    if not options:
+        return None
+    retenues = [o for o in options if o.statut != "contredit"] or options
+    return max(retenues, key=lambda o: o.ev)
+
+
 def chasseur_incoherences(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:
     """Chasseur A : marchés du bookmaker cible mal alignés sur ses propres 1X2 et plus/moins.
 

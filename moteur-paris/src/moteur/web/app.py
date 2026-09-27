@@ -238,6 +238,11 @@ def creer_app(service: Service) -> FastAPI:
                 raisons_reel=conditions_reel(s, r, quand) if mode == "simulation" else [],
                 battement=lire_etat(s, "service:battement"),
             )
+        analyse = contexte["analyse"]
+        contexte["analyse_quand"] = datetime.fromisoformat(analyse["quand"]) if analyse.get("quand") else None
+        contexte["apercus"] = [dict(a, debut=datetime.fromisoformat(a["debut"])) for a in analyse.get("apercus", [])]
+        with service.sessions() as s:
+            contexte["tache_analyse"] = etat_taches(s)["analyse"]
         contexte["service_actif"] = bool(contexte["battement"]) and (
             quand - datetime.fromisoformat(contexte["battement"]) < timedelta(minutes=3))
         contexte["parametres"] = bool(charger_parametres(r.dossier).get("ligues"))

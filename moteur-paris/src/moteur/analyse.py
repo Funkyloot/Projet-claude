@@ -21,6 +21,7 @@ from .chasseurs import (
     chasseur_surebet,
     chasseur_value,
     grille_reference,
+    meilleure_option,
 )
 from .config import Reglages
 from .donnees.cotes import MAXIMUM, MOYENNE, CoteBrute, cotes_depuis_ligne, plus_recentes
@@ -54,6 +55,7 @@ class ResultatAnalyse:
     ligues: list[str]
     alertes: list[str]
     modeles: dict[str, ModeleDC]
+    apercus: list = field(default_factory=list)
 
 
 def charger_parametres(dossier: Path) -> dict:
@@ -147,6 +149,7 @@ def analyser(
         alertes.append(f"{ligue} : pas assez d'historique pour le modèle (télécharger l'historique).")
     candidats: list[Candidat] = []
     surebets: list[Surebet] = []
+    apercus = []
     for m in matchs:
         params, familles = params_ligue(parametres, m.ligue, r)
         f = Filtre(
@@ -161,9 +164,14 @@ def analyser(
             plus_recentes(m.cotes),
         )
         candidats += chasseur_value(ctx, f) + chasseur_incoherences(ctx, f)
+        apercu = meilleure_option(ctx, f)
+        if apercu is not None:
+            apercus.append(apercu)
         surebets += chasseur_surebet(ctx, f, exclus=(MOYENNE, MAXIMUM))
     candidats.sort(key=lambda c: (not c.valide, -c.ev))
-    return ResultatAnalyse(candidats, surebets, len(matchs), sorted({m.ligue for m in matchs}), alertes, modeles)
+    apercus.sort(key=lambda a: a.debut)
+    return ResultatAnalyse(candidats, surebets, len(matchs), sorted({m.ligue for m in matchs}), alertes, modeles,
+                           apercus)
 
 
 @dataclass

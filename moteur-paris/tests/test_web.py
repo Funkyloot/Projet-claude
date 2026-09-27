@@ -165,3 +165,11 @@ def test_page_donnees_se_rafraichit_pendant_un_calcul(connecte, sessions):
     assert 'http-equiv="refresh"' not in connecte.get("/donnees").text
     connecte.post("/action/analyse", data={"retour_vers": "/donnees"})
     assert 'http-equiv="refresh"' in connecte.get("/donnees").text
+
+
+def test_tableau_montre_les_matchs_analyses(connecte, service):
+    page = connecte.get("/").text
+    assert "Matchs analysés" in page and "Dernière analyse :" in page
+    assert len(service.derniere_analyse["apercus"]) == service.derniere_analyse["nb_matchs"]
+    connecte.post("/action/analyse")
+    assert "analyse en cours" in connecte.get("/").text

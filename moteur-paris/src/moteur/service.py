@@ -264,6 +264,12 @@ class Service:
                 + ", ".join(f"{sel.libelle(sb.dom, sb.ext)} @ {cote(c)} chez {bk}" for sel, bk, c, _ in sb.jambes) + ")"
                 for sb in res.surebets
             ],
+            "apercus": [
+                {"ligue": a.ligue, "match": f"{a.dom} – {a.ext}", "debut": a.debut.isoformat(), "option": a.libelle,
+                 "cote": a.cote, "source": a.source, "cote_juste": a.cote_juste, "cote_min": a.cote_min, "ev": a.ev,
+                 "statut": a.statut}
+                for a in res.apercus
+            ],
         }
         with self.sessions() as s:
             capital(s, self.r, "simulation")

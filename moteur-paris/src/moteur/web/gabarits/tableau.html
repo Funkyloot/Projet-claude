@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block entete %}{% if tache_analyse.get('etat') in ('en_cours', 'en_attente') %}<meta http-equiv="refresh" content="3">{% endif %}{% endblock %}
 {% block contenu %}
 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
 <h1>Tableau de bord</h1>
@@ -29,8 +30,10 @@ Tant que le backtest n'a validé aucun marché, les signaux restent « en observ
 <h2 style="margin:0">Paris recommandés ({{ recos|length }})</h2>
 <form method="post" action="/action/analyse"><button class="secondaire" type="submit">Analyser maintenant</button></form>
 </div>
-{% if analyse %}<p class="doux petit">Dernière analyse : {{ analyse.get('nb_matchs', 0) }} match(s) dans {{ analyse.get('ligues', [])|length }} championnat(s).
-{% if nb_observation %}{{ nb_observation }} signal(aux) en observation (marchés pas encore validés).{% endif %}</p>{% endif %}
+{% if tache_analyse.get('etat') in ('en_cours', 'en_attente') %}<p class="petit"><span class="pastille alerte">analyse en cours…</span></p>
+{% elif analyse %}<p class="doux petit">Dernière analyse : {{ analyse_quand|local if analyse_quand else '—' }} · {{ analyse.get('nb_matchs', 0) }} match(s) dans {{ analyse.get('ligues', [])|length }} championnat(s) · {{ analyse.get('nb_signaux', 0) }} signal(aux).
+{% if nb_observation %}{{ nb_observation }} en observation (marchés pas encore validés).{% endif %}
+Le moteur analyse aussi tout seul toutes les {{ r.intervalle_analyse_h }} h.</p>{% endif %}
 {% for x in recos %}{% set reco = x.reco %}
 <div class="signal">
 <div><strong>#{{ reco.id }} {{ reco.match.libelle }}</strong> · {{ reco.match.competition|ligue }} · {{ reco.match.debut|local }}</div>
@@ -56,6 +59,19 @@ Prix juste {{ reco.cote_juste|cote }} · <strong>jouer si 22bet ≥ {{ reco.cote
 <p>Rien de bon pour l'instant{% if analyse %} : aucune cote au-dessus du prix juste + {{ '%.0f'|format(r.valeur_min*100) }} % dans un marché validé{% endif %}.</p>
 {% endfor %}
 </div>
+
+{% if apercus %}
+<div class="carte defile"><h2>Matchs analysés : l'option la plus proche d'une value</h2>
+<p class="doux petit">Pour chaque match, le pari qui s'approche le plus d'une bonne affaire, avec les mêmes filtres que les recommandations.
+Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé) pour une recommandation. Sur 22bet, la cote peut être meilleure que la moyenne : compare avec la « cote min ».</p>
+{% set statuts = {'recommande': ('', 'recommandé'), 'observation': ('alerte', 'en observation'), 'contredit': ('erreur', 'bloqué : contredit Pinnacle'), 'trop_belle': ('erreur', 'trop belle, risque d’annulation'), 'sous_seuil': ('neutre', 'sous le seuil')} %}
+<table><thead><tr><th>Match</th><th>Option</th><th>Cote vue</th><th>Prix juste</th><th>Cote min</th><th>Écart</th><th>Statut</th></tr></thead><tbody>
+{% for a in apercus %}<tr><td>{{ a.match }}<div class="doux petit">{{ a.ligue|ligue }} · {{ a.debut|local }}</div></td>
+<td>{{ a.option }}</td><td>{{ a.cote|cote }}<div class="doux petit">{{ a.source }}</div></td><td>{{ a.cote_juste|cote }}</td>
+<td><strong>{{ a.cote_min|cote }}</strong></td><td>{{ a.ev|pct }}</td>
+{% set st = statuts.get(a.get('statut', 'sous_seuil'), ('erreur', '')) %}<td><span class="pastille {{ st[0] }}">{{ st[1] }}</span></td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
 
 {% if suspects %}
 <div class="carte"><h2>Cotes trop belles (risque d'annulation)</h2>
