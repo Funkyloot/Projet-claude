@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block titre %}Moteur de paris{% endblock %}</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/statique/icone-180.png">
+<link rel="icon" href="/statique/icone-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Paris">
+<meta name="theme-color" content="#1E6B47">
 {% block entete %}{% endblock %}
 <style>
 :root{--fond:#F4F6F3;--surface:#fff;--encre:#17211C;--doux:#5A665F;--trait:#DCE2DD;--accent:#1E6B47;--accent-doux:#E2EFE7;
@@ -14,6 +21,7 @@
 body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 a{color:var(--accent)}
 header{background:var(--surface);border-bottom:1px solid var(--trait);position:sticky;top:0;z-index:5}
+.barre{position:relative}
 .barre{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 .marque{font-weight:700;letter-spacing:-.01em;margin-right:8px}
 nav{display:flex;flex-wrap:wrap;gap:2px}
@@ -51,6 +59,15 @@ button.danger{background:var(--erreur-doux);color:var(--erreur)}
 .signal:first-of-type{border-top:0}
 .progression{height:8px;background:var(--trait);border-radius:99px;overflow:hidden}
 .progression span{display:block;height:100%;background:var(--accent)}
+a.pastille{text-decoration:none}
+@media (max-width:640px){
+.barre{padding:8px 12px;gap:6px}
+nav{flex-wrap:nowrap;overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+nav a{white-space:nowrap}
+.barre form{position:absolute;top:6px;right:12px} .barre form button{padding:4px 10px;font-size:13px}
+.grille{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px} .chiffre{font-size:21px}
+main{padding:14px 12px 48px}
+}
 pre{white-space:pre-wrap;font-size:13px;background:var(--fond);padding:12px;border-radius:8px;border:1px solid var(--trait)}
 </style>
 </head>
@@ -59,7 +76,7 @@ pre{white-space:pre-wrap;font-size:13px;background:var(--fond);padding:12px;bord
 <header><div class="barre">
 <span class="marque">Moteur de paris <span class="doux petit" style="font-weight:400">v{{ version }}</span></span>
 <nav>
-{% for cle, nom in [("tableau","Tableau de bord"),("journal","Journal"),("fiche","Fiche de match"),("outils","Outils"),("donnees","Données"),("reglages","Réglages"),("bilan","Bilan")] %}
+{% for cle, nom in [("tableau","Tableau de bord"),("historique","Historique"),("journal","Journal"),("fiche","Fiche de match"),("outils","Outils"),("donnees","Données"),("reglages","Réglages"),("bilan","Bilan")] %}
 <a href="{{ '/' if cle == 'tableau' else '/' ~ cle }}" class="{{ 'actif' if page == cle }}">{{ nom }}</a>
 {% endfor %}
 </nav>

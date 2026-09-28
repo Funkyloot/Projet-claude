@@ -173,3 +173,33 @@ def test_tableau_montre_les_matchs_analyses(connecte, service):
     assert len(service.derniere_analyse["apercus"]) == service.derniere_analyse["nb_matchs"]
     connecte.post("/action/analyse")
     assert "analyse en cours" in connecte.get("/").text
+
+
+def test_historique_des_predictions(connecte, service, sessions, scenario):
+    from datetime import timedelta
+
+    from moteur.db import Prediction
+    from moteur.journal import regler_depuis_resultats
+
+    with sessions() as s:
+        n = s.query(Prediction).count()
+    assert n == len(service.derniere_analyse["apercus"]) > 0
+    page = connecte.get("/historique").text
+    assert "Historique des prédictions" in page and "à venir" in page
+    plus_tard = scenario["maintenant"] + timedelta(days=3)
+    with sessions() as s:
+        regler_depuis_resultats(s, scenario["complet"], plus_tard)
+        reglees = s.query(Prediction).filter(Prediction.fraction.isnot(None)).count()
+    assert reglees == n  # toutes notées une fois les scores connus
+    service.horloge = lambda: plus_tard
+    page = connecte.get("/historique?jours=7").text
+    assert "Réussite réelle" in page and ("gagné" in page or "perdu" in page)
+
+
+def test_installation_sur_iphone(client):
+    m = client.get("/manifest.webmanifest").json()  # accessible sans connexion
+    assert m["display"] == "standalone" and m["icons"]
+    assert client.get("/statique/icone-180.png").headers["content-type"] == "image/png"
+    assert client.get("/statique/..%2Fapp.py").status_code == 404  # pas de sortie du dossier
+    assert "def creer_app" not in client.get("/statique/../app.py").text
+    assert 'apple-touch-icon' in client.get("/connexion").text

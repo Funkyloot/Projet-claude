@@ -31,6 +31,13 @@ calcul, arrêtez le moteur le temps de jouer.
 Double-cliquez sur « Installer Moteur de paris.desktop » (ou « bash installer.sh » dans un terminal),
 puis sur l'icône « Moteur de paris » du bureau. Arrêt : arreter.sh.
 
+=== IPHONE / ANDROID ===
+
+Le PC allumé et le téléphone sur le même Wi-Fi : ouvrez Safari, tapez http://adresse-du-pc:8080
+(l'adresse IPv4 s'obtient sur le PC avec la commande « ipconfig »), puis Partager › « Sur l'écran d'accueil ».
+L'icône « Paris » s'ouvre alors en plein écran comme une application, toujours à jour.
+Hors de chez vous : installez Tailscale (gratuit) sur le PC et sur l'iPhone, puis utilisez l'adresse Tailscale du PC.
+
 === Bon à savoir ===
 - Tout se règle dans l'application (page Réglages) : Telegram, championnats, capital, seuils.
 - Depuis le téléphone, sur le même Wi-Fi : http://adresse-du-pc:8080

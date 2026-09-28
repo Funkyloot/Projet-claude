@@ -163,6 +163,7 @@ class Apercu:
     cote_min: float
     ev: float
     statut: str  # recommande | observation | contredit | trop_belle | sous_seuil
+    selection: Selection | None = None
 
 
 def meilleure_option(ctx: ContexteMatch, f: Filtre) -> Apercu | None:
@@ -196,7 +197,7 @@ def meilleure_option(ctx: ContexteMatch, f: Filtre) -> Apercu | None:
         else:
             statut = "observation"
         options.append(Apercu(ctx.ligue, ctx.dom, ctx.ext, ctx.debut, sel.libelle(ctx.dom, ctx.ext), cote, source,
-                              cote_juste(W, L), cote_minimale(W, L, vmin), ev, statut))
+                              cote_juste(W, L), cote_minimale(W, L, vmin), ev, statut, sel))
     if not options:
         return None
     retenues = [o for o in options if o.statut != "contredit"] or options

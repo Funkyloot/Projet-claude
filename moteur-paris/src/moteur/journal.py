@@ -18,7 +18,7 @@ from .calcul import arrondi_naturel, probas_justes
 from .capital import depot_initial, enregistrer, solde
 from .chasseurs import Candidat
 from .config import Reglages
-from .db import Etat, Match, Pari, Recommandation
+from .db import Etat, Match, Pari, Prediction, Recommandation
 from .format import argent, cote as fcote, pct
 from .marches import Selection, cote_juste, esperance, fraction_gagnee, gain_perte, kelly_wl
 from .modeles.grille import grille_depuis_cotes
@@ -158,6 +158,48 @@ def enregistrer_candidats(s: Session, r: Reglages, candidats: list[Candidat], qu
     return nouvelles
 
 
+def enregistrer_predictions(s: Session, apercus: list, quand: datetime) -> int:
+    """Une prédiction par match, mise à jour jusqu'au coup d'envoi, figée ensuite."""
+    n = 0
+    for a in apercus:
+        if a.selection is None or a.debut <= quand:
+            continue
+        m = trouver_ou_creer_match(s, a.ligue, a.dom, a.ext, a.debut)
+        p = s.scalars(select(Prediction).where(Prediction.match_id == m.id)).first()
+        if p is None:
+            p = Prediction(match_id=m.id, cree_le=quand)
+            s.add(p)
+        elif p.fraction is not None:
+            continue
+        p.selection, p.cote, p.source = a.selection.cle, a.cote, a.source
+        p.cote_juste, p.cote_min, p.ev, p.statut, p.maj_le = a.cote_juste, a.cote_min, a.ev, a.statut, quand
+        n += 1
+    s.commit()
+    return n
+
+
+def predictions(s: Session, depuis: datetime) -> list[Prediction]:
+    return list(s.scalars(select(Prediction).join(Match).where(Match.debut >= depuis)
+                          .order_by(Match.debut.desc(), Prediction.id)))
+
+
+def bilan_predictions(liste: list[Prediction]) -> dict:
+    """Probabilité annoncée contre fréquence réelle, et ce qu'aurait donné 1 $ par prédiction."""
+    reglees = [p for p in liste if p.fraction is not None]
+    decisives = [p for p in reglees if p.fraction != 0]
+    gagnees = [p for p in decisives if p.fraction > 0]
+    clvs = [p.clv for p in reglees if p.clv is not None]
+    return {
+        "n": len(liste), "reglees": len(reglees), "en_attente": len(liste) - len(reglees),
+        "gagnees": len(gagnees), "perdues": len(decisives) - len(gagnees),
+        "annoncee": sum(1 / p.cote_juste for p in decisives) / len(decisives) if decisives else None,
+        "reelle": len(gagnees) / len(decisives) if decisives else None,
+        "roi": sum(p.fraction * (p.cote - 1) if p.fraction > 0 else p.fraction for p in reglees) / len(reglees)
+        if reglees else None,
+        "clv": sum(clvs) / len(clvs) if clvs else None,
+    }
+
+
 def recommandations_ouvertes(s: Session, quand: datetime, valides: bool = True) -> list[Recommandation]:
     return list(s.scalars(
         select(Recommandation).join(Match).where(
@@ -264,6 +306,12 @@ def _regler_match(s: Session, m: Match, ligne: pd.Series | None, quand: datetime
         cc = cote_cloture_juste(ligne, sel)
         if cc and reco.cote_retenue:
             reco.clv = reco.cote_retenue / cc - 1
+    for pred in s.scalars(select(Prediction).where(Prediction.match_id == m.id, Prediction.fraction.is_(None))):
+        sel = Selection.depuis_cle(pred.selection)
+        pred.fraction = fraction_gagnee(sel, m.buts_domicile, m.buts_exterieur)
+        cc = cote_cloture_juste(ligne, sel)
+        if cc:
+            pred.clv = pred.cote / cc - 1
     for p in s.scalars(select(Pari).where(Pari.match_id == m.id, Pari.statut == "en_cours")):
         sel = Selection.depuis_cle(p.selection)
         g = fraction_gagnee(sel, m.buts_domicile, m.buts_exterieur)
@@ -284,7 +332,8 @@ def _regler_match(s: Session, m: Match, ligne: pd.Series | None, quand: datetime
 def matchs_a_regler(s: Session, quand: datetime) -> list[Match]:
     """Matchs terminés (début il y a plus de 2 h) sans score, qui ont un pari ou un signal ouvert."""
     ouverts = select(Pari.match_id).where(Pari.statut == "en_cours").union(
-        select(Recommandation.match_id).where(Recommandation.fraction.is_(None)))
+        select(Recommandation.match_id).where(Recommandation.fraction.is_(None)),
+        select(Prediction.match_id).where(Prediction.fraction.is_(None)))
     return list(s.scalars(select(Match).where(
         Match.id.in_(ouverts), Match.buts_domicile.is_(None), Match.debut < quand - timedelta(hours=2))))
 

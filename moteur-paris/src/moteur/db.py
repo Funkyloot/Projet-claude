@@ -121,6 +121,29 @@ class Recommandation(Base):
         return self.cote_vue or self.cote_indicative
 
 
+class Prediction(Base):
+    """La meilleure option affichée pour un match, gardée même sous le seuil, puis notée après le
+    match : permet de vérifier si les probabilités annoncées se réalisent (calibration)."""
+
+    __tablename__ = "predictions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    cree_le: Mapped[datetime] = mapped_column(DateUTC, default=maintenant)
+    maj_le: Mapped[datetime] = mapped_column(DateUTC, default=maintenant)
+    match_id: Mapped[int] = mapped_column(ForeignKey("matchs.id"), index=True, unique=True)
+    selection: Mapped[str] = mapped_column(String(32))
+    cote: Mapped[float] = mapped_column(Float)
+    source: Mapped[str] = mapped_column(String(64))
+    cote_juste: Mapped[float] = mapped_column(Float)
+    cote_min: Mapped[float] = mapped_column(Float)
+    ev: Mapped[float] = mapped_column(Float)
+    statut: Mapped[str] = mapped_column(String(16))
+    fraction: Mapped[float | None] = mapped_column(Float)
+    clv: Mapped[float | None] = mapped_column(Float)
+
+    match: Mapped[Match] = relationship()
+
+
 class Pari(Base):
     """Journal des paris simulés ou réels (cahier des charges, section 12)."""
 

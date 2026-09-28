@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block contenu %}
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+<h1>Historique des prédictions</h1>
+<div style="display:flex;gap:6px">{% for j in (4, 7, 30) %}<a class="pastille {{ '' if j == jours else 'neutre' }}" href="/historique?jours={{ j }}">{{ j }} jours</a>{% endfor %}</div>
+</div>
+<p class="doux petit">Pour chaque match analysé, l'option la plus proche d'une value au dernier passage avant le coup d'envoi,
+puis son résultat une fois le score connu (mis à jour chaque jour). C'est ce qui permet de vérifier le moteur et de l'améliorer.</p>
+
+<div class="grille">
+<div class="carte"><div class="doux petit">Prédictions réglées</div><div class="chiffre">{{ bilan.reglees }}</div>
+<div class="doux petit">{{ bilan.gagnees }} gagnée(s) · {{ bilan.perdues }} perdue(s) · {{ bilan.en_attente }} en attente</div></div>
+<div class="carte"><div class="doux petit">Probabilité annoncée</div><div class="chiffre">{{ '%.0f %%'|format(bilan.annoncee*100) if bilan.annoncee is not none else '—' }}</div>
+<div class="doux petit">en moyenne, par le moteur</div></div>
+<div class="carte"><div class="doux petit">Réussite réelle</div><div class="chiffre">{{ '%.0f %%'|format(bilan.reelle*100) if bilan.reelle is not none else '—' }}</div>
+<div class="doux petit">proche de l'annoncée = probabilités justes</div></div>
+<div class="carte"><div class="doux petit">1 $ sur chaque prédiction</div><div class="chiffre">{{ bilan.roi|pct }}</div>
+<div class="doux petit">à la cote vue{% if bilan.clv is not none %} · CLV {{ bilan.clv|pct }}{% endif %}</div></div>
+</div>
+{% if bilan.reglees and bilan.reglees < 50 %}<p class="doux petit">Moins de 50 prédictions réglées : les écarts sont encore surtout dus au hasard. Il faut plusieurs semaines pour conclure.</p>{% endif %}
+
+<div class="carte defile">
+<table><thead><tr><th>Match</th><th>Option</th><th>Cote vue</th><th>Prix juste</th><th>Proba</th><th>Statut</th><th>Résultat</th><th>CLV</th></tr></thead><tbody>
+{% set statuts = {'recommande': 'recommandé', 'observation': 'en observation', 'contredit': 'contredit Pinnacle', 'trop_belle': 'trop belle', 'sous_seuil': 'sous le seuil'} %}
+{% for p, libelle in lignes %}
+<tr><td>{{ p.match.libelle }}<div class="doux petit">{{ p.match.competition|ligue }} · {{ p.match.debut|local }}</div></td>
+<td>{{ libelle }}</td><td>{{ p.cote|cote }}<div class="doux petit">{{ p.source }}</div></td><td>{{ p.cote_juste|cote }}</td>
+<td>{{ '%.0f %%'|format(100 / p.cote_juste) }}</td><td class="petit">{{ statuts.get(p.statut, p.statut) }}</td>
+<td>{% if p.fraction is none %}<span class="pastille neutre">{{ 'à venir' if p.match.debut > maintenant else 'score attendu' }}</span>
+{% else %}<span class="pastille {{ '' if p.fraction > 0 else 'neutre' if p.fraction == 0 else 'erreur' }}">{{ {1.0:'gagné', 0.5:'demi-gagné', 0.0:'remboursé', -0.5:'demi-perdu', -1.0:'perdu'}[p.fraction] }}</span>
+<div class="doux petit">{{ p.match.score }}</div>{% endif %}</td>
+<td>{{ p.clv|pct }}</td></tr>
+{% else %}<tr><td colspan="8" class="doux">Pas encore de prédiction sur cette période : elles s'enregistrent à chaque analyse à partir de cette version.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

@@ -182,3 +182,18 @@ def test_rapport_backtest_affichable_sous_windows(capsys):
     _sorties_utf8()
     print("ξ − →")  # symboles absents de l'encodage Windows par défaut
     assert "ξ" in capsys.readouterr().out or sys.stdout.encoding.lower().startswith("utf")
+
+
+def test_prediction_figee_apres_le_coup_d_envoi(service, sessions, scenario):
+    from datetime import timedelta
+
+    from moteur.db import Prediction
+
+    service.analyser(scenario["maintenant"])
+    with sessions() as s:
+        avant = {p.match_id: p.maj_le for p in s.query(Prediction)}
+    apres_debut = scenario["maintenant"] + timedelta(hours=30)
+    service.horloge_modifiable["t"] = apres_debut
+    service.analyser(apres_debut)
+    with sessions() as s:
+        assert {p.match_id: p.maj_le for p in s.query(Prediction)} == avant

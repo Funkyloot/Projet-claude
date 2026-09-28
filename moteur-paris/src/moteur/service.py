@@ -48,6 +48,7 @@ from .journal import (
     controle_arret,
     ecrire_etat,
     enregistrer_candidats,
+    enregistrer_predictions,
     lire_etat,
     regler_depuis_resultats,
 )
@@ -274,6 +275,7 @@ class Service:
         with self.sessions() as s:
             capital(s, self.r, "simulation")
             nouvelles = enregistrer_candidats(s, self.r, res.candidats, quand)
+            enregistrer_predictions(s, res.apercus, quand)
             ecrire_etat(s, "derniere_analyse", self.derniere_analyse)
             textes = [alerte(s, self.r, reco, quand) for reco in nouvelles]
         for texte in textes:

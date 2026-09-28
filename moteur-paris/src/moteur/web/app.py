@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import quote
 
 from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
@@ -39,6 +39,8 @@ from ..journal import (
     evaluer_cote,
     lire_etat,
     matchs_a_regler,
+    bilan_predictions,
+    predictions,
     mode_actuel,
     recommandations_ouvertes,
     recommandations_suspectes,
@@ -56,6 +58,8 @@ if TYPE_CHECKING:
     from ..service import Service
 
 GABARITS = Path(__file__).parent / "gabarits"
+STATIQUE = Path(__file__).parent / "statique"
+LIBRES = {"/connexion", "/sante", "/manifest.webmanifest"}  # accessibles sans être connecté
 
 
 @dataclass(frozen=True)
@@ -161,7 +165,7 @@ def creer_app(service: Service) -> FastAPI:
 
     @app.middleware("http")
     async def garde(request: Request, call_next):
-        if request.url.path in ("/connexion", "/sante"):
+        if request.url.path in LIBRES or request.url.path.startswith("/statique/"):
             return await call_next(request)
         with service.sessions() as s:
             ok = securite.session_valide(s, request.cookies.get(securite.COOKIE))
@@ -174,6 +178,22 @@ def creer_app(service: Service) -> FastAPI:
     @app.get("/sante")
     def sante():
         return {"ok": True}
+
+    @app.get("/manifest.webmanifest")
+    def manifeste():
+        # Permet « Sur l'écran d'accueil » sur iPhone / Android : icône et plein écran comme une app
+        return JSONResponse({
+            "name": "Moteur de paris", "short_name": "Paris", "start_url": "/", "display": "standalone",
+            "background_color": "#F4F6F3", "theme_color": "#1E6B47", "lang": "fr",
+            "icons": [{"src": f"/statique/icone-{t}.png", "sizes": f"{t}x{t}", "type": "image/png"} for t in (192, 512)],
+        }, media_type="application/manifest+json")
+
+    @app.get("/statique/{nom}")
+    def statique(nom: str):
+        chemin = (STATIQUE / nom).resolve()
+        if chemin.parent != STATIQUE.resolve() or not chemin.is_file():
+            return JSONResponse({"erreur": "introuvable"}, status_code=404)
+        return FileResponse(chemin, headers={"Cache-Control": "public, max-age=86400"})
 
     @app.get("/connexion", response_class=HTMLResponse)
     def connexion(request: Request):
@@ -496,6 +516,18 @@ def creer_app(service: Service) -> FastAPI:
             except ValueError as e:
                 return retour("/reglages", erreur=f"Nouveau mot de passe trop court : {e}.")
         return RedirectResponse("/connexion", status_code=303)
+
+    # --- historique des prédictions -----------------------------------------------------
+
+    @app.get("/historique", response_class=HTMLResponse)
+    def historique(request: Request, jours: int = 4):
+        jours = max(1, min(jours, 90))
+        quand = service.horloge()
+        with service.sessions() as s:
+            liste = predictions(s, quand - timedelta(days=jours))
+            lignes = [(p, Selection.depuis_cle(p.selection).libelle(p.match.domicile, p.match.exterieur)) for p in liste]
+            bilan = bilan_predictions(liste)
+        return page(request, "historique", lignes=lignes, bilan=bilan, jours=jours)
 
     # --- bilan ----------------------------------------------------------------------------------
 

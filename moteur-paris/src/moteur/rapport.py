@@ -19,7 +19,9 @@ from .journal import (
     debut_du_jour,
     derniers_paris,
     dimensionner,
+    bilan_predictions,
     mode_actuel,
+    predictions,
     recommandations_ouvertes,
     recommandations_suspectes,
     stats_paris,
@@ -193,6 +195,13 @@ def bilan_hebdo(s: Session, r: Reglages, quand: datetime, parametres: dict) -> s
     for g in stats_signaux(s, debut):
         lignes.append(f"| {g['chasseur']} | {g['ligue']} | {g['famille']} | {'oui' if g['valide'] else 'non'} | "
                       f"{g['n']} | {pct(g['roi'])} | {pct(g['clv'])} |")
+    b = bilan_predictions(predictions(s, debut))
+    lignes += ["", "## Prédictions affichées (meilleure option par match, 1 unité)"]
+    if b["reglees"]:
+        lignes.append(f"{b['reglees']} réglées : {b['gagnees']} gagnées, {b['perdues']} perdues · probabilité annoncée "
+                      f"{b['annoncee']:.0%} contre {b['reelle']:.0%} réalisé · ROI {pct(b['roi'])} · CLV {pct(b['clv'])}")
+    else:
+        lignes.append("Aucune prédiction réglée cette semaine.")
     lignes += ["", "## Marchés validés par le dernier backtest"]
     ligues = parametres.get("ligues", {})
     if not ligues:
