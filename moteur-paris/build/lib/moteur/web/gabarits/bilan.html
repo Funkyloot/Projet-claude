@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Bilan de la semaine</h1>
+<div class="carte">
+<p class="doux petit">Copiez ce texte dans une conversation Claude (votre abonnement suffit, pas besoin d'API) pour décider des réglages à ajuster.</p>
+<button type="button" class="secondaire" id="copier">Copier le texte</button>
+<pre id="texte">{{ texte }}</pre>
+</div>
+<script>
+document.getElementById("copier").addEventListener("click", async (e) => {
+  const texte = document.getElementById("texte").innerText;
+  try { await navigator.clipboard.writeText(texte); e.target.textContent = "Copié"; }
+  catch { const r = document.createRange(); r.selectNodeContents(document.getElementById("texte"));
+          const s = getSelection(); s.removeAllRanges(); s.addRange(r); e.target.textContent = "Texte sélectionné : Ctrl+C"; }
+});
+</script>
+{% endblock %}

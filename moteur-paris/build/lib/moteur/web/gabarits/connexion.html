@@ -8,19 +8,13 @@
 <form method="post" action="/connexion" style="display:grid;gap:12px">
 <label>Mot de passe<input type="password" name="mdp" id="mdp" required minlength="8" autocomplete="new-password"></label>
 <label>Confirmation<input type="password" name="confirmation" id="confirmation" required minlength="8" autocomplete="new-password"></label>
-<input type="hidden" name="fuseau" class="fuseau">
 <button type="submit">Créer et entrer</button>
 </form>
 {% else %}
 <form method="post" action="/connexion" style="display:grid;gap:12px">
 <label>Mot de passe<input type="password" name="mdp" id="mdp" required autofocus autocomplete="current-password"></label>
-<input type="hidden" name="fuseau" class="fuseau">
 <button type="submit">Entrer</button>
 </form>
 {% endif %}
 </div>
-<script>
-try { const f = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
-      document.querySelectorAll("input.fuseau").forEach(e => e.value = f); } catch (e) {}
-</script>
 {% endblock %}

@@ -140,3 +140,22 @@ def test_cache_de_lecture(tmp_path):
     assert (dossier / "2425.pkl").exists()
     assert fd.charger(tmp_path, ["E1"]).equals(premier)
     assert fd.etat_historique(tmp_path)["E1"]["saisons"] == 1  # le cache n'est pas compté comme une saison
+
+
+def test_programme_publie(tmp_path):
+    """Le programme garde la date de publication de football-data et explique ce qu'il contient."""
+    contenu = ("Div,Date,Time,HomeTeam,AwayTeam\nEC,29/09/2026,19:45,Barrow,Scunthorpe\n"
+               "E1,03/10/2026,15:00,Leeds,Hull\nE1,20/09/2026,15:00,Hull,Leeds\n").encode()
+
+    def repondre(r: httpx.Request):
+        return httpx.Response(200, content=contenu, headers={"Last-Modified": "Tue, 29 Sep 2026 09:09:25 GMT"})
+
+    assert fd.telecharger_fixtures(tmp_path, httpx.Client(transport=httpx.MockTransport(repondre))) is None
+    chemin = fd.dossier_csv(tmp_path) / "fixtures.csv"
+    assert datetime.fromtimestamp(chemin.stat().st_mtime, timezone.utc) == datetime(2026, 9, 29, 9, 9, 25, tzinfo=timezone.utc)
+    fixtures = fd.charger_fixtures(tmp_path)
+    quand = datetime(2026, 9, 29, 12, tzinfo=timezone.utc)
+    assert fd.resume_programme(fixtures, ["E1"], quand) == {
+        "nb": 2, "suivis": 1, "prochain": "2026-10-03T14:00:00+00:00", "autres": ["National League anglaise"]}
+    assert fd.resume_programme(fixtures, ["D2"], quand)["prochain"] is None
+    assert fd.resume_programme(fd.charger_fixtures(tmp_path / "vide"), ["E1"], quand)["nb"] == 0

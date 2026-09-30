@@ -202,7 +202,7 @@ def creer_app(service: Service) -> FastAPI:
         return page(request, "connexion", premiere=premiere)
 
     @app.post("/connexion")
-    def se_connecter(mdp: str = Form(...), confirmation: str = Form(""), fuseau: str = Form("")):
+    def se_connecter(mdp: str = Form(...), confirmation: str = Form("")):
         with service.sessions() as s:
             if not securite.mdp_defini(s):
                 if mdp != confirmation:
@@ -215,11 +215,6 @@ def creer_app(service: Service) -> FastAPI:
                 time.sleep(1)  # freine les essais au hasard
                 return retour("/connexion", erreur="Mot de passe incorrect.")
             jeton = securite.ouvrir_session(s)
-            if fuseau and service.base.fuseau == "UTC" and "fuseau" not in surcharges(s):
-                try:  # fuseau jamais choisi : on prend celui de l'appareil qui se connecte
-                    enregistrer_reglages(s, {"fuseau": fuseau}, service.base)
-                except ValidationError:
-                    pass
         reponse = RedirectResponse("/", status_code=303)
         reponse.set_cookie(securite.COOKIE, jeton, max_age=int(securite.DUREE_SESSION.total_seconds()),
                            httponly=True, samesite="strict")

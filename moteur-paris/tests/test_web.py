@@ -203,3 +203,24 @@ def test_installation_sur_iphone(client):
     assert client.get("/statique/..%2Fapp.py").status_code == 404  # pas de sortie du dossier
     assert "def creer_app" not in client.get("/statique/../app.py").text
     assert 'apple-touch-icon' in client.get("/connexion").text
+
+
+def test_tableau_explique_l_absence_de_match(connecte, service):
+    service.derniere_analyse = {"quand": "2026-09-30T08:00:00+00:00", "nb_matchs": 0, "ligues": [], "apercus": [],
+                                "programme": {"nb": 2, "suivis": 0, "prochain": None, "maj": "2026-09-29T09:09:25+00:00",
+                                              "autres": ["National League anglaise"]}}
+    page = connecte.get("/").text
+    assert "Pourquoi aucun match" in page and "National League anglaise" in page and "The Odds API" in page
+    service.derniere_analyse["programme"]["prochain"] = "2026-10-03T14:00:00+00:00"
+    assert "Prochain match de tes championnats" in connecte.get("/").text
+
+
+def test_fuseau_de_l_appareil_a_la_premiere_connexion(client, sessions):
+    r = client.post("/connexion", data={"mdp": "motdepasse1", "confirmation": "motdepasse1", "fuseau": "Mars/Olympus"})
+    assert "Tableau de bord" in r.text  # fuseau inconnu : ignoré sans bloquer la connexion
+    with sessions() as s:
+        assert "fuseau" not in surcharges(s)
+    client.post("/connexion", data={"mdp": "motdepasse1", "fuseau": "Europe/Paris"})
+    client.post("/connexion", data={"mdp": "motdepasse1", "fuseau": "America/Toronto"})
+    with sessions() as s:
+        assert surcharges(s)["fuseau"] == "Europe/Paris"  # un choix déjà fait n'est jamais écrasé
