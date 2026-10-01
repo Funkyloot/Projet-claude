@@ -3,6 +3,19 @@
 Le PC fait serveur : il garde le jeu et le sert au téléphone. Il doit rester
 allumé (et ne pas se mettre en veille) pendant que tu joues.
 
+## 0. Sur un serveur Linux (VM Proxmox, etc.) : tout en un
+
+Dans la console du serveur (en root), colle ces deux lignes :
+
+```
+cd /root/projet-claude && git fetch origin claude/kairosoft-hybrid-racing-game-5x34eg && git worktree add /opt/pistonville FETCH_HEAD
+bash /opt/pistonville/pistonville/installer-serveur.sh
+```
+
+Le script installe le jeu comme service (il redémarre tout seul), affiche
+l'adresse à ouvrir sur le téléphone, et explique Tailscale pour jouer hors de
+la maison. Pour mettre à jour plus tard : `bash /opt/pistonville/pistonville/installer-serveur.sh`.
+
 ## 1. Une seule fois, sur le PC
 
 1. Installe **Node.js** (version LTS) : https://nodejs.org
