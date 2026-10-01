@@ -8,7 +8,8 @@
  * montre où le bâtiment se posera.
  */
 
-import { tuile, objet, idPersonnage, PERSONNAGES, DIRECTION, spriteVoiture, bulle, T } from './sprites.js';
+import { DIRECTION, bulle, police } from './sprites.js';
+import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, CONTOUR as CONTOUR_TINY } from './tiny.js';
 import { texte } from './course.js';
 import { decrireVoiture } from './partie.js';
 import { batiment, COLONNES_TERRAIN, combosActifs, raisonPlacement, effets } from './garage.js';
@@ -16,11 +17,13 @@ import { batiment, COLONNES_TERRAIN, combosActifs, raisonPlacement, effets } fro
 export const CASE = 32;
 export const X0 = (320 - COLONNES_TERRAIN * CASE) / 2;   // 32 px de marge
 const Y0 = 184;                                          // haut du terrain (sous la barre, l’objectif et la rue)
+const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 const PAROLES = { mecano: ['Clac !', 'Serré !', 'Huile ?'], ingenieur: ['Eurêka !', 'Hmm…', '3,14'], commercial: ['Merci !', 'Promo !', 'Souriez !'] };
 
 export class SceneGarage {
-  constructor(planche) {
+  constructor(planche, tiny = {}) {
     this.planche = planche;
+    this.tiny = tiny;
     this.scroll = 0;
     this.construction = null;
     this.etincelles = [];
@@ -213,46 +216,64 @@ export class SceneGarage {
 
   // --- Dessin ---------------------------------------------------------------------------
 
+  /**
+   * Le garage vu de l'intérieur, façon Kenney Tiny Factory : un grand atelier au
+   * sol orangé, mur du fond gris à bande jaune avec la grande porte sur la rue,
+   * chaque bâtiment posé comme une pièce meublée (mur, machines, établis), et le
+   * personnel qui circule entre les postes. 1 case du terrain = 2 m.
+   */
   dessiner(ctx, W, H, t, partie) {
-    const p = this.planche;
+    const tiny = this.tiny;
     ctx.imageSmoothingEnabled = false;
-    ctx.fillStyle = '#38cbab';
+    ctx.fillStyle = '#34283a';
     ctx.fillRect(0, 0, W, H);
-    for (let y = 0; y < H; y += 2) for (let x = (y / 2) % 6; x < W; x += 12) {
-      if ((x * 7 + y * 13) % 17 < 2) { ctx.fillStyle = '#33bdae'; ctx.fillRect(x, y, 2, 2); }
-    }
     if (!partie?.terrain) return;
     const o = this.origine();
     const L = partie.terrain.lignes;
     const largeur = COLONNES_TERRAIN * CASE, hauteur = L * CASE;
+    // Sol extérieur : terre sombre et cailloux (tuiles Tiny Factory).
+    const dy = ((o.y % 16) + 16) % 16;
+    for (let y = dy - 16; y < H; y += 16) for (let x = 0; x < W; x += 16) {
+      const k = (((x * 7 + (y - o.y) * 13) % 23) + 23) % 23;
+      tuileTiny(ctx, tiny, 'factory', k === 0 ? 32 : k === 5 ? 33 : 3, x, y);
+    }
 
-    // Rue et trottoir au-dessus du terrain, voiture qui passe.
-    const yRue = o.y - 52;
-    for (let x = 0; x < W; x += T) { tuile(ctx, p, 441, x, yRue); tuile(ctx, p, 441, x, yRue + T); tuile(ctx, p, 36, x, yRue + 2 * T); }
-    ctx.fillStyle = '#d9d6e6';
-    for (let x = 4; x < W; x += 24) ctx.fillRect(x, yRue + 15, 12, 2);
-    const passante = spriteVoiture('#4f7ddb');
-    ctx.save(); ctx.translate(Math.round(this.passant), yRue + 10); ctx.rotate(Math.PI / 2);
-    ctx.drawImage(passante, -Math.floor(passante.width / 2), -Math.floor(passante.height / 2)); ctx.restore();
+    // La rue au-dessus, avec sa voiture qui passe.
+    const yRue = o.y - 96;
+    ctx.fillStyle = '#d9d3c3'; ctx.fillRect(0, yRue - 10, W, 10); ctx.fillRect(0, yRue + 38, W, 12);
+    ctx.fillStyle = '#a59f90'; ctx.fillRect(0, yRue - 1, W, 1); ctx.fillRect(0, yRue + 38, W, 1);
+    ctx.fillStyle = '#4f5470'; ctx.fillRect(0, yRue, W, 38);
+    ctx.fillStyle = '#e8e4d6';
+    for (let x = 4; x < W; x += 24) ctx.fillRect(x, yRue + 18, 12, 2);
+    dessinerVoitureTiny(ctx, spriteVoitureTiny('#4f7ddb'), Math.round(this.passant), yRue + 22, 0);
+    // Allée de béton entre la rue et la grande porte.
+    const porteX = o.x + largeur / 2 - 24;
+    ctx.fillStyle = '#bdb6a4'; ctx.fillRect(porteX, yRue + 50, 48, o.y - 20 - (yRue + 50));
+    ctx.fillStyle = '#a59f90'; for (let y = yRue + 56; y < o.y - 20; y += 8) ctx.fillRect(porteX, y, 48, 1);
 
-    // Sol du terrain, clôture, portail.
-    for (let y = 0; y < hauteur; y += T) for (let x = 0; x < largeur; x += T) tuile(ctx, p, 36, o.x + x, o.y + y);
-    ctx.fillStyle = '#3a3550';
-    ctx.fillRect(o.x - 4, o.y - 4, 4, hauteur + 8); ctx.fillRect(o.x + largeur, o.y - 4, 4, hauteur + 8);
-    ctx.fillRect(o.x - 4, o.y + hauteur, largeur + 8, 4);
-    ctx.fillRect(o.x - 4, o.y - 4, largeur / 2 - 28, 4); ctx.fillRect(o.x + largeur / 2 + 32, o.y - 4, largeur / 2 - 28, 4);
-    ctx.fillStyle = '#1f2a44'; ctx.fillRect(W / 2 - 62, o.y - 26, 124, 18);
-    ctx.fillStyle = '#f2c14e'; ctx.fillRect(W / 2 - 60, o.y - 24, 120, 14);
-    texte(ctx, 'GARAGE PISTON', W / 2, o.y - 17, 10, '#1f2a44', 'center');
+    // Le bâtiment : contour clair bordé de sombre, comme les pièces de Tiny Factory.
+    cadreTiny(ctx, o.x - 4, o.y - 20, largeur + 8, hauteur + 24);
+    // Mur du fond (une rangée de tuiles), avec la grande porte au milieu.
+    for (let x = 0; x < largeur; x += 16) {
+      const i = Math.floor((x - (largeur / 2 - 24)) / 16);
+      const n = i >= 0 && i < 3 ? [69, 70, 71][i] : [44, 46, 47, 57, 46, 58, 59, 47][(x / 16) % 8];
+      tuileTiny(ctx, tiny, 'factory', n, o.x + x, o.y - 16);
+    }
+    // Enseigne au-dessus du mur, de chaque côté de la porte.
+    ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(o.x + 6, o.y - 40, 88, 18);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(o.x + 8, o.y - 38, 84, 14);
+    texte(ctx, 'GARAGE PISTON', o.x + 50, o.y - 31, 9, '#1f2a44', 'center');
+    // Sol : dalles orangées ; les cases libres forment les allées.
+    for (let y = 0; y < hauteur; y += 16) for (let x = 0; x < largeur; x += 16) tuileTiny(ctx, tiny, 'factory', 0, o.x + x, o.y + y);
 
     // Grille en mode construction.
     if (this.placement) {
-      ctx.fillStyle = 'rgba(31,42,68,0.25)';
+      ctx.fillStyle = 'rgba(38,24,46,0.22)';
       for (let x = 0; x <= COLONNES_TERRAIN; x++) ctx.fillRect(o.x + x * CASE, o.y, 1, hauteur);
       for (let y = 0; y <= L; y++) ctx.fillRect(o.x, o.y + y * CASE, largeur, 1);
     }
 
-    // Bâtiments et décor, triés de haut en bas.
+    // Bâtiments et décor, du fond vers l'avant.
     const combos = combosActifs(partie);
     const enCombo = new Set(combos.flatMap((c) => c.membres));
     const tries = partie.terrain.batiments.slice().sort((a, b) => a.y + batiment(a.id).h - (b.y + batiment(b.id).h));
@@ -262,14 +283,14 @@ export class SceneGarage {
       if (this.placement?.sauf === b.uid) continue;
       const d = batiment(b.id);
       const x = o.x + b.x * CASE, y = o.y + b.y * CASE, w = d.l * CASE, h = d.h * CASE;
-      if (y + h < 0 || y > H) continue;
-      dessinerBatiment(ctx, p, b, d, x, y, w, h, t);
+      if (y + h < -16 || y > H) continue;
+      dessinerBatiment(ctx, tiny, b, d, x, y, w, h, t, !!this.placement || this.selection === b.uid);
       if (b.id === 'pont') {
         const i = ponts.indexOf(b);
         if (i === 0 && this.construction) this.dessinerChantier(ctx, x + w / 2, y + h / 2, t);
         else if (voitures[i]) {
-          const s = spriteVoiture(voitures[i].couleur, voitures[i].active ? '#f2c14e' : '#f4f1e8', voitures[i].looks);
-          ctx.save(); ctx.translate(x + w / 2, y + h / 2); ctx.drawImage(s, -Math.floor(s.width / 2), -Math.floor(s.height / 2)); ctx.restore();
+          const v = voitures[i];
+          dessinerVoitureTiny(ctx, spriteVoitureTiny(v.couleur, v.active ? '#f2c14e' : null, v.looks), x + w / 2, y + h / 2 - 3, Math.PI / 2);
         }
       }
       if (enCombo.has(b.uid)) { ctx.fillStyle = Math.sin(t * 4) > 0 ? '#ffe066' : '#f39c33'; ctx.fillRect(x + w - 7, y + 2, 5, 5); }
@@ -281,14 +302,14 @@ export class SceneGarage {
 
     for (const e of this.etincelles) { ctx.fillStyle = e.vie > 0.2 ? '#ffe066' : '#f39c33'; ctx.fillRect(Math.round(e.x), Math.round(e.y), 2, 2); }
 
-    // Personnel.
+    // Personnel : petits personnages modernes (casque jaune des mécanos, blouse des ingénieurs).
     const persos = partie.personnel.map((s) => ({ s, m: this.marcheurs.get(s.uid) })).filter((x) => x.m)
       .map((x) => ({ ...x, pos: x.m.dedans || x.m })).sort((a, b) => a.pos.y - b.pos.y);
     for (const { s, m, pos } of persos) {
-      const px = o.x + pos.x * CASE + 16, py = o.y + pos.y * CASE + 24;
-      const pas = m.marche ? (Math.floor(t * 6) % 2) + 1 : (Math.floor(t * 3) % 4 === 0 ? 1 : 0);
-      tuile(ctx, p, idPersonnage(PERSONNAGES[s.apparence % PERSONNAGES.length], m.dir, pas), px - 8, py - 14);
-      if (s.auRepos) { ctx.fillStyle = '#7dd3fc'; ctx.fillRect(px + 5, py - 16, 3, 3); }
+      const px = o.x + pos.x * CASE + 16, py = o.y + pos.y * CASE + 26;
+      const pas = m.marche ? (Math.floor(t * 6) % 2) + 1 : 0;
+      dessinerPerso(ctx, tenue(s.apparence, s.metier), px, py, NOMS_DIRECTION[m.dir] || 'face', pas);
+      if (s.auRepos) { ctx.fillStyle = '#7dd3fc'; ctx.fillRect(px + 6, py - 18, 3, 3); }
     }
     for (const { m, pos } of persos) if (m.bulle) bulle(ctx, o.x + pos.x * CASE + 16, o.y + pos.y * CASE + 8, m.bulle.texte);
 
@@ -302,7 +323,7 @@ export class SceneGarage {
       const ok = !raisonPlacement(partie, this.placement.id, this.placement.x, this.placement.y, this.placement.sauf);
       const x = o.x + this.placement.x * CASE, y = o.y + this.placement.y * CASE;
       ctx.globalAlpha = 0.75;
-      dessinerBatiment(ctx, p, { id: d.id, niveau: 1 }, d, x, y, d.l * CASE, d.h * CASE, t);
+      dessinerBatiment(ctx, tiny, { id: d.id, niveau: 1 }, d, x, y, d.l * CASE, d.h * CASE, t);
       ctx.globalAlpha = 1;
       ctx.fillStyle = ok ? 'rgba(90,209,106,0.35)' : 'rgba(228,67,45,0.4)';
       ctx.fillRect(x, y, d.l * CASE, d.h * CASE);
@@ -327,124 +348,249 @@ export class SceneGarage {
     return liste;
   }
 
-  /** La voiture se monte de l'avant vers l'arrière, puis reçoit sa peinture. */
+  /** La voiture se monte de l'arrière vers l'avant, puis reçoit sa peinture. */
   dessinerChantier(ctx, cx, cy, t) {
     const c = this.construction;
     const avance = Math.min(1, c.t / c.duree);
-    const brute = spriteVoiture('#9ea3ac', '#c9ccd4', []);
-    const finie = spriteVoiture(c.voiture.couleur, '#f2c14e', c.voiture.looks || []);
-    const s = avance > 0.85 ? finie : brute;
-    const h = Math.ceil(s.height * Math.min(1, avance / 0.8));
+    const s = avance > 0.85 ? spriteVoitureTiny(c.voiture.couleur, '#f2c14e', c.voiture.looks || []) : spriteVoitureTiny('#9ea3ac', null, []);
+    const h = Math.ceil(60 * Math.min(1, avance / 0.8));
     ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(1.5, 1.5);
-    const ox = -Math.floor(s.width / 2), oy = -Math.floor(s.height / 2);
-    ctx.fillStyle = 'rgba(31,42,68,0.35)';
-    for (let y = 0; y < s.height; y += 2) ctx.fillRect(ox + 1, oy + y, s.width - 2, 1);
-    ctx.drawImage(s, 0, 0, s.width, h, ox, oy, s.width, h);
-    if (avance < 0.85) { ctx.fillStyle = Math.sin(t * 30) > 0 ? '#ffe066' : '#ffffff'; ctx.fillRect(ox, oy + h - 1, s.width, 1); }
+    ctx.beginPath(); ctx.rect(cx - 32, cy + 30 - h, 64, h); ctx.clip();
+    dessinerVoitureTiny(ctx, s, cx, cy - 3, Math.PI / 2);
     ctx.restore();
+    if (avance < 0.85) { ctx.fillStyle = Math.sin(t * 30) > 0 ? '#ffe066' : '#ffffff'; ctx.fillRect(cx - 16, cy + 30 - h, 32, 1); }
   }
 }
 
-// --- Dessin des bâtiments ---------------------------------------------------------------------
+// --- Dessin des bâtiments (style Kenney Tiny Factory) ------------------------------------------
+// Une case du terrain fait 32 px = 2 tuiles de 16 px. Chaque bâtiment est une
+// « pièce » : un bout de mur au fond (bande jaune), le sol à damier, et ses
+// machines ou meubles à l'échelle (une personne = 1 tuile, une voiture = 2 × 3).
 
-function toit(ctx, x, y, w, h, couleur) {
-  ctx.fillStyle = 'rgba(42,40,56,0.3)'; ctx.fillRect(x + 3, y + 3, w - 2, h - 2);
-  ctx.fillStyle = '#3a3550'; ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
-  ctx.fillStyle = couleur; ctx.fillRect(x + 2, y + 2, w - 4, h - 12);
-  ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(x + 2, y + 2, w - 4, 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.12)'; for (let i = y + 6; i < y + h - 12; i += 5) ctx.fillRect(x + 3, i, w - 6, 1);
-  // Façade avec porte.
-  ctx.fillStyle = '#d6d4af'; ctx.fillRect(x + 2, y + h - 10, w - 4, 8);
-  ctx.fillStyle = '#836a62'; ctx.fillRect(x + w / 2 - 3, y + h - 9, 6, 7);
-  ctx.fillStyle = '#9fd3ff'; ctx.fillRect(x + 5, y + h - 8, 4, 4); ctx.fillRect(x + w - 9, y + h - 8, 4, 4);
+/** Contour de pièce : trait clair bordé de sombre. */
+export function cadreTiny(ctx, x, y, w, h) {
+  ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  ctx.fillStyle = '#c4cbda'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
 }
 
-function etiquette(ctx, x, y, w, nom, niveau, max) {
+/** Pose une ligne de tuiles Tiny Factory à partir de (x, y), de gauche à droite. */
+function rangee(ctx, tiny, ns, x, y) {
+  ns.forEach((n, i) => { if (n !== null) tuileTiny(ctx, tiny, 'factory', n, x + i * 16, y); });
+}
+
+/** Sol à damier, mur du fond et contour : la base d'une pièce. */
+function piece(ctx, tiny, x, y, w, h, murs, sol = 1) {
+  for (let yy = 0; yy < h; yy += 16) for (let xx = 0; xx < w; xx += 16) tuileTiny(ctx, tiny, 'factory', sol, x + xx, y + yy);
+  if (murs) for (let xx = 0; xx < w; xx += 16) tuileTiny(ctx, tiny, 'factory', murs[(xx / 16) % murs.length], x + xx, y);
+  ctx.fillStyle = 'rgba(38,24,46,0.55)';
+  ctx.fillRect(x, y, w, 1); ctx.fillRect(x, y + h - 1, w, 1); ctx.fillRect(x, y, 1, h); ctx.fillRect(x + w - 1, y, 1, h);
+}
+
+function plaque(ctx, x, y, w, nom, niveau, max) {
   const court = nom.length > 14 && w < 64 ? `${nom.slice(0, 11)}.` : nom;
-  texte(ctx, court, x + w / 2, y + 9, 7, '#ffffff', 'center');
-  if (max > 1) texte(ctx, '◆'.repeat(niveau), x + w / 2, y + 19, 6, '#ffe066', 'center');
+  ctx.font = police(7);
+  const lw = Math.min(w - 4, Math.ceil(ctx.measureText(court).width) + 8);
+  ctx.fillStyle = 'rgba(31,42,68,0.88)'; ctx.fillRect(x + (w - lw) / 2, y + 1, lw, 9);
+  texte(ctx, court, x + w / 2, y + 6, 7, '#ffffff', 'center');
+  if (max > 1) texte(ctx, '★'.repeat(niveau), x + w / 2, y + 15, 6, '#ffe066', 'center');
+}
+
+function etoiles(ctx, xd, y, n) {
+  for (let i = 0; i < n; i++) {
+    const x = xd - 5 - i * 6;
+    ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x - 1, y - 1, 6, 6);
+    ctx.fillStyle = '#ffe066'; ctx.fillRect(x, y, 4, 4);
+    ctx.fillStyle = '#fff6c8'; ctx.fillRect(x, y, 2, 1);
+  }
+}
+
+function perso(ctx, x, y, apparence, dir = 'face') {
+  dessinerPerso(ctx, tenue(apparence), x, y, dir, 0);
 }
 
 /** Dessine un bâtiment ou un décor dans son rectangle (en pixels d'écran). */
-export function dessinerBatiment(ctx, planche, b, d, x, y, w, h, t = 0) {
+export function dessinerBatiment(ctx, tiny, b, d, x, y, w, h, t = 0, avecNom = false) {
   const n = b.niveau || 1;
+  // Le nom n'apparaît que sur demande (bâtiment touché, mode construction) ; sinon, le niveau en petites étoiles.
+  const nom = () => {
+    if (!b.uid) return;
+    if (avecNom) plaque(ctx, x, y, w, d.nom, n, d.niveauMax);
+    else if (d.niveauMax > 1) etoiles(ctx, x + w - 3, y + 3, n);
+  };
   switch (d.id) {
     case 'pont': {
-      ctx.fillStyle = '#7e7c93'; ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
-      ctx.fillStyle = '#9896ab'; ctx.fillRect(x + 4, y + 4, w - 8, h - 8);
-      ctx.fillStyle = '#f2c14e';
-      for (const [a, c] of [[4, 4], [w - 12, 4], [4, h - 10], [w - 12, h - 10]]) ctx.fillRect(x + a, y + c, 8, 6);
-      texte(ctx, '◆'.repeat(n), x + w / 2, y + h - 5, 6, '#ffe066', 'center');
+      // Pont élévateur : plateau gris à l'échelle d'une voiture, quatre colonnes jaunes.
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 8, y + 4, w - 16, h - 8);
+      ctx.fillStyle = '#9aa1b5'; ctx.fillRect(x + 9, y + 5, w - 18, h - 10);
+      ctx.fillStyle = '#80879c'; for (let yy = y + 9; yy < y + h - 6; yy += 6) ctx.fillRect(x + 10, yy, w - 20, 1);
+      for (const [a, c] of [[3, 2], [w - 9, 2], [3, h - 12], [w - 9, h - 12]]) {
+        ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + a, y + c, 6, 10);
+        ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + a + 1, y + c + 1, 4, 8);
+        ctx.fillStyle = '#fff1a8'; ctx.fillRect(x + a + 1, y + c + 1, 1, 8);
+      }
+      if (b.uid) etoiles(ctx, x + w - 10, y + h - 9, n);
       return;
     }
-    case 'distributeur': {
-      ctx.fillStyle = '#1a1626'; ctx.fillRect(x + 7, y + 3, 18, 26);
-      ctx.fillStyle = d.couleur; ctx.fillRect(x + 8, y + 4, 16, 24);
-      ctx.fillStyle = '#9fd3ff'; ctx.fillRect(x + 10, y + 6, 8, 12);
-      ctx.fillStyle = '#e4432d'; ctx.fillRect(x + 11, y + 8, 2, 3); ctx.fillStyle = '#ffe066'; ctx.fillRect(x + 14, y + 12, 2, 3);
-      ctx.fillStyle = '#c9ccd4'; ctx.fillRect(x + 19, y + 7, 3, 6);
-      return;
+    case 'bureau-etudes':
+      piece(ctx, tiny, x, y, w, h, [44, 58, 59, 45]);
+      rangee(ctx, tiny, [111, 112, null, 100], x, y + 14);
+      rangee(ctx, tiny, [54, 55, 56], x + 8, y + 38);
+      tuileTiny(ctx, tiny, 'town', 17, x + w - 16, y + 44);
+      perso(ctx, x + 32, y + 36, 7, 'dos');
+      return nom();
+    case 'soufflerie':
+      piece(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
+      rangee(ctx, tiny, [30, 31], x + 4, y + 16); rangee(ctx, tiny, [42, 43], x + 4, y + 32);
+      tuileTiny(ctx, tiny, 'factory', 114, x + 40, y + 20);
+      { const k = Math.floor(t * 12) % 2; ctx.fillStyle = '#c4e8ff'; ctx.fillRect(x + 10 + k * 3, y + 30, 14, 1); ctx.fillRect(x + 12 - k * 2, y + 34, 12, 1); }
+      rangee(ctx, tiny, [105, 107], x + 30, y + 46);
+      return nom();
+    case 'precision':
+      piece(ctx, tiny, x, y, w, h, [44, 57, 46, 45]);
+      rangee(ctx, tiny, [54, 55, 56, 122], x, y + 14);
+      return nom();
+    case 'banc':
+      piece(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
+      rangee(ctx, tiny, [87, 88, 114, 126], x, y + 14);
+      return nom();
+    case 'analyse':
+      piece(ctx, tiny, x, y, w, h, [44, 57, 58, 45]);
+      rangee(ctx, tiny, [111, 112, 113, 99], x, y + 14);
+      rangee(ctx, tiny, [54, 55, 56], x + 8, y + 40);
+      perso(ctx, x + 22, y + 38, 3, 'dos');
+      return nom();
+    case 'repos': {
+      piece(ctx, tiny, x, y, w, h, [44, 58, 59, 45]);
+      // Canapé (dessiné dans le style Tiny) et fontaine à eau.
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 3, y + 17, 38, 13);
+      ctx.fillStyle = '#e86ca6'; ctx.fillRect(x + 4, y + 18, 36, 6);
+      ctx.fillStyle = '#c8508a'; ctx.fillRect(x + 4, y + 24, 36, 5);
+      ctx.fillStyle = '#f7a9cd'; ctx.fillRect(x + 6, y + 19, 14, 2); ctx.fillRect(x + 23, y + 19, 14, 2);
+      tuileTiny(ctx, tiny, 'factory', 86, x + w - 18, y + 14);
+      return nom();
     }
+    case 'cafeteria':
+      piece(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
+      rangee(ctx, tiny, [75, 76, 55, 56], x, y + 14);
+      return nom();
+    case 'sport': {
+      piece(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
+      // Tapis de course et haltères.
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 4, y + 18, 22, 12); ctx.fillRect(x + 22, y + 13, 3, 8);
+      ctx.fillStyle = '#5c6278'; ctx.fillRect(x + 5, y + 19, 20, 10);
+      ctx.fillStyle = '#2a2838'; for (let i = 0; i < 20; i += 4) ctx.fillRect(x + 5 + ((i + Math.floor(t * 20)) % 20), y + 19, 1, 10);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 34, y + 24, 20, 2); ctx.fillRect(x + 32, y + 20, 5, 10); ctx.fillRect(x + 51, y + 20, 5, 10);
+      ctx.fillStyle = '#9896ab'; ctx.fillRect(x + 33, y + 21, 3, 8); ctx.fillRect(x + 52, y + 21, 3, 8);
+      return nom();
+    }
+    case 'distributeur':
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      rangee(ctx, tiny, [75, 76], x, y + 10);
+      return;
+    case 'boutique':
+      piece(ctx, tiny, x, y, w, h, [44, 57, 46, 45]);
+      rangee(ctx, tiny, [72, 73, 123, 56], x, y + 14);
+      return nom();
+    case 'tribune': {
+      // Gradins de face, avec le public (une personne = une tuile).
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      for (let r = 0; r < 3; r++) {
+        const yy = y + 6 + r * 16;
+        ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 2, yy + 10, w - 4, 7);
+        ctx.fillStyle = r % 2 ? '#aab1c4' : '#c4cbda'; ctx.fillRect(x + 3, yy + 11, w - 6, 5);
+        for (let i = 0; i < 4; i++) perso(ctx, x + 9 + i * 15 + (r % 2) * 3, yy + 13, i * 3 + r * 5);
+      }
+      return nom();
+    }
+    case 'simu-route': case 'simu-terre': case 'simu-glace': {
+      const tapis = { 'simu-route': '#5c6278', 'simu-terre': '#a8865f', 'simu-glace': '#a9c6d8' }[d.id];
+      piece(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
+      rangee(ctx, tiny, [111, 112], x + 2, y + 10);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 36, y + 14, 22, 16);
+      ctx.fillStyle = tapis; ctx.fillRect(x + 37, y + 15, 20, 14);
+      ctx.fillStyle = '#2a2838'; ctx.fillRect(x + 41, y + 18, 12, 9);
+      ctx.fillStyle = '#c2504d'; ctx.fillRect(x + 43, y + 20, 8, 5);
+      return nom();
+    }
+    // --- Décor -----------------------------------------------------------------------------
     case 'fleurs': {
-      ctx.fillStyle = '#5a3a24'; ctx.fillRect(x + 4, y + 10, 24, 14);
-      ctx.fillStyle = '#3fa34d'; ctx.fillRect(x + 5, y + 11, 22, 12);
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 3, y + 12, 26, 15);
+      ctx.fillStyle = '#8a5a3b'; ctx.fillRect(x + 4, y + 20, 24, 6);
+      ctx.fillStyle = '#3fa34d'; ctx.fillRect(x + 4, y + 13, 24, 7);
       const cs = ['#e86ca6', '#f2c14e', '#ffffff', '#e4432d'];
-      for (let i = 0; i < 8; i++) { ctx.fillStyle = cs[i % 4]; ctx.fillRect(x + 7 + (i % 4) * 5, y + 13 + Math.floor(i / 4) * 5, 3, 3); }
+      for (let i = 0; i < 6; i++) { ctx.fillStyle = cs[i % 4]; ctx.fillRect(x + 6 + (i % 3) * 7, y + 13 + Math.floor(i / 3) * 3, 3, 3); }
       return;
     }
-    case 'arbre': objet(ctx, planche, 'arbreRond', x + 16, y + 30); return;
-    case 'banc-public': objet(ctx, planche, 'banc', x + 16, y + 26); return;
-    case 'lampadaire': objet(ctx, planche, 'lampadaire', x + 16, y + 30); return;
-    case 'drapeaux': {
-      ctx.fillStyle = '#3a3550'; ctx.fillRect(x + 15, y + 4, 2, 26);
-      const f = Math.sin(t * 6) > 0 ? 1 : 0;
-      ctx.fillStyle = '#e4432d'; ctx.fillRect(x + 17, y + 5 + f, 10, 3);
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 17, y + 8 + f, 10, 3);
-      ctx.fillStyle = '#2f6fdb'; ctx.fillRect(x + 17, y + 11 + f, 10, 3);
+    case 'banc-public':
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      rangee(ctx, tiny, [6, 6], x, y + 12);
+      return;
+    case 'arbre': {
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 9, y + 22, 14, 9);
+      ctx.fillStyle = '#c2504d'; ctx.fillRect(x + 10, y + 23, 12, 7);
+      tuileTiny(ctx, tiny, 'town', 4, x + 8, y + 6);
       return;
     }
+    case 'lampadaire': {
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      ctx.fillStyle = 'rgba(38,24,46,0.3)'; ctx.fillRect(x + 12, y + 28, 10, 2);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 15, y + 6, 3, 23); ctx.fillRect(x + 10, y + 3, 13, 5);
+      ctx.fillStyle = '#fff2a8'; ctx.fillRect(x + 11, y + 6, 11, 1);
+      return;
+    }
+    case 'drapeaux':
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      tuileTiny(ctx, tiny, 'ski', Math.sin(t * 6) > 0 ? 8 : 20, x, y + 10);
+      tuileTiny(ctx, tiny, 'ski', Math.sin(t * 6 + 1) > 0 ? 9 : 21, x + 16, y + 10);
+      return;
     case 'fontaine': case 'bassin': {
-      ctx.fillStyle = '#7e7c93'; ctx.fillRect(x + 3, y + 3, w - 6, h - 6);
-      ctx.fillStyle = '#59b6d8'; ctx.fillRect(x + 6, y + 6, w - 12, h - 12);
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 3, y + 5, w - 6, h - 8);
+      ctx.fillStyle = '#c4cbda'; ctx.fillRect(x + 4, y + 6, w - 8, h - 10);
+      ctx.fillStyle = '#59b6d8'; ctx.fillRect(x + 7, y + 9, w - 14, h - 16);
       ctx.fillStyle = '#9fdcef';
       const k = Math.floor(t * 3) % 3;
-      ctx.fillRect(x + 10 + k * 4, y + 10, 6, 1); ctx.fillRect(x + w - 18 - k * 3, y + h - 12, 6, 1);
-      if (d.id === 'fontaine') { ctx.fillStyle = '#c9ccd4'; ctx.fillRect(x + w / 2 - 3, y + h / 2 - 6, 6, 10); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + w / 2 - 1, y + h / 2 - 10 - (k % 2), 2, 4); }
+      ctx.fillRect(x + 10 + k * 4, y + 12, 6, 1); ctx.fillRect(x + w - 18 - k * 3, y + h - 12, 6, 1);
+      if (d.id === 'fontaine') { ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + w / 2 - 4, y + h / 2 - 9, 8, 13); ctx.fillStyle = '#c9ccd4'; ctx.fillRect(x + w / 2 - 3, y + h / 2 - 8, 6, 11); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + w / 2 - 1, y + h / 2 - 13 - (k % 2), 2, 4); }
       else for (let i = 0; i < 3; i++) { ctx.fillStyle = i % 2 ? '#f39c33' : '#ffffff'; ctx.fillRect(x + 14 + ((t * 10 + i * 13) % (w - 30)), y + 18 + i * 9, 5, 2); }
       return;
     }
     case 'statue': {
-      ctx.fillStyle = '#7e7c93'; ctx.fillRect(x + 8, y + 22, 16, 8);
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 7, y + 21, 18, 9); ctx.fillRect(x + 12, y + 1, 8, 21);
+      ctx.fillStyle = '#7e7c93'; ctx.fillRect(x + 8, y + 22, 16, 7);
       ctx.fillStyle = '#f2c14e'; ctx.fillRect(x + 13, y + 6, 6, 16); ctx.fillRect(x + 10, y + 10, 12, 4); ctx.fillRect(x + 14, y + 2, 4, 4);
       ctx.fillStyle = '#fff3b0'; ctx.fillRect(x + 14, y + 7, 1, 10);
       return;
     }
     case 'tour': {
-      ctx.fillStyle = 'rgba(42,40,56,0.3)'; ctx.fillRect(x + 8, y + 8, w - 10, h - 10);
-      ctx.fillStyle = '#3a3550'; ctx.fillRect(x + 14, y + 4, w - 28, h - 8);
-      ctx.fillStyle = '#c9ccd4'; ctx.fillRect(x + 16, y + 6, w - 32, h - 12);
+      piece(ctx, tiny, x, y, w, h, null, 0);
+      ctx.fillStyle = 'rgba(38,24,46,0.3)'; ctx.fillRect(x + 18, y + 10, w - 28, h - 12);
+      ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(x + 14, y + 4, w - 28, h - 8);
+      ctx.fillStyle = '#c9ccd4'; ctx.fillRect(x + 15, y + 5, w - 30, h - 10);
       ctx.fillStyle = '#9fd3ff'; for (let i = 0; i < 6; i++) ctx.fillRect(x + 18, y + 10 + i * 8, w - 36, 4);
       ctx.fillStyle = Math.sin(t * 4) > 0 ? '#e4432d' : '#7a1d12'; ctx.fillRect(x + w / 2 - 2, y + 1, 4, 4);
       return;
     }
     default:
-      toit(ctx, x, y, w, h, d.couleur || '#9896ab');
-      // Nom et niveau seulement sur le terrain (pas sur les vignettes des menus).
-      if (b.uid) etiquette(ctx, x, y, w, d.nom, n, d.niveauMax);
+      piece(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
+      return nom();
   }
 }
 
 /** Petite image d'un bâtiment pour les menus (data URL), mise en cache. */
 const cacheVignettes = new Map();
-export function vignetteBatiment(planche, d) {
+export function vignetteBatiment(tiny, d) {
   if (cacheVignettes.has(d.id)) return cacheVignettes.get(d.id);
   const c = document.createElement('canvas');
   c.width = d.l * CASE; c.height = d.h * CASE;
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  dessinerBatiment(ctx, planche, { id: d.id, niveau: 1 }, d, 0, 0, c.width, c.height, 0);
+  dessinerBatiment(ctx, tiny, { id: d.id, niveau: 1 }, d, 0, 0, c.width, c.height, 0);
   const url = c.toDataURL();
   cacheVignettes.set(d.id, url);
   return url;

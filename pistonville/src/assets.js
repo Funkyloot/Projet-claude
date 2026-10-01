@@ -20,16 +20,22 @@ function chargerImage(chemin) {
 
 export const PROFILS = ['rounded_yellow', 'sedan_blue', 'sports_green', 'sports_red', 'sports_race', 'formula', 'kart', 'buggy', 'suv', 'convertible', 'sports_convertible', 'sports_yellow', 'sedan_vintage'];
 
+/** Planches Kenney « Tiny » (16 px, CC0) : intérieurs, ville, courses. */
+export const TINY = ['factory', 'town', 'battle', 'ski', 'farm'];
+
 export async function chargerAssets() {
   const police = new FontFace('Jersey 10', `url(${urlAsset('assets/police/Jersey10.woff2')})`);
   const resultats = await Promise.all([
     chargerImage('assets/kenney/rpg-urban.png'),
     ...PROFILS.map((p) => chargerImage(`assets/kenney/profil/${p}.png`)),
+    ...TINY.map((p) => chargerImage(`assets/kenney/tiny-${p}/tilemap_packed.png`)),
     // Sans la police, le jeu reste jouable avec la police de secours.
     police.load().then((f) => document.fonts.add(f)).catch(() => null),
   ]);
   const urbain = resultats[0];
   const profilsParNom = {};
   PROFILS.forEach((p, i) => { profilsParNom[p] = resultats[1 + i]; });
-  return { urbain, profils: profilsParNom };
+  const tiny = {};
+  TINY.forEach((p, i) => { tiny[p] = resultats[1 + PROFILS.length + i]; });
+  return { urbain, profils: profilsParNom, tiny };
 }

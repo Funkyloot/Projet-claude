@@ -20,7 +20,7 @@ import {
   ecranObjectifs, ecranAide, ecranCelebration,
 } from './ecrans.js';
 import { voitureActive, peutSortir, objectifsActifs, peutCourir, grandPrix } from './partie.js';
-import { PERSONNAGES, idPersonnage } from './sprites.js';
+import { spritePerso, tenue } from './tiny.js';
 import { formatArgent } from './outils.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -104,7 +104,7 @@ const texteEffet = (def) => (def.categorie === 'decor'
 
 export function ecranConstruire(app, onglet = 'batiment') {
   const p = app.partie;
-  const planche = app.assets?.urbain;
+  const planche = app.assets?.tiny;
   const liste = BATIMENTS.filter((d) => d.categorie === onglet).map((d) => {
     const raison = raisonAchat(p, d.id);
     const verrou = raison && raison !== 'Pas assez d’argent';
@@ -230,18 +230,16 @@ export function ecranFicheBatiment(app, buid) {
 // --- Équipe ----------------------------------------------------------------------------------------
 
 const cacheAvatars = new Map();
+/** Portrait d'un membre du personnel : son petit personnage Tiny, agrandi sans lissage. */
 function avatar(app, s, grand = false) {
-  const planche = app.assets?.urbain;
-  if (!planche) return '';
-  const cle = `${s.apparence}-${grand}`;
+  const cle = `${s.apparence}-${s.metier}-${grand}`;
   if (!cacheAvatars.has(cle)) {
     const t = grand ? 3 : 2;
     const c = document.createElement('canvas');
     c.width = 16 * t; c.height = 16 * t;
     const ctx = c.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    const id = idPersonnage(PERSONNAGES[s.apparence % PERSONNAGES.length], 1, 0);
-    ctx.drawImage(planche, (id % 27) * 16, Math.floor(id / 27) * 16, 16, 16, 0, 0, 16 * t, 16 * t);
+    ctx.drawImage(spritePerso(tenue(s.apparence, s.metier), 'face', 0), 0, 0, 16 * t, 16 * t);
     cacheAvatars.set(cle, c.toDataURL());
   }
   return `<img class="avatar ${grand ? 'grand' : ''}" src="${cacheAvatars.get(cle)}" alt="">`;

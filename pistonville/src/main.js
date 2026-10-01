@@ -63,7 +63,7 @@ class App {
       this.montrer(ecranChargement(`Impossible de charger les images (${err.message}).`));
       return;
     }
-    this.scene = new SceneGarage(this.assets.urbain);
+    this.scene = new SceneGarage(this.assets.urbain, this.assets.tiny);
     this.titre();
     this.dernier = performance.now();
     this.accu = 0;

@@ -38,6 +38,7 @@ const assets = {};
 const ajouter = (chemin) => { assets[chemin] = dataUrl(chemin); };
 ajouter('assets/kenney/rpg-urban.png');
 for (const f of readdirSync(join(RACINE, 'assets/kenney/profil'))) ajouter(`assets/kenney/profil/${f}`);
+for (const p of ['factory', 'town', 'battle', 'ski', 'farm']) ajouter(`assets/kenney/tiny-${p}/tilemap_packed.png`);
 ajouter('assets/police/Jersey10.woff2');
 
 const css = readFileSync(join(RACINE, 'style.css'), 'utf8')
