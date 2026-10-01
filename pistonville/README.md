@@ -1,4 +1,4 @@
-# Pistonville — version d'essai 0.5
+# Pistonville — version d'essai 0.6
 
 Jeu mobile de gestion d'écurie et de course en pixel art, inspiré de
 *Grand Prix Story* (Kairosoft) et des jeux de poursuite mobiles où l'on tourne
@@ -31,6 +31,19 @@ L'aide au pilotage (activée par défaut, réglable dans la pause) recentre
 doucement la voiture quand on ne touche à rien.
 
 ## Ce que contient cette version
+
+**Nouveau en 0.6** : une grande carte de 14 × 14 pâtés (environ 4 km de
+côté) : la ville au centre, son lac et ses ponts, et trois couronnes de
+campagne autour (champs, fermes, prés avec vaches et moutons, vergers, bois,
+étangs, hameaux, stations-service, éoliennes qui tournent). Routes de
+campagne avec STOP et tracteurs, deux sprints, une livraison à la ferme, deux
+radars et cinq affiches de plus à la campagne. La carte est peinte par
+morceaux, à la demande, pour rester fluide sur téléphone. Les pilotes
+deviennent une vraie équipe : on les recrute (4 méthodes), on les entraîne,
+on les paie, on peut les renvoyer (une semaine d'indemnité). En course, une
+écurie aligne au plus deux pilotes : le titulaire, que l'on conduit, et un
+second pilote qui court seul sur une autre voiture du garage ; les grosses
+écuries adverses viennent aussi à deux.
 
 **Nouveau en 0.5** : nouveau style graphique, celui des packs Kenney « Tiny »
 (CC0), et tout est à l'échelle (1 case ≈ 1 m : une personne = 1 case, une

@@ -16,11 +16,15 @@ import {
 } from './garage.js';
 import { vignetteBatiment } from './scene-garage.js';
 import {
-  barre, carteVoiture, texteRecompense, ecranAtelier, ecranBoutique, ecranPieces, ecranLabo, ecranPilote, ecranBureau,
+  barre, carteVoiture, texteRecompense, ecranAtelier, ecranBoutique, ecranPieces, ecranLabo, ecranBureau,
   ecranObjectifs, ecranAide, ecranCelebration,
 } from './ecrans.js';
 import { voitureActive, peutSortir, objectifsActifs, peutCourir, grandPrix } from './partie.js';
 import { spritePerso, tenue } from './tiny.js';
+import {
+  engagement, tenuePilote, indemnitePilote, expPilote, STATS_PILOTE,
+  PILOTES_MAX, TRAITS_PILOTE, RECRUTEMENTS_PILOTES,
+} from './pilotes.js';
 import { formatArgent } from './outils.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -249,7 +253,7 @@ function jaugeMini(val, couleur) {
   return `<span class="jauge-mini"><i style="width:${Math.max(0, Math.min(100, val))}%;background:${couleur}"></i></span>`;
 }
 
-function carteEmploye(app, s, { candidat = false } = {}) {
+function carteEmploye(app, s, { candidat = false, confirmer = null } = {}) {
   const p = app.partie;
   const poste = p.terrain.batiments.find((b) => b.uid === s.poste);
   const trait = TRAITS.find((x) => x.id === s.trait);
@@ -267,16 +271,29 @@ function carteEmploye(app, s, { candidat = false } = {}) {
     <div class="ligne petit"><span>Énergie ${jaugeMini(s.energie, s.energie < 30 ? '#e4432d' : '#5ad16a')}</span><span>Moral ${jaugeMini(s.moral, s.moral < 30 ? '#e4432d' : '#f2c14e')}</span></div>
     <div class="ligne">
       <button class="btn btn-mini btn-principal" data-action="former" data-uid="${s.uid}" ${s.niveau >= NIVEAU_PERSONNEL_MAX || p.recherche < f.recherche || p.argent < f.argent ? 'disabled' : ''}>Former · ${f.recherche} PR · ${formatArgent(f.argent)}</button>
-      <button class="btn btn-mini" data-action="licencier" data-uid="${s.uid}">Renvoyer</button>
+      ${confirmer === s.uid
+        ? `<button class="btn btn-mini btn-rouge" data-action="licencier" data-uid="${s.uid}">Confirmer le renvoi</button>`
+        : `<button class="btn btn-mini" data-action="renvoi" data-uid="${s.uid}">Renvoyer</button>`}
     </div>`}
   </div>`;
 }
 
-export function ecranEquipe(app) {
+export function ecranEquipe(app, confirmer = null) {
   const p = app.partie;
   const cap = capacitePersonnel(p);
-  const liste = p.personnel.map((s) => carteEmploye(app, s)).join('') || '<p class="petit">Personne pour l’instant.</p>';
+  const liste = p.personnel.map((s) => carteEmploye(app, s, { confirmer })).join('') || '<p class="petit">Personne pour l’instant.</p>';
   const prochaine = JOURS_PAIE - (p.jour % JOURS_PAIE);
+  const eng = engagement(p);
+  const pilotes = p.pilotes.map((x) => {
+    const role = eng.titulaire === x ? '<span class="badge-role titulaire">Titulaire</span>' : eng.second === x ? '<span class="badge-role second">2e pilote</span>' : '';
+    return `<button class="carte-pilote" data-action="fiche-pilote" data-uid="${x.uid}">
+      ${avatarPilote(x)}
+      <span class="cp-texte"><b>${e(x.nom)} ${role}</b>
+        <small>Niv. ${x.niveau} · potentiel <span class="potentiel p${x.potentiel}">${x.potentiel}</span> · ${x.salaire ? `${formatArgent(x.salaire)} / sem.` : 'sans salaire'}</small>
+        <small>Tech. ${x.stats.technique} · Sang-froid ${x.stats.sangfroid} · Charisme ${x.stats.charisme}</small></span>
+      ${x.points ? `<span class="badge">${x.points}</span>` : '<span class="cp-fleche">›</span>'}
+    </button>`;
+  }).join('') || '<p class="petit ko">Aucun pilote : sans pilote, pas de course. Recrutes-en un !</p>';
   return {
     classe: 'garage plein',
     html: `${barre(p)}<div class="defile">
@@ -287,9 +304,13 @@ export function ecranEquipe(app) {
         <div><small>Prochaine paie</small><b>dans ${prochaine} j</b></div>
         <div><small>Recettes / jour</small><b>${formatArgent(effets(p).revenu)}</b></div>
       </div></section>
+      <h3 class="titre-section petit-titre">Pilotes · ${p.pilotes.length} / ${PILOTES_MAX}</h3>
+      <p class="petit clair">En course, l'écurie aligne au plus deux pilotes : le titulaire (tu conduis) et un second pilote qui court seul sur une autre voiture.</p>
+      ${pilotes}
+      <div class="pile"><button class="btn" data-action="recruter-pilote" ${p.pilotes.length >= PILOTES_MAX ? 'disabled' : ''}>${p.pilotes.length >= PILOTES_MAX ? `Écurie complète (${PILOTES_MAX} pilotes)` : 'Recruter un pilote'}</button></div>
+      <h3 class="titre-section petit-titre">Personnel du garage</h3>
       <div class="pile">
-        <button class="btn btn-principal" data-action="recruter" ${p.personnel.length >= cap ? 'disabled' : ''}>${p.personnel.length >= cap ? 'Équipe complète : construis une salle de repos' : 'Recruter'}</button>
-        <button class="btn" data-action="pilote">Pilote : ${e(p.pilote)}${p.pilotePoints ? ` <span class="badge">${p.pilotePoints}</span>` : ''}</button>
+        <button class="btn btn-principal" data-action="recruter" ${p.personnel.length >= cap ? 'disabled' : ''}>${p.personnel.length >= cap ? 'Équipe complète : construis une salle de repos' : 'Recruter du personnel'}</button>
       </div>
       <p class="petit clair">Pour affecter quelqu'un, touche son bâtiment sur le terrain. Un employé épuisé part se reposer tout seul ; un employé mal payé finit par démissionner.</p>
       ${liste}
@@ -297,13 +318,128 @@ export function ecranEquipe(app) {
     actions: {
       ...actionsOnglets(app),
       recruter: () => app.montrer(ecranRecrutement(app)),
-      pilote: () => app.montrer(avecOnglets(app, ecranPilote(app), 'equipe')),
+      'recruter-pilote': () => app.montrer(ecranRecrutementPilotes(app)),
+      'fiche-pilote': (d) => app.montrer(ecranFichePilote(app, d.uid)),
       former: (d) => {
         const g = app.action('former', d.uid);
         if (g) { app.son.niveau(); app.toast(`Formation réussie : ${Object.entries(g).map(([k, v]) => `${STATS_PERSONNEL[k]} +${v}`).join(', ') || 'expérience'}`); }
         app.montrer(ecranEquipe(app));
       },
-      licencier: (d) => { app.action('licencier', d.uid); app.montrer(ecranEquipe(app)); },
+      renvoi: (d) => app.montrer(ecranEquipe(app, d.uid)),
+      licencier: (d) => { app.action('licencier', d.uid); app.toast('Il range ses outils et s’en va.'); app.montrer(ecranEquipe(app)); },
+    },
+  };
+}
+
+// --- Pilotes -------------------------------------------------------------------------------------
+
+const cachePilotes = new Map();
+function avatarPilote(x, taille = 3) {
+  const t = tenuePilote(x);
+  const cle = `${x.apparence}-${x.casque}-${taille}`;
+  if (!cachePilotes.has(cle)) {
+    const c = document.createElement('canvas');
+    c.width = 16 * taille; c.height = 16 * taille;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(spritePerso(t, 'face', 0), 0, 0, 16 * taille, 16 * taille);
+    cachePilotes.set(cle, c.toDataURL());
+  }
+  return `<img class="avatar grand" src="${cachePilotes.get(cle)}" alt="">`;
+}
+
+export function ecranFichePilote(app, puid, confirmer = false) {
+  const p = app.partie;
+  const x = p.pilotes.find((y) => y.uid === puid);
+  if (!x) return ecranEquipe(app);
+  const eng = engagement(p);
+  const besoin = expPilote(x.niveau);
+  const trait = TRAITS_PILOTE.find((t) => t.id === x.trait);
+  const lignes = Object.entries(STATS_PILOTE).map(([k, st]) => `<div class="ligne stat-pilote">
+      <div><b>${st.nom} · ${x.stats[k]}</b><div class="petit">${st.texte}</div></div>
+      <button class="btn btn-mini btn-principal" data-action="point" data-stat="${k}" ${x.points ? '' : 'disabled'}>+1</button></div>`).join('');
+  const indemnite = indemnitePilote(x);
+  const role = eng.titulaire === x ? 'Titulaire : c’est lui ou elle que tu conduis.' : eng.second === x ? 'Second pilote : court seul à tes côtés.' : 'Remplaçant.';
+  const retour = () => app.montrer(ecranEquipe(app));
+  return {
+    classe: 'garage plein',
+    html: `${barre(p)}<div class="defile">
+      <h2 class="titre-section">Pilote</h2>
+      <section class="panneau">
+        <div class="contenu fiche-pilote">${avatarPilote(x, 4)}<div>
+          <b class="gros">${e(x.nom)}</b>
+          <div>Niveau ${x.niveau} · potentiel <span class="potentiel p${x.potentiel}">${x.potentiel}</span>${x.points ? ` · <span class="ok">${x.points} point${x.points > 1 ? 's' : ''} à répartir</span>` : ''}</div>
+          <div class="jauge grande"><i style="width:${Math.round((x.exp / besoin) * 100)}%;background:#7a5ac8"></i></div>
+          <div class="petit">${x.exp} / ${besoin} EXP · gagnée en course</div>
+          <div class="petit">${x.salaire ? `${formatArgent(x.salaire)} / semaine` : 'Sans salaire'}${trait ? ` · <span class="trait">${e(trait.nom)}</span>` : ''}</div>
+        </div></div>
+        ${trait ? `<div class="contenu petit">${e(trait.texte)}</div>` : ''}
+        <div class="contenu petit">${role}</div>
+      </section>
+      <section class="panneau"><h2 class="titre-panneau violet">Entraînement<small>Chaque niveau donne un point. À toi de choisir son style.</small></h2>
+        <div class="contenu">${lignes}</div></section>
+      <div class="pile">
+        ${eng.titulaire !== x ? '<button class="btn btn-principal" data-action="titulaire">En faire le titulaire</button>' : ''}
+        ${eng.titulaire !== x && eng.second !== x ? `<button class="btn" data-action="second" ${p.garage.length < 2 ? 'disabled' : ''}>${p.garage.length < 2 ? 'Second pilote : il faut 2 voitures' : 'Engager comme second pilote'}</button>` : ''}
+        ${eng.second === x ? '<button class="btn" data-action="banc">Mettre sur le banc</button>' : ''}
+        ${p.gp ? '<p class="petit clair">Pas de renvoi pendant un Grand Prix.</p>'
+          : confirmer ? `<button class="btn btn-rouge" data-action="renvoyer" ${p.argent < indemnite ? 'disabled' : ''}>Confirmer : renvoyer (indemnité ${formatArgent(indemnite)})</button>`
+          : `<button class="btn" data-action="confirmer">Renvoyer${indemnite ? ` · indemnité ${formatArgent(indemnite)}` : ''}</button>`}
+      </div>
+      ${p.palmares.length && eng.titulaire === x ? `<section class="panneau"><h2 class="titre-panneau">Pistons d'Or de l'écurie</h2><div class="contenu petit">${p.palmares.map((y) => `Saison ${y.saison} · ${e(y.prix)}`).join('<br>')}</div></section>` : ''}
+    </div>${ongletsBas('equipe')}`,
+    actions: {
+      ...actionsOnglets(app),
+      point: (d) => { if (app.action('entrainerPilote', [x.uid, d.stat])) app.son.niveau(); app.montrer(ecranFichePilote(app, puid)); },
+      titulaire: () => { app.action('choisirTitulaire', x.uid); app.toast(`${x.nom} prend le volant.`); app.montrer(ecranFichePilote(app, puid)); },
+      second: () => { if (app.action('choisirSecond', x.uid)) app.toast(`${x.nom} courra à tes côtés.`); app.montrer(ecranFichePilote(app, puid)); },
+      banc: () => { app.action('choisirSecond', null); app.montrer(ecranFichePilote(app, puid)); },
+      confirmer: () => app.montrer(ecranFichePilote(app, puid, true)),
+      renvoyer: () => {
+        if (app.action('renvoyerPilote', x.uid)) { app.toast(`${x.nom} quitte l'écurie.`); retour(); }
+        else app.toast('Impossible pour l’instant.');
+      },
+    },
+  };
+}
+
+function cartePilote(x) {
+  const trait = TRAITS_PILOTE.find((t) => t.id === x.trait);
+  return `<div class="employe">
+    <div class="employe-tete">${avatarPilote(x)}<div>
+      <b>${e(x.nom)}</b>
+      <small>Pilote · niv. ${x.niveau} · potentiel <span class="potentiel p${x.potentiel}">${x.potentiel}</span>${trait ? ` · <span class="trait">${e(trait.nom)}</span>` : ''}</small>
+      <small>${formatArgent(x.salaire)} / semaine</small>
+    </div></div>
+    <div class="stats-employe"><span>Technique <b>${x.stats.technique}</b></span><span>Sang-froid <b>${x.stats.sangfroid}</b></span><span>Charisme <b>${x.stats.charisme}</b></span></div>
+    ${trait ? `<div class="petit">${e(trait.texte)}</div>` : ''}
+    <div class="ligne"><span></span><button class="btn btn-mini btn-vert" data-action="engager" data-uid="${x.uid}">Engager</button></div>
+  </div>`;
+}
+
+export function ecranRecrutementPilotes(app) {
+  const p = app.partie;
+  const methodes = RECRUTEMENTS_PILOTES.map((m) => `<button class="carte-batiment sans-image" data-action="methode" data-id="${m.id}" ${p.rang < m.rang || p.argent < m.prix ? 'disabled' : ''}>
+      <span class="cb-texte"><b>${e(m.nom)}</b><small>${m.candidats} candidats · niveau ${m.niveau[0]} à ${m.niveau[1]} · potentiels ${[...new Set(m.potentiels)].join(', ')}</small></span>
+      <span class="cb-prix">${p.rang < m.rang ? `Rang ${m.rang}` : formatArgent(m.prix)}</span></button>`).join('');
+  const cands = p.candidatsPilotes?.liste?.length
+    ? `<h3 class="titre-section petit-titre">Candidats</h3>${p.candidatsPilotes.liste.map(cartePilote).join('')}` : '';
+  return {
+    classe: 'garage plein',
+    html: `${barre(p)}<div class="defile">
+      <h2 class="titre-section">Recruter un pilote</h2>
+      <p class="petit clair">${p.pilotes.length} / ${PILOTES_MAX} pilotes sous contrat. Un pilote expérimenté coûte plus cher chaque semaine, mais rapporte plus de fans et gagne plus souvent.</p>
+      ${methodes}
+      ${cands}
+    </div>${ongletsBas('equipe')}`,
+    actions: {
+      ...actionsOnglets(app),
+      methode: (d) => { if (app.action('recruterPilotes', d.id)) app.son.caisse(); app.montrer(ecranRecrutementPilotes(app)); },
+      engager: (d) => {
+        if (app.action('engagerPilote', d.uid)) { app.son.niveau(); app.toast('Contrat signé ! Choisis son rôle dans sa fiche.'); app.montrer(ecranEquipe(app)); return; }
+        app.toast(`L'écurie est complète (${PILOTES_MAX} pilotes).`);
+        app.montrer(ecranRecrutementPilotes(app));
+      },
     },
   };
 }

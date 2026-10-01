@@ -41,3 +41,36 @@ export const PRENOMS = [
   'Bernard', 'Léon', 'Zoé', 'Moussa', 'Odile', 'Titouan', 'Aïcha', 'Raymond',
 ];
 export const SURNOMS = ['la Clé', 'Turbo', 'Boulon', 'Piston', 'Calcul', 'Pneu', 'Micro', 'Volt', 'Chrono', 'Sourire', 'Graisse', 'Radar'];
+
+// --- Pilotes ----------------------------------------------------------------------------------
+//
+// Les pilotes font partie de l'équipe : on les recrute, on les entraîne, on les
+// paie chaque semaine et on peut les renvoyer. Une écurie engage au plus deux
+// pilotes dans une même course : le titulaire (c'est toi qui conduis) et un
+// second pilote qui court seul, sur une autre voiture du garage.
+
+export const PILOTES_MAX = 4;
+
+export const TRAITS_PILOTE = [
+  { id: 'fondatrice', nom: 'Pilote maison', texte: 'Là depuis le premier jour : ne demande pas de salaire.' },
+  { id: 'prodige', nom: 'Prodige', texte: 'Gagne 30 % d’EXP en plus.' },
+  { id: 'star', nom: 'Star', texte: '+10 % de fans en course.' },
+  { id: 'econome', nom: 'Économe', texte: 'Salaire −20 %.' },
+  { id: 'soigneux', nom: 'Soigneux', texte: 'La voiture s’use 25 % moins.' },
+  { id: 'fonceur', nom: 'Fonceur', texte: '+2 en sang-froid, mais abîme un peu plus la voiture.' },
+  { id: 'virtuose', nom: 'Virtuose', texte: '+2 en technique.' },
+];
+
+/** Recrutement de pilotes : plus c'est cher, plus les candidats sont expérimentés. */
+export const RECRUTEMENTS_PILOTES = [
+  { id: 'karting', nom: 'Club de karting', prix: 2000, rang: 1, candidats: 3, stats: [0, 2], niveau: [1, 2], potentiels: 'DCCBB' },
+  { id: 'formule', nom: 'École de pilotage', prix: 15000, rang: 4, candidats: 3, stats: [2, 5], niveau: [3, 6], potentiels: 'CBBAA' },
+  { id: 'mercato', nom: 'Mercato des écuries', prix: 80000, rang: 9, candidats: 3, stats: [5, 9], niveau: [8, 14], potentiels: 'BAASS' },
+  { id: 'legende', nom: 'Retour d’une légende', prix: 250000, rang: 15, candidats: 2, stats: [9, 13], niveau: [16, 22], potentiels: 'AS' },
+];
+
+export const PRENOMS_PILOTES = [
+  'Enzo', 'Maëlle', 'Jules', 'Nina', 'Malik', 'Sacha', 'Romy', 'Diego', 'Elsa', 'Tiago', 'Lina',
+  'Oscar', 'Jade', 'Kylian', 'Alma', 'Noé', 'Capucine', 'Yanis', 'Manon', 'Ayoub', 'Louna', 'Gaspard', 'Rose',
+];
+export const NOMS_PILOTES = ['Vitesse', 'Lebrun', 'Martin', 'Diallo', 'Rossi', 'Moreau', 'Nguyen', 'Garcia', 'Benali', 'Leroy', 'Fontaine', 'Costa'];

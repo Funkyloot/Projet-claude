@@ -673,3 +673,28 @@ body {
   image-rendering: pixelated; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 6);
   box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
 }
+
+/* Pilotes de l'écurie : cartes cliquables, rôle en course, choix au briefing. */
+.carte-pilote {
+  font-family: var(--police); text-align: left; cursor: pointer; color: var(--encre);
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: calc(var(--u) * 8);
+  background: var(--creme); border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 6);
+  padding: calc(var(--u) * 6) calc(var(--u) * 8); box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
+}
+.cp-texte { display: flex; flex-direction: column; gap: calc(var(--u) * 1); min-width: 0; }
+.cp-texte b { font-size: calc(var(--u) * 14.5); }
+.cp-texte small { font-size: calc(var(--u) * 11); color: #4a5068; }
+.cp-fleche { font-size: calc(var(--u) * 22); color: var(--gris); }
+.badge-role { display: inline-block; font-size: calc(var(--u) * 10.5); padding: 0 calc(var(--u) * 5); border-radius: calc(var(--u) * 3); color: #fff; vertical-align: middle; }
+.badge-role.titulaire { background: var(--rouge-vif); }
+.badge-role.second { background: var(--bleu); }
+.engagement { display: flex; flex-direction: column; gap: calc(var(--u) * 4); }
+.choix-liste { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 4); }
+.choix {
+  font-family: var(--police); font-size: calc(var(--u) * 12); cursor: pointer; color: var(--encre);
+  background: #fff6e0; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 12);
+  padding: calc(var(--u) * 3) calc(var(--u) * 9); min-height: calc(var(--u) * 30);
+}
+.choix.active { background: var(--jaune); font-weight: 700; }
+.choix:disabled { opacity: 0.5; cursor: default; }
+.classement tr.moi.second td { background: #ffe9a8; }

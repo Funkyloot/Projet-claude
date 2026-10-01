@@ -15,6 +15,7 @@ import { BATIMENTS } from '../contenu/catalogue.js';
 import { COMBOS, PERMIS } from '../contenu/base/batiments.js';
 import { METIERS, POTENTIELS, TRAITS, RECRUTEMENTS, PRENOMS, SURNOMS } from '../contenu/base/personnel.js';
 import { creerAlea } from './outils.js';
+import { departsPilotes } from './pilotes.js';
 
 export const COLONNES_TERRAIN = 8;
 export const LIGNES_DEPART = 6;
@@ -352,19 +353,22 @@ export function journeeGarage(partie, alea) {
     }
     s.energie = Math.min(100, s.energie);
   }
-  if (partie.jour % JOURS_PAIE === 0 && partie.personnel.length) {
-    const total = partie.personnel.reduce((t, s) => t + s.salaire, 0);
+  // Jour de paie : le personnel et les pilotes (la pilote maison ne demande rien).
+  const payes = [...partie.personnel, ...(partie.pilotes || []).filter((p) => p.salaire > 0)];
+  if (partie.jour % JOURS_PAIE === 0 && payes.length) {
+    const total = masseSalariale(partie);
     if (partie.argent >= total) {
       partie.argent -= total;
-      for (const s of partie.personnel) { s.moral = Math.min(100, s.moral + (s.trait === 'raleur' ? 2 : 6)); s.impayes = 0; }
+      for (const s of payes) { s.moral = Math.min(100, s.moral + (s.trait === 'raleur' ? 2 : 6)); s.impayes = 0; }
       nouvelles.push({ titre: 'Jour de paie', texte: `Salaires versés : −${total.toLocaleString('fr-FR')} G.` });
     } else {
-      for (const s of partie.personnel) { s.moral = Math.max(0, s.moral - 35); s.impayes += 1; }
+      for (const s of payes) { s.moral = Math.max(0, s.moral - 35); s.impayes = (s.impayes || 0) + 1; }
       nouvelles.push({ titre: 'Paie impossible !', texte: `Il manque de quoi payer ${total.toLocaleString('fr-FR')} G. L'équipe grogne.` });
     }
-    const partis = partie.personnel.filter((s) => s.impayes >= 2 || s.moral <= 0);
-    for (const s of partis) nouvelles.push({ titre: 'Démission', texte: `${s.nom} quitte le garage.` });
+    const partis = payes.filter((s) => s.impayes >= 2 || s.moral <= 0);
+    for (const s of partis) nouvelles.push({ titre: 'Démission', texte: `${s.nom} quitte ${s.metier ? 'le garage' : "l'écurie"}.` });
     partie.personnel = partie.personnel.filter((s) => !partis.includes(s));
+    departsPilotes(partie, partis);
   }
   if (boutique + e.revenu > 0 && partie.jour % JOURS_PAIE === 1) {
     nouvelles.push({ titre: 'Recettes du garage', texte: `+${(boutique + e.revenu).toLocaleString('fr-FR')} G par jour (distributeurs, cafétéria, boutique).` });
@@ -373,7 +377,8 @@ export function journeeGarage(partie, alea) {
 }
 
 /** Coût hebdomadaire de l'équipe. */
-export const masseSalariale = (partie) => partie.personnel.reduce((t, s) => t + s.salaire, 0);
+export const masseSalariale = (partie) => partie.personnel.reduce((t, s) => t + s.salaire, 0)
+  + (partie.pilotes || []).reduce((t, p) => t + p.salaire, 0);
 
 /** Premier employé offert au début : un mécanicien modeste. */
 export function personnelDepart() {

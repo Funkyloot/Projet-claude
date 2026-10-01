@@ -27,6 +27,7 @@ export class Course {
    *   circuit, decor (rendreCircuit), planche, tours,
    *   joueur: { physique, couleur, looks, pilote, nitros, nitroDuree, surfaces },
    *   adversaires: [{ physique, couleur, nom, talent }],
+   *   coequipier: { physique, couleur, looks, nom, talent, surfaces } (second pilote de l'écurie, facultatif),
    *   aide (aide au pilotage), son, niveau
    */
   constructor(o) {
@@ -41,8 +42,11 @@ export class Course {
     const surface = SURFACES[o.circuit.def.surface] || SURFACES.asphalte;
 
     this.voitures = [];
-    const nb = o.adversaires.length + 1;
+    const co = o.coequipier || null;
+    const nb = o.adversaires.length + 1 + (co ? 1 : 0);
     const placeJoueur = Math.min(nb - 1, Math.floor(nb * 0.6));
+    // Le second pilote de l'écurie part juste devant (ou derrière) son titulaire.
+    const placeCo = co ? (placeJoueur > 0 ? placeJoueur - 1 : placeJoueur + 1) : -1;
     let a = 0;
     for (let i = 0; i < nb; i++) {
       let v;
@@ -50,6 +54,15 @@ export class Course {
         v = new Voiture({ physique: o.joueur.physique, couleur: o.joueur.couleur, nom: o.joueur.pilote, joueur: true });
         v.looks = o.joueur.looks || [];
         this.joueur = v;
+      } else if (i === placeCo) {
+        v = new Voiture({ physique: co.physique, couleur: co.couleur, nom: co.nom, equipe: 'coequipier' });
+        v.looks = co.looks || [];
+        v.coequipier = true;
+        v.talent = co.talent || 0;
+        v.voie = (this.alea() - 0.5) * 36;
+        v.nitroIA = 1 + Math.floor(this.niveau / 2);
+        v.prochaineVoie = this.alea() * 2;
+        this.coequipier = v;
       } else {
         const adv = o.adversaires[a++];
         v = new Voiture({ physique: adv.physique, couleur: adv.couleur, nom: adv.nom, equipe: adv.equipe });
@@ -59,7 +72,7 @@ export class Course {
         v.nitroIA = 1 + Math.floor(this.niveau / 2);
         v.prochaineVoie = this.alea() * 2;
       }
-      const bonusSol = v.joueur ? (o.joueur.surfaces?.[o.circuit.def.surface] || 0) : 0;
+      const bonusSol = v.joueur ? (o.joueur.surfaces?.[o.circuit.def.surface] || 0) : v.coequipier ? (co.surfaces?.[o.circuit.def.surface] || 0) : 0;
       v.adherenceSol = surface.adherence + bonusSol;
       v.vitesseSol = Math.min(1, surface.vitesse + bonusSol * 0.3);
       const s = this.circuit.longueur - 50 - i * 54;
@@ -73,6 +86,7 @@ export class Course {
       this.voitures.push(v);
     }
 
+    this.tenuePilote = o.joueur.tenue || null;
     this.nitros = o.joueur.nitros ?? 1;
     this.nitroDuree = o.joueur.nitroDuree ?? BOOSTS.nitro.duree;
     this.poteaux = [pointA(this.circuit, 0, -ECART_POTEAU), pointA(this.circuit, 0, ECART_POTEAU)];
@@ -183,7 +197,7 @@ export class Course {
     let cibleV = Math.sqrt(52 * R * v.p.adherence * v.adherenceSol) * prudence;
     // Un peu d'élastique pour que la course reste disputée.
     const ecartJoueur = v.progres - this.joueur.progres;
-    if (!this.joueur.fini) cibleV *= ecartJoueur > 700 ? 0.97 : ecartJoueur < -400 ? 1.06 : 1;
+    if (!this.joueur.fini && !v.coequipier) cibleV *= ecartJoueur > 700 ? 0.97 : ecartJoueur < -400 ? 1.06 : 1;
     v.frein = v.vitesse > cibleV + 12 ? clamp((v.vitesse - cibleV) / 60, 0, 1) : 0;
 
     if (v.nitroIA > 0 && this.etat === 'course' && R > 1500 && this.alea() < dt * 0.2) {
@@ -552,6 +566,7 @@ export class Course {
       ramasses: { ...this.ramasses },
       pieces: this.piecesOr, driftMax: this.driftMax, departParfait: this.departReussi, meilleurTour: this.meilleurTour,
       usure: 1 - this.joueur.durabilite / this.joueur.p.durabiliteMax,
+      usureCoequipier: this.coequipier ? 1 - this.coequipier.durabilite / this.coequipier.p.durabiliteMax : undefined,
     };
   }
 
@@ -639,11 +654,12 @@ export class Course {
           ctx.fill();
         }
       }
-      const sprite = spriteVoitureTiny(v.couleur, v.joueur ? '#f2c14e' : null, v.looks || []);
+      const sprite = spriteVoitureTiny(v.couleur, v.joueur ? '#f2c14e' : v.coequipier ? '#f4f6fb' : null, v.looks || []);
       dessinerVoitureTiny(ctx, sprite, v.x, v.y, v.angle);
     }
 
     for (const v of this.voitures) if (v.rival) texte(ctx, 'RIVAL', v.x, v.y - 30, 7, '#ff8a80', 'center');
+    if (this.coequipier) texte(ctx, `ÉQUIPE · ${this.coequipier.nom.split(' ')[0]}`, this.coequipier.x, this.coequipier.y - 30, 7, '#ffe066', 'center');
 
     // Repère au-dessus du joueur : une flèche jaune qui rebondit.
     const bx = Math.round(j.x), by = Math.round(j.y) - 34 + (Math.sin(t * 6) > 0 ? 1 : 0);
@@ -730,7 +746,7 @@ export class Course {
     for (const v of this.voitures) {
       const x = mx + (v.x - mc.minX) * mc.echelle + mc.decalage;
       const y = my + (v.y - mc.minY) * mc.echelle + mc.decalage;
-      ctx.fillStyle = v.joueur ? '#ffffff' : '#2a2838';
+      ctx.fillStyle = v.joueur ? '#ffffff' : v.coequipier ? '#ffe066' : '#2a2838';
       ctx.fillRect(Math.round(x) - (v.joueur ? 3 : 2), Math.round(y) - (v.joueur ? 3 : 2), v.joueur ? 6 : 4, v.joueur ? 6 : 4);
       ctx.fillStyle = v.couleur;
       ctx.fillRect(Math.round(x) - (v.joueur ? 2 : 1), Math.round(y) - (v.joueur ? 2 : 1), v.joueur ? 4 : 2, v.joueur ? 4 : 2);
@@ -759,7 +775,7 @@ export class Course {
     ctx.fillRect(pr.x - 2, pr.y - 2, pr.w + 4, pr.h + 4);
     ctx.fillStyle = '#fff6e0'; ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
     ctx.save(); ctx.translate(pr.x + 18, pr.y + 18); ctx.scale(2, 2);
-    ctx.drawImage(spritePerso({ ...tenue(4), casque: '#e4432d', haut: '#f4f1e8' }, 'face', 0), -8, -8);
+    ctx.drawImage(spritePerso(this.tenuePilote || { ...tenue(4), casque: '#e4432d', haut: '#f4f1e8' }, 'face', 0), -8, -8);
     ctx.restore();
 
     texte(ctx, j.nom, 54, y0 + 16, 11, '#f4f1e8', 'left');
@@ -788,8 +804,9 @@ export class Course {
       for (let i = r.y; i < r.y + r.h; i += 6) { ctx.fillRect(r.x, i, 1, 3); ctx.fillRect(r.x + r.w - 1, i, 1, 3); }
       const cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 6;
       ctx.fillStyle = '#f4f1e8';
-      for (let i = 0; i < 7; i++) ctx.fillRect(Math.round(cx - fleche * 8 + fleche * i * 2), Math.round(cy - i), 2, i * 2 + 1);
-      ctx.fillRect(Math.round(cx - (fleche > 0 ? 12 : -4)), Math.round(cy - 2), 10, 4);
+      // Flèche pointée vers le côté où l'on tourne : pointe à l'extérieur, tige vers le centre.
+      for (let i = 0; i < 7; i++) ctx.fillRect(Math.round(cx + fleche * 8 - fleche * i * 2), Math.round(cy - i), 2, i * 2 + 1);
+      ctx.fillRect(Math.round(fleche > 0 ? cx - 14 : cx + 4), Math.round(cy - 2), 10, 4);
       texte(ctx, fleche < 0 ? 'Gauche' : 'Droite', cx, r.y + r.h - 9, 9, '#f4f1e8', 'center');
     }
     const n = z.nitro;

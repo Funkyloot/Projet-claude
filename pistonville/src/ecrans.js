@@ -15,7 +15,7 @@ import {
   piece, montureDe, peutSortir, prixPiece, promoDuJour, PRIX_CAFE, ORDRE_PALIERS, PALIERS,
   peutCourir, objectifsActifs, objectifsFaits, totalObjectifs, estimerChances, rivalDe, sponsorActif, sponsorDispo,
   saisonDe, jourDeSaison, JOURS_SAISON, SAISONS_CARRIERE, pieceNiveau, coutNiveauPiece, NIVEAU_PIECE_MAX,
-  tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, exporter, importer, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
+  tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, exporter, importer, CADEAUX, lirePalmares, scoreCarriere,
 } from './partie.js';
 import {
   coutAmelioration, evaluerCandidature, SURFACES, kmh, CLASSES, EMPLACEMENTS, RARETES, COUT_RECHERCHE,
@@ -26,6 +26,7 @@ import { urlAsset } from './assets.js';
 import { THEMES } from './rendu-circuit.js';
 import { spriteVoitureTiny, dessinerVoitureTiny, spritePerso, tenue, VOITURE_LONGUEUR, VOITURE_LARGEUR } from './tiny.js';
 import { imgPiece } from './icones.js';
+import { engagement, pointsAPlacer } from './pilotes.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -152,7 +153,7 @@ export function ecranTitre(app) {
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>
       </div>
-      <p class="credits">Version d'essai 0.5 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
+      <p class="credits">Version d'essai 0.6 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
     </div>`,
     actions: {
       continuer: () => app.continuer(),
@@ -211,7 +212,8 @@ function resumeReprise(p) {
   if (attente) morceaux.push(`${attente} candidature${attente > 1 ? 's' : ''} en attente`);
   const obj = objectifsActifs(p, 1)[0];
   if (obj) morceaux.push(`Objectif : ${obj.titre} (${obj.actuel}/${obj.but})`);
-  if (p.pilotePoints) morceaux.push(`${p.pilotePoints} point${p.pilotePoints > 1 ? 's' : ''} de pilote à répartir`);
+  const pts = pointsAPlacer(p);
+  if (pts) morceaux.push(`${pts} point${pts > 1 ? 's' : ''} de pilote à répartir`);
   return morceaux.map(e).join(' · ');
 }
 
@@ -224,6 +226,8 @@ export function ecranAide(app, retour) {
         <div class="contenu texte">
           <p><b>Le jour</b>, au garage : construis tes bâtiments sur le terrain (onglet Construire), recrute et affecte ton équipe (onglet Équipe), construis ou achète tes voitures et monte des pièces (onglet Voitures), inscris-toi aux Grands Prix (onglet Courses). Une balade en ville par jour.</p>
           <p>Touche un bâtiment pour le gérer. Le décor rend ses voisins plus efficaces ; trois bâtiments précis qui se touchent forment un combo. Le personnel est payé chaque semaine.</p>
+          <p><b>Les pilotes</b> (onglet Équipe) : recrute-les, entraîne-les, renvoie-les. En course, l'écurie aligne au plus deux pilotes : le titulaire, que tu conduis, et un second pilote qui court seul sur une autre voiture du garage. Ses points comptent pour le Grand Prix.</p>
+          <p><b>La ville</b> est entourée de campagne : champs, fermes, bois, étangs et éoliennes. Défis, radars et affiches cachées t'y attendent. À la campagne, pas de feux : STOP sur les routes nord-sud.</p>
           <p><b>Le soir</b>, la course : la voiture accélère toute seule, tu ne fais que tourner.</p>
           <table class="touches">
             <tr><th>Tourner</th><td>Toucher la moitié gauche ou droite · flèches ← → · Q / D</td></tr>
@@ -869,6 +873,25 @@ export function ecranBriefing(app, gp, manche, apercu) {
   const theme = THEMES[def.theme] || THEMES.parc;
   const v = voitureActive(app.partie);
   const bonusSol = v?.surfaces?.[def.surface];
+  const p = app.partie;
+  const eng = engagement(p);
+  const autresVoitures = p.garage.filter((g) => g.uid !== v?.uid);
+  const puce = (action, id, nom, actif, extra = '') => `<button class="choix ${actif ? 'active' : ''}" data-action="${action}" data-id="${id}" ${extra}>${e(nom)}</button>`;
+  const ecurie = `<section class="panneau">
+        <h2 class="titre-panneau">Écurie engagée<small>2 pilotes au plus par écurie</small></h2>
+        <div class="contenu engagement">
+          ${p.pilotes.length ? `
+          <div class="petit">Au volant (c'est toi qui conduis) · ${e(v ? v.nom : 'aucune voiture')}</div>
+          <div class="choix-liste">${p.pilotes.map((x) => puce('titulaire', x.uid, `${x.nom} · niv. ${x.niveau}`, eng.titulaire === x)).join('')}</div>
+          <div class="petit">Second pilote (il court seul, sur une autre voiture)</div>
+          <div class="choix-liste">${puce('second', '', 'Aucun', !eng.second)}${p.pilotes.filter((x) => x !== eng.titulaire).map((x) => puce('second', x.uid, `${x.nom} · niv. ${x.niveau}`, eng.second === x, autresVoitures.length ? '' : 'disabled')).join('')}</div>
+          ${eng.second ? `<div class="petit">Sa voiture</div><div class="choix-liste">${autresVoitures.map((g) => puce('voiture2', g.uid, `${modele(g.modele).nom}${g.usure > 0.3 ? ` · usée ${Math.round(g.usure * 100)} %` : ''}`, eng.voitureSecond === g)).join('')}</div>` : ''}
+          ${p.pilotes.length > 1 && !autresVoitures.length ? '<div class="petit ko">Pour aligner un second pilote, il faut une deuxième voiture au garage.</div>' : ''}
+          ${p.pilotes.length < 2 ? '<div class="petit">Recrute un second pilote (onglet Équipe) pour marquer deux fois plus de points.</div>' : ''}`
+    : '<div class="petit ko">Aucun pilote sous contrat : recrute-en un dans l\'onglet Équipe.</div>'}
+        </div>
+      </section>`;
+  const redessiner = () => app.montrer(ecranBriefing(app, gp, manche, apercu));
   return {
     classe: 'fond-sombre',
     html: `<div class="ecran">
@@ -894,14 +917,18 @@ export function ecranBriefing(app, gp, manche, apercu) {
         ${manche === gp.manches.length - 1 && gp.manches.length > 1 ? '<div class="contenu texte petit ko">Finale : les adversaires sortent le grand jeu !</div>' : ''}
         <div class="contenu texte petit">Touche l'écran pile au feu vert pour un départ parfait. Ramasse les pièces d'or et les disquettes sur la piste !</div>
       </section>
+      ${ecurie}
       <div class="pile">
-        <button class="btn btn-principal" data-action="depart">Départ !</button>
+        <button class="btn btn-principal" data-action="depart" ${eng.titulaire ? '' : 'disabled'}>Départ !</button>
         <button class="btn" data-action="retour">${manche === 0 ? 'Pas ce soir' : 'Abandonner le Grand Prix'}</button>
       </div>
     </div>`,
     actions: {
       depart: () => app.depart(),
       retour: () => (manche === 0 ? app.annulerGP() : app.abandonnerGP()),
+      titulaire: (d) => { app.action('choisirTitulaire', d.id); redessiner(); },
+      second: (d) => { app.action('choisirSecond', d.id || null); redessiner(); },
+      voiture2: (d) => { app.action('choisirVoitureSecond', d.id); redessiner(); },
     },
   };
 }
@@ -937,9 +964,9 @@ export function ecranPause(app) {
 
 export function ecranResultats(app, r) {
   const g = r.gain;
-  const lignes = r.resultats.map((x) => `<tr class="${x.id === 'joueur' ? 'moi' : ''}">
+  const lignes = r.resultats.map((x) => `<tr class="${x.id === 'joueur' ? 'moi' : x.id === 'coequipier' ? 'moi second' : ''}">
       <td>${ordinal(x.place)}</td><td><i class="puce" style="background:${x.couleur}"></i>${e(x.nom)}</td><td class="petit">${e(x.ecurie)}</td><td class="num">${x.place === 1 ? formatTemps(x.temps) : `+${x.ecart.toFixed(1)} s`}</td></tr>`).join('');
-  const general = r.general.map((x, i) => `<tr class="${x.id === 'joueur' ? 'moi' : ''}"><td>${ordinal(i + 1)}</td><td>${e(x.nom)}</td><td class="num">${x.points} pts</td></tr>`).join('');
+  const general = r.general.map((x, i) => `<tr class="${x.id === 'joueur' ? 'moi' : x.id === 'coequipier' ? 'moi second' : ''}"><td>${ordinal(i + 1)}</td><td>${e(x.nom)}</td><td class="num">${x.points} pts</td></tr>`).join('');
   const p = app.partie;
   const besoin = expPourRang(p.rang);
   const butin = g.butin
@@ -967,7 +994,9 @@ export function ecranResultats(app, r) {
           ${g.premiere ? '<p class="premiere">PREMIÈRE VICTOIRE SUR CE CIRCUIT · +10 PR</p>' : ''}
           ${g.meilleurTour ? `<p class="petit-clair">Meilleur tour : ${g.meilleurTour.toFixed(1)} s${g.medaille?.record ? ' · RECORD' : ''}</p>` : ''}
           ${g.medaille?.nouvelle ? `<p class="premiere medaille-gagnee m${g.medaille.niveau}">MÉDAILLE ${NOMS_MEDAILLES[g.medaille.niveau].toUpperCase()} ! +${g.medaille.recherche} PR</p>` : ''}
-          ${g.niveauxPilote?.length ? `<p class="premiere">${e(app.partie.pilote)} passe niveau ${g.niveauxPilote.at(-1)} ! Point à répartir</p>` : ''}
+          ${g.niveauxPilote?.length ? `<p class="premiere">${e(g.pilote || 'Le pilote')} passe niveau ${g.niveauxPilote.at(-1)} ! Point à répartir</p>` : ''}
+          ${g.coequipier ? `<p class="petit-clair">Second pilote · ${e(g.coequipier.nom)} : ${ordinal(g.coequipier.place)} · +${formatArgent(g.coequipier.prime)} · +${g.coequipier.fans} fans · +${g.coequipier.exp} EXP</p>` : ''}
+          ${g.coequipier?.niveaux?.length ? `<p class="premiere">${e(g.coequipier.nom)} passe niveau ${g.coequipier.niveaux.at(-1)} ! Point à répartir</p>` : ''}
         </div>
       </section>
       ${butin}
@@ -984,7 +1013,7 @@ export function ecranResultats(app, r) {
 }
 
 export function ecranFinGP(app, f) {
-  const lignes = f.general.map((x, i) => `<tr class="${x.id === 'joueur' ? 'moi' : ''}"><td>${ordinal(i + 1)}</td><td>${e(x.nom)}</td><td class="petit">${e(x.ecurie)}</td><td class="num">${x.points} pts</td></tr>`).join('');
+  const lignes = f.general.map((x, i) => `<tr class="${x.id === 'joueur' ? 'moi' : x.id === 'coequipier' ? 'moi second' : ''}"><td>${ordinal(i + 1)}</td><td>${e(x.nom)}</td><td class="petit">${e(x.ecurie)}</td><td class="num">${x.points} pts</td></tr>`).join('');
   return {
     classe: 'fond-sombre',
     html: `<div class="ecran defile-ecran">
@@ -1011,47 +1040,6 @@ export function ecranFinGP(app, f) {
 export function ecranRang(app, m, suite) {
   return ecranCelebration(app, `RANG ${m.rang} !`, "L'équipe monte en grade.", suite,
     `<div class="recompenses"><span>+${formatArgent(m.argent)}</span><span>+${m.recherche} PR</span><span>+${m.tickets} ticket</span></div>`);
-}
-
-// --- Pilote ----------------------------------------------------------------------------------------
-
-function portrait(app, taille = 3) {
-  const c = document.createElement('canvas');
-  c.width = 16 * taille; c.height = 16 * taille;
-  const ctx = c.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(spritePerso({ ...tenue(4), casque: '#e4432d', haut: '#f4f1e8' }, 'face', 0), 0, 0, 16 * taille, 16 * taille);
-  return `<img class="portrait" src="${c.toDataURL()}" alt="">`;
-}
-
-export function ecranPilote(app) {
-  const p = app.partie;
-  const besoin = expPilote(p.piloteNiv);
-  const lignes = Object.entries(STATS_PILOTE).map(([k, st]) => `<div class="ligne stat-pilote">
-      <div><b>${st.nom} · ${p.piloteStats[k]}</b><div class="petit">${st.texte}</div></div>
-      <button class="btn btn-mini btn-principal" data-action="point" data-stat="${k}" ${p.pilotePoints ? '' : 'disabled'}>+1</button></div>`).join('');
-  return {
-    classe: 'garage plein',
-    html: `${barre(p)}<div class="defile">
-      <h2 class="titre-section">Pilote</h2>
-      <section class="panneau">
-        <div class="contenu fiche-pilote">${portrait(app)}<div>
-          <b class="gros">${e(p.pilote)}</b>
-          <div>Niveau ${p.piloteNiv}${p.pilotePoints ? ` · <span class="ok">${p.pilotePoints} point${p.pilotePoints > 1 ? 's' : ''} à répartir</span>` : ''}</div>
-          <div class="jauge grande"><i style="width:${Math.round((p.piloteExp / besoin) * 100)}%;background:#7a5ac8"></i></div>
-          <div class="petit">${p.piloteExp} / ${besoin} EXP · gagnée en course</div>
-        </div></div>
-      </section>
-      <section class="panneau"><h2 class="titre-panneau violet">Entraînement<small>Chaque niveau donne un point. À toi de choisir ton style.</small></h2>
-        <div class="contenu">${lignes}</div></section>
-      ${p.palmares.length ? `<section class="panneau"><h2 class="titre-panneau">Pistons d'Or</h2><div class="contenu petit">${p.palmares.map((x) => `Saison ${x.saison} · ${e(x.prix)}`).join('<br>')}</div></section>` : ''}
-    </div>
-    <div class="pied"><button class="btn" data-action="retour">Retour au garage</button></div>`,
-    actions: {
-      point: (d) => { if (app.action('entrainerPilote', d.stat)) app.son.niveau(); app.montrer(ecranPilote(app)); },
-      retour: () => app.garage(),
-    },
-  };
 }
 
 // --- Cérémonie des Pistons d'Or -------------------------------------------------------------------

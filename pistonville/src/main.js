@@ -25,6 +25,7 @@ import {
 } from './ecrans.js';
 import * as P from './partie.js';
 import * as G from './garage.js';
+import * as PL from './pilotes.js';
 import * as Nuage from './nuage.js';
 import { ecranPlacement, ecranFicheBatiment, ecranConstruire } from './ecrans-garage.js';
 
@@ -335,7 +336,10 @@ class App {
       signerSponsor: P.signerSponsor,
       agrandirTerrain: G.agrandirTerrain, ameliorerBatiment: G.ameliorerBatiment, vendreBatiment: G.vendreBatiment,
       affecter: (p, [s, b]) => G.affecter(p, s, b), recruter: G.recruter, embaucher: G.embaucher,
-      licencier: G.licencier, former: G.former, ameliorerPiece: P.ameliorerPiece, entrainerPilote: P.entrainerPilote,
+      licencier: G.licencier, former: G.former, ameliorerPiece: P.ameliorerPiece,
+      entrainerPilote: PL.entrainer, recruterPilotes: PL.recruterPilotes, engagerPilote: PL.engagerPilote,
+      renvoyerPilote: PL.renvoyerPilote, choisirTitulaire: PL.choisirTitulaire, choisirSecond: PL.choisirSecond,
+      choisirVoitureSecond: PL.choisirVoitureSecond,
     }[nom];
     const ok = f(this.partie, arg);
     if (ok) this.sauver();
@@ -455,7 +459,17 @@ class App {
     const def = gp.manches[this.partie.gp.manche];
     const decor = rendreCircuit(this.circuit, this.assets.urbain, gp.niveau, this.assets.tiny);
     const v = P.voitureActive(this.partie);
+    const eng = PL.engagement(this.partie);
     this.adversaires = P.adversaires(gp, this.partie.gp.manche);
+    // Le second pilote de l'écurie : sa voiture, décrite avec ses propres qualités de pilote.
+    let coequipier = null;
+    if (eng.second) {
+      const v2 = P.decrireVoiture(this.partie, eng.voitureSecond, eng.second);
+      coequipier = {
+        physique: v2.physique, couleur: v2.couleur, looks: v2.looks, nom: eng.second.nom, surfaces: v2.surfaces,
+        talent: PL.talentPilote(eng.second) * 0.5, usure: eng.voitureSecond.usure,
+      };
+    }
     this.course = new Course({
       circuit: this.circuit,
       decor,
@@ -463,15 +477,17 @@ class App {
       tiny: this.assets.tiny,
       tours: def.tours,
       joueur: {
-        physique: v.physique, couleur: v.couleur, looks: v.looks, pilote: this.partie.pilote,
+        physique: v.physique, couleur: v.couleur, looks: v.looks, pilote: eng.titulaire?.nom || 'Pilote', tenue: PL.tenuePilote(eng.titulaire),
         nitros: v.nitros, nitroDuree: v.nitroDuree, surfaces: v.surfaces,
       },
       adversaires: this.adversaires,
+      coequipier,
       aide: this.partie.aide,
       son: this.son,
       niveau: gp.niveau,
     });
     this.course.joueur.durabilite = v.physique.durabiliteMax * (1 - v.usure);
+    if (this.course.coequipier) this.course.coequipier.durabilite = coequipier.physique.durabiliteMax * (1 - coequipier.usure);
     this.pause = false;
     this.accu = 0;
     this.pointeurs.clear();
@@ -525,7 +541,11 @@ class App {
   }
 
   noms() {
-    const noms = { joueur: { nom: this.partie.pilote, ecurie: 'Garage Piston', couleur: P.voitureActive(this.partie)?.couleur || '#f2c14e' } };
+    const eng = PL.engagement(this.partie);
+    const noms = {
+      joueur: { nom: eng.titulaire?.nom || 'Pilote', ecurie: 'Garage Piston', couleur: P.voitureActive(this.partie)?.couleur || '#f2c14e' },
+      coequipier: { nom: eng.second?.nom || 'Second pilote', ecurie: 'Garage Piston', couleur: eng.voitureSecond?.couleur || '#f2c14e' },
+    };
     // Recalculées depuis le Grand Prix : marche aussi après une reprise de partie.
     const gp = this.partie.gp && P.grandPrix(this.partie.gp.id);
     for (const a of (gp ? P.adversaires(gp) : this.adversaires || [])) noms[a.equipe] = { nom: a.nom, ecurie: a.ecurie, couleur: a.couleur };
@@ -551,7 +571,8 @@ class App {
   finGP() {
     const gp = P.grandPrix(this.partie.gp.id);
     const general = P.classementGP(this.partie, this.noms());
-    const place = general.findIndex((x) => x.id === 'joueur') + 1;
+    // Le trophée revient à l'écurie : on garde la meilleure de ses deux voitures.
+    const place = general.findIndex((x) => x.id === 'joueur' || x.id === 'coequipier') + 1;
     const { gains, fans } = this.partie.gp;
     P.terminerGP(this.partie, place);
     this.sauver();

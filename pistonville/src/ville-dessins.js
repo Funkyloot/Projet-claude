@@ -163,3 +163,142 @@ export function fleurs(c, x, y, graine = 0) {
     c.fillRect(x + 2 + ((i * 5 + graine) % 11), y + 3 + ((i * 7 + graine) % 9), 3, 3);
   }
 }
+
+// --- Campagne ---------------------------------------------------------------------------------
+
+/** Grange rouge à toit à deux pans, grande porte en croix (x, y = coin haut-gauche ; w = largeur). */
+export function grange(c, x, y, w) {
+  const h = 80;
+  c.fillStyle = 'rgba(38,24,46,0.25)'; c.fillRect(x + 4, y + h - 2, w, 6);
+  c.fillStyle = CONTOUR; c.fillRect(x, y, w, h);
+  // Toit : tôle grise, deux pans et faîte.
+  c.fillStyle = '#9aa1b5'; c.fillRect(x + 1, y + 1, w - 2, 17);
+  c.fillStyle = '#80879c'; c.fillRect(x + 1, y + 18, w - 2, 17);
+  c.fillStyle = '#6a7088';
+  for (let tx = x + 4; tx < x + w - 2; tx += 5) { c.fillRect(tx, y + 3, 1, 13); c.fillRect(tx, y + 20, 1, 13); }
+  c.fillStyle = CONTOUR; c.fillRect(x + 1, y + 17, w - 2, 1); c.fillRect(x + 1, y + 35, w - 2, 1);
+  // Façade rouge à planches.
+  c.fillStyle = '#c2504d'; c.fillRect(x + 1, y + 36, w - 2, h - 37);
+  c.fillStyle = '#a63f3c'; for (let px = x + 5; px < x + w - 2; px += 6) c.fillRect(px, y + 36, 1, h - 37);
+  c.fillStyle = '#f4f1e8'; c.fillRect(x + 1, y + 36, w - 2, 2);
+  // Grande porte à croix blanche, au milieu.
+  const pw = 32, px = x + Math.round((w - pw) / 2), py = y + h - 34;
+  cadre(c, px, py, pw, 34, '#8f3a37');
+  c.strokeStyle = '#f4f1e8'; c.lineWidth = 2;
+  c.strokeRect(px + 2, py + 2, pw - 4, 30);
+  c.beginPath(); c.moveTo(px + 3, py + 3); c.lineTo(px + pw - 3, py + 31); c.moveTo(px + pw - 3, py + 3); c.lineTo(px + 3, py + 31); c.stroke();
+  // Lucarne à foin.
+  cadre(c, x + w / 2 - 7, y + 40, 14, 10, '#f2c14e');
+}
+
+/** Silo cylindrique (pieds en x, y). */
+export function silo(c, x, y) {
+  c.fillStyle = 'rgba(38,24,46,0.25)'; c.fillRect(x - 12, y - 2, 26, 5);
+  c.fillStyle = CONTOUR; c.fillRect(x - 13, y - 70, 26, 70);
+  c.fillStyle = '#c0cbdc'; c.fillRect(x - 12, y - 62, 24, 61);
+  c.fillStyle = '#e6ebf2'; c.fillRect(x - 10, y - 62, 5, 61);
+  c.fillStyle = '#8b9bb4'; c.fillRect(x + 6, y - 62, 5, 61);
+  for (let k = y - 54; k < y; k += 10) { c.fillStyle = '#8b9bb4'; c.fillRect(x - 12, k, 24, 1); }
+  // Dôme.
+  c.fillStyle = CONTOUR; c.beginPath(); c.ellipse(x, y - 63, 13, 9, 0, Math.PI, 0); c.fill();
+  c.fillStyle = '#c2504d'; c.beginPath(); c.ellipse(x, y - 63, 12, 8, 0, Math.PI, 0); c.fill();
+}
+
+/** Tracteur vu de dessus, orienté selon l'angle (centre en x, y). */
+export function tracteur(c, x, y, angle) {
+  c.save();
+  c.translate(Math.round(x), Math.round(y));
+  c.rotate(angle);
+  c.fillStyle = 'rgba(38,24,46,0.28)'; c.fillRect(-17, -11, 36, 24);
+  // Grosses roues arrière, petites roues avant.
+  c.fillStyle = CONTOUR; c.fillRect(-16, -13, 13, 6); c.fillRect(-16, 7, 13, 6); c.fillRect(8, -11, 8, 4); c.fillRect(8, 7, 8, 4);
+  c.fillStyle = '#4b5873'; c.fillRect(-15, -12, 11, 4); c.fillRect(-15, 8, 11, 4);
+  // Capot et cabine.
+  c.fillStyle = CONTOUR; c.fillRect(-12, -8, 30, 16);
+  c.fillStyle = '#3fa34d'; c.fillRect(-11, -7, 28, 14);
+  c.fillStyle = '#2f7d3a'; c.fillRect(2, -7, 15, 2);
+  c.fillStyle = CONTOUR; c.fillRect(-12, -7, 13, 14);
+  c.fillStyle = '#a9d4f2'; c.fillRect(-11, -6, 11, 12);
+  c.fillStyle = '#f2c14e'; c.fillRect(-10, -5, 9, 2);
+  c.fillStyle = '#2a2838'; c.fillRect(14, -2, 3, 1);
+  c.restore();
+}
+
+/** Mât d'éolienne (pieds en x, y), sans les pales. */
+export function eolienne(c, x, y) {
+  c.fillStyle = 'rgba(38,24,46,0.2)'; c.fillRect(x - 6, y - 2, 14, 4);
+  c.fillStyle = CONTOUR; c.fillRect(x - 3, y - 96, 7, 96);
+  c.fillStyle = '#f4f6fb'; c.fillRect(x - 2, y - 95, 5, 95);
+  c.fillStyle = '#c0cbdc'; c.fillRect(x + 1, y - 95, 2, 95);
+  c.fillStyle = CONTOUR; c.fillRect(x - 6, y - 102, 13, 9);
+  c.fillStyle = '#e6ebf2'; c.fillRect(x - 5, y - 101, 11, 7);
+}
+
+/** Les trois pales, qui tournent (moyeu en x, y). */
+export function palesEolienne(c, x, y, angle) {
+  c.save();
+  c.translate(x, y);
+  for (let i = 0; i < 3; i++) {
+    c.rotate((Math.PI * 2) / 3);
+    c.save(); c.rotate(angle);
+    c.fillStyle = CONTOUR; c.fillRect(-3, -42, 6, 40);
+    c.fillStyle = '#f4f6fb'; c.fillRect(-2, -41, 4, 38);
+    c.fillStyle = '#e4432d'; c.fillRect(-2, -41, 4, 5);
+    c.restore();
+  }
+  c.fillStyle = CONTOUR; c.fillRect(-3, -3, 6, 6);
+  c.fillStyle = '#c0cbdc'; c.fillRect(-2, -2, 4, 4);
+  c.restore();
+}
+
+/** Clôture de bois horizontale ou verticale, de longueur l (x, y = début, au sol). */
+export function cloture(c, x, y, l, verticale = false) {
+  c.fillStyle = CONTOUR;
+  if (!verticale) {
+    c.fillRect(x, y - 9, l, 3); c.fillRect(x, y - 4, l, 3);
+    for (let k = 0; k <= l - 3; k += 12) c.fillRect(x + k, y - 12, 4, 12);
+    c.fillStyle = '#c98a55'; c.fillRect(x, y - 8, l, 1); c.fillRect(x, y - 3, l, 1);
+    for (let k = 0; k <= l - 3; k += 12) c.fillRect(x + k + 1, y - 11, 2, 10);
+  } else {
+    c.fillRect(x - 2, y, 4, l);
+    for (let k = 0; k <= l; k += 12) c.fillRect(x - 2, y + k - 9, 5, 10);
+    c.fillStyle = '#c98a55'; c.fillRect(x - 1, y, 2, l);
+    for (let k = 0; k <= l; k += 12) c.fillRect(x - 1, y + k - 8, 3, 8);
+  }
+}
+
+/** Station-service : auvent sur piliers et deux pompes (x, y = coin haut-gauche de l'auvent). */
+export function auventStation(c, x, y, w) {
+  c.fillStyle = 'rgba(38,24,46,0.22)'; c.fillRect(x + 6, y + 40, w - 4, 18);
+  for (const px of [x + 10, x + w - 14]) { c.fillStyle = CONTOUR; c.fillRect(px, y + 18, 5, 36); c.fillStyle = '#e6ebf2'; c.fillRect(px + 1, y + 18, 3, 35); }
+  for (const px of [x + w / 2 - 22, x + w / 2 + 10]) {
+    cadre(c, px, y + 34, 12, 20, '#e4432d');
+    c.fillStyle = '#f4f6fb'; c.fillRect(px + 2, y + 37, 8, 5);
+    c.fillStyle = CONTOUR; c.fillRect(px + 12, y + 40, 3, 2); c.fillRect(px + 14, y + 40, 1, 8);
+  }
+  cadre(c, x, y, w, 20, '#f4f6fb');
+  c.fillStyle = '#e4432d'; c.fillRect(x + 1, y + 13, w - 2, 5);
+  c.fillStyle = '#f2c14e'; c.fillRect(x + 1, y + 11, w - 2, 2);
+}
+
+/** Panneau STOP sur poteau (pieds en x, y). */
+export function panneauStop(c, x, y) {
+  c.fillStyle = CONTOUR; c.fillRect(x - 1, y - 18, 3, 18);
+  c.fillStyle = CONTOUR; c.fillRect(x - 6, y - 30, 13, 13);
+  c.fillStyle = '#e4432d'; c.fillRect(x - 5, y - 29, 11, 11);
+  c.fillStyle = '#ffffff'; c.fillRect(x - 4, y - 25, 9, 2);
+}
+
+/** Parapet de pont le long d'une route (x, y, longueur, sens). */
+export function parapet(c, x, y, l, verticale = false) {
+  c.fillStyle = CONTOUR;
+  if (!verticale) {
+    c.fillRect(x, y, l, 6);
+    c.fillStyle = '#c0cbdc'; c.fillRect(x, y + 1, l, 3);
+    c.fillStyle = '#8b9bb4'; for (let k = 0; k < l; k += 16) c.fillRect(x + k, y + 1, 2, 4);
+  } else {
+    c.fillRect(x, y, 6, l);
+    c.fillStyle = '#c0cbdc'; c.fillRect(x + 1, y, 3, l);
+    c.fillStyle = '#8b9bb4'; for (let k = 0; k < l; k += 16) c.fillRect(x + 1, y + k, 4, 2);
+  }
+}

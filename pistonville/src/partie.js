@@ -12,9 +12,10 @@ import {
 } from './regles.js';
 import { creerAlea } from './outils.js';
 import * as G from './garage.js';
+import * as PL from './pilotes.js';
 
 const CLE = 'pistonville.partie.v1';
-const VERSION = 2;
+const VERSION = 3;
 
 /** Plafond des qualités selon la classe de la voiture. */
 export const PLAFOND_CLASSE = { D: 62, C: 74, B: 86, A: 95, S: 99 };
@@ -62,9 +63,11 @@ export function nouvellePartie() {
     collection: {},          // pièces déjà obtenues une fois (album)
     premieres: {},           // circuits déjà gagnés une fois
     stats: { courses: 0, piecesOr: 0, driftMax: 0, departsParfaits: 0, superRares: 0 },
-    pilote: 'Léa',
-    piloteNiv: 1, piloteExp: 0, pilotePoints: 0,
-    piloteStats: { technique: 0, sangfroid: 0, charisme: 0 },
+    pilotes: [PL.piloteDepart()],   // pilotes sous contrat (4 au plus)
+    titulaire: 'p-lea',      // celui que l'on conduit
+    second: null,            // second pilote engagé en course (ou null)
+    voitureSecond: null,     // sa voiture
+    candidatsPilotes: null,  // dernier recrutement de pilotes
     saisonStats: saisonVide(),
     ceremonie: null,         // cérémonie des Pistons d'Or à montrer
     palmares: [],            // Pistons d'Or gagnés : { saison, prix }
@@ -125,6 +128,12 @@ export function importer(code) {
 
 /** Met une ancienne sauvegarde au format courant. */
 function migrer(p) {
+  // v0.5 → v0.6 : le pilote unique devient le premier pilote de l'écurie.
+  if (!p.pilotes) {
+    p.pilotes = [PL.piloteDepart({ nom: p.pilote, niveau: p.piloteNiv, exp: p.piloteExp, points: p.pilotePoints, stats: p.piloteStats })];
+    p.titulaire = 'p-lea';
+  }
+  for (const k of ['pilote', 'piloteNiv', 'piloteExp', 'pilotePoints', 'piloteStats']) delete p[k];
   const base = nouvellePartie();
   for (const cle of Object.keys(base)) if (p[cle] === undefined) p[cle] = base[cle];
   for (const v of p.garage) {
@@ -136,7 +145,6 @@ function migrer(p) {
   p.inventaire = p.inventaire.filter((i) => piece(i.piece));
   p.stats = { ...base.stats, ...p.stats };
   p.saisonStats = { ...saisonVide(), ...p.saisonStats };
-  p.piloteStats = { ...base.piloteStats, ...p.piloteStats };
   for (const i of p.inventaire) if (i.niveau === undefined) i.niveau = 0;
   // v0.3 → v0.4 : les « installations » deviennent de vrais bâtiments posés sur le terrain.
   if (p.installations) {
@@ -178,7 +186,7 @@ export function voitureActive(partie) {
   return v ? decrireVoiture(partie, v) : null;
 }
 
-export function decrireVoiture(partie, v) {
+export function decrireVoiture(partie, v, pilote = PL.titulaire(partie)) {
   const m = modele(v.modele);
   const q = QUALITES[v.qualite || 0];
   const montees = Object.entries(v.pieces || {})
@@ -196,7 +204,7 @@ export function decrireVoiture(partie, v) {
   }
   const surfaces = { ...(m.surfaces || {}) };
   for (const [k, val] of Object.entries(G.effets(partie).surfaces || {})) surfaces[k] = (surfaces[k] || 0) + val;
-  const ps = partie.piloteStats || {};
+  const ps = pilote?.stats || {};
   let nitros = 1, nitroDuree = BOOSTS.nitro.duree;
   const looks = new Set();
   for (const pc of montees) {
@@ -503,7 +511,7 @@ export function jourSuivant(partie) {
   // Le garage travaille : revenus, recherche, fatigue, paie du personnel.
   const g = G.journeeGarage(partie, alea);
   nouvelles.push(...g.nouvelles);
-  if (g.pilote) gagnerExpPilote(partie, g.pilote);
+  if (g.pilote) for (const pl of partie.pilotes) PL.gagnerExp(pl, g.pilote);
   const ev = evenementDuJour(partie, alea);
   if (ev) nouvelles.push(ev);
   partie.nouvelles = nouvelles;
@@ -534,30 +542,47 @@ const BASE_NIVEAU = [0, 33, 53, 68, 80, 88, 93];
 /** Le rival est un peu plus fort, de plus en plus avec les paliers. */
 const bonusRival = (gp) => 0.03 + 0.01 * gp.niveau;
 
-/** Les adversaires d'un Grand Prix : toujours les mêmes écuries pour un GP donné. */
-export function adversaires(gp, manche = 0) {
+/**
+ * Les écuries d'un Grand Prix : toujours les mêmes pour un GP donné. Comme
+ * pour nous, une écurie aligne au plus deux pilotes ; plus le Grand Prix est
+ * relevé, plus les grosses écuries viennent à deux. Le nombre de voitures
+ * adverses reste celui du Grand Prix.
+ */
+function plateau(gp) {
   const alea = creerAlea([...gp.id].reduce((h, c) => h * 31 + c.charCodeAt(0), 7) >>> 0);
-  const equipes = EQUIPES.slice().sort(() => alea() - 0.5).slice(0, gp.adversaires);
+  const doubles = Math.min(Math.floor(gp.adversaires / 3), Math.max(0, gp.niveau - 1));
+  const equipes = EQUIPES.slice().sort(() => alea() - 0.5).slice(0, gp.adversaires - doubles);
+  const parTalent = equipes.slice().sort((a, b) => b.talent - a.talent);
+  return { equipes, doublees: new Set(parTalent.slice(0, doubles).map((e) => e.id)) };
+}
+
+/** Les adversaires d'une manche : [{ equipe (identifiant unique), nom, ecurie, couleur, talent, rival, physique }]. */
+export function adversaires(gp, manche = 0) {
+  const { equipes, doublees } = plateau(gp);
   const rival = rivalDe(gp);
   // Dents de scie : la finale d'un Grand Prix est un cran plus dure.
   const finale = manche === gp.manches.length - 1 ? 3 : 0;
   const base = (BASE_NIVEAU[gp.niveau] || 36) + finale;
-  return equipes.map((e) => {
-    const talent = e.talent + (e.id === rival.id ? bonusRival(gp) : 0);
+  const liste = [];
+  const voiture = (e, talent) => {
     const b = Math.min(99, base + talent * 70);
-    const stats = { vitesse: b, acceleration: b + 4, maniabilite: b + 2, solidite: 50 };
-    return {
-      equipe: e.id, nom: e.pilote, ecurie: e.nom, couleur: e.couleur, talent: talent * 0.5,
-      rival: e.id === rival.id, physique: physique(stats),
-    };
-  });
+    return physique({ vitesse: b, acceleration: b + 4, maniabilite: b + 2, solidite: 50 });
+  };
+  for (const e of equipes) {
+    const talent = e.talent + (e.id === rival.id ? bonusRival(gp) : 0);
+    liste.push({ equipe: e.id, nom: e.pilote, ecurie: e.nom, couleur: e.couleur, talent: talent * 0.5, rival: e.id === rival.id, physique: voiture(e, talent) });
+    if (doublees.has(e.id)) {
+      // Le second pilote d'une écurie est un peu moins rapide que son leader.
+      const t2 = talent - 0.03;
+      liste.push({ equipe: `${e.id}~2`, nom: e.pilote2 || `${e.pilote} Jr`, ecurie: e.nom, couleur: e.couleur, talent: t2 * 0.5, rival: false, second: true, physique: voiture(e, t2) });
+    }
+  }
+  return liste;
 }
 
 /** L'écurie rivale d'un Grand Prix : la plus talentueuse du plateau. */
 export function rivalDe(gp) {
-  const alea = creerAlea([...gp.id].reduce((h, c) => h * 31 + c.charCodeAt(0), 7) >>> 0);
-  const equipes = EQUIPES.slice().sort(() => alea() - 0.5).slice(0, gp.adversaires);
-  return equipes.reduce((a, b) => (b.talent > a.talent ? b : a));
+  return plateau(gp).equipes.reduce((a, b) => (b.talent > a.talent ? b : a));
 }
 
 /**
@@ -589,12 +614,17 @@ export function commencerGP(partie, gpId) {
 export function enregistrerManche(partie, resultats, course) {
   const gp = grandPrix(partie.gp.id);
   const moi = resultats.find((r) => r.id === 'joueur');
+  const co = resultats.find((r) => r.id === 'coequipier');
   const i = moi.place - 1;
+  // L'écurie compte sa meilleure voiture pour les victoires, podiums et points de licence.
+  const meilleure = Math.min(moi.place, co?.place ?? 99);
+  const pl = PL.titulaire(partie);
+  const eng = PL.engagement(partie);
   partie.courseJour = partie.jour;
   const sp = sponsorActif(partie)?.effets || {};
   const prime = Math.round(gp.prix * (PART_PRIX[i] ?? 0.1) * (1 + (sp.prime || 0))) + (sp.argent || 0);
-  const licence = POINTS_LICENCE[i] ?? 1;
-  const charisme = 0.05 * (partie.piloteStats?.charisme || 0) + G.effets(partie).fans;
+  const licence = POINTS_LICENCE[meilleure - 1] ?? 1;
+  const charisme = 0.05 * (pl?.stats.charisme || 0) + (pl?.trait === 'star' ? 0.1 : 0) + G.effets(partie).fans;
   const bonusVoiture = modele(partie.garage.find((g) => g.uid === partie.voitureActive)?.modele)?.fans || 0;
   const fans = Math.round(((FANS_PLACE[i] ?? 2) * gp.niveau + course.fans) * (1 + (sp.fans || 0) + charisme + bonusVoiture));
   const exp = Math.round((EXP_PLACE[i] ?? 8) * gp.niveau + course.depassements * EXP_DEPASSEMENT + course.drift);
@@ -616,9 +646,9 @@ export function enregistrerManche(partie, resultats, course) {
   const ss = partie.saisonStats;
   ss.fans += fans;
   ss.drift += course.drift || 0;
-  if (moi.place <= 3) { partie.podiums += 1; ss.podiums += 1; }
-  if (moi.place === 1) ss.victoires += 1;
-  if (moi.place === 1) {
+  if (meilleure <= 3) { partie.podiums += 1; ss.podiums += 1; }
+  if (meilleure === 1) ss.victoires += 1;
+  if (meilleure === 1) {
     partie.victoires += 1;
     partie.victoiresParPalier[gp.palier] = (partie.victoiresParPalier[gp.palier] || 0) + 1;
   }
@@ -626,7 +656,25 @@ export function enregistrerManche(partie, resultats, course) {
   partie.gp.gains += prime + course.ramasses.argent;
   partie.gp.fans += fans;
   const v = partie.garage.find((g) => g.uid === partie.voitureActive);
-  if (v) v.usure = Math.min(0.9, Math.max(v.usure, course.usure));
+  const soin = (p) => (p?.trait === 'soigneux' ? 0.75 : p?.trait === 'fonceur' ? 1.15 : 1);
+  if (v) v.usure = Math.min(0.9, Math.max(v.usure, course.usure * soin(pl)));
+
+  // Le second pilote : sa prime, ses fans, son EXP ; sa voiture s'use aussi.
+  let coequipier = null;
+  if (co && eng.second) {
+    const j = co.place - 1;
+    // Le sponsor ne paie qu'en partie la seconde voiture : 60 % de la prime de sa place.
+    const primeCo = Math.round(gp.prix * (PART_PRIX[j] ?? 0.1) * 0.6 * (1 + (sp.prime || 0)));
+    const fansCo = Math.round((FANS_PLACE[j] ?? 2) * gp.niveau * 0.5 * (1 + 0.05 * eng.second.stats.charisme + (eng.second.trait === 'star' ? 0.1 : 0)));
+    const expCo = Math.round((EXP_PLACE[j] ?? 8) * gp.niveau);
+    partie.argent += primeCo;
+    partie.fans += fansCo;
+    ss.fans += fansCo;
+    partie.gp.gains += primeCo;
+    partie.gp.fans += fansCo;
+    if (eng.voitureSecond) eng.voitureSecond.usure = Math.min(0.9, Math.max(eng.voitureSecond.usure, (course.usureCoequipier ?? 0.12) * soin(eng.second)));
+    coequipier = { nom: eng.second.nom, place: co.place, prime: primeCo, fans: fansCo, exp: expCo, niveaux: PL.gagnerExp(eng.second, expCo) };
+  }
 
   // Butin : une caisse de pièce, plus souvent quand on gagne.
   const alea = creerAlea((Date.now() ^ (partie.jour * 131 + i)) >>> 0);
@@ -641,10 +689,10 @@ export function enregistrerManche(partie, resultats, course) {
     appliquerLot(partie, butin);
   }
   const rangs = gagnerExp(partie, exp);
-  const niveauxPilote = gagnerExpPilote(partie, exp);
+  const niveauxPilote = PL.gagnerExp(pl, exp);
   partie.gp.manche += 1;
   return {
-    prime, licence, fans, exp, rangs, butin, place: moi.place, medaille, niveauxPilote, meilleurTour: course.meilleurTour,
+    prime, licence, fans, exp, rangs, butin, place: moi.place, medaille, niveauxPilote, pilote: pl?.nom, coequipier, meilleurTour: course.meilleurTour,
     ramasses: course.ramasses, recherche, premiere, sponsor: sponsorActif(partie)?.nom,
     fini: partie.gp.manche >= gp.manches.length,
   };
@@ -753,33 +801,9 @@ function noterTour(partie, cle, def, tour) {
 }
 export const totalMedailles = (partie) => Object.values(partie.medailles).reduce((s, x) => s + x, 0);
 
-// --- Pilote -----------------------------------------------------------------------------------
+// --- Pilotes (voir pilotes.js) ----------------------------------------------------------------
 
-export const expPilote = (niv) => Math.round(70 * niv ** 1.3);
-export const STATS_PILOTE = {
-  technique: { nom: 'Technique', texte: '+1,2 % d\'adhérence par point' },
-  sangfroid: { nom: 'Sang-froid', texte: '+0,08 s de nitro par point' },
-  charisme: { nom: 'Charisme', texte: '+5 % de fans par point' },
-};
-
-function gagnerExpPilote(partie, n) {
-  partie.piloteExp += Math.round(n);
-  const niveaux = [];
-  while (partie.piloteExp >= expPilote(partie.piloteNiv)) {
-    partie.piloteExp -= expPilote(partie.piloteNiv);
-    partie.piloteNiv += 1;
-    partie.pilotePoints += 1;
-    niveaux.push(partie.piloteNiv);
-  }
-  return niveaux;
-}
-
-export function entrainerPilote(partie, stat) {
-  if (partie.pilotePoints <= 0 || !(stat in STATS_PILOTE)) return false;
-  partie.pilotePoints -= 1;
-  partie.piloteStats[stat] += 1;
-  return true;
-}
+export const { expPilote, STATS_PILOTE } = PL;
 
 // --- Saisons : cérémonie des Pistons d'Or -------------------------------------------------------
 
@@ -845,7 +869,7 @@ export function terminerCarriere(partie) {
   partie.finCarriere = false;
   const score = scoreCarriere(partie);
   const liste = lirePalmares();
-  liste.push({ score, pilote: partie.pilote, heritage: partie.heritage, date: new Date().toISOString().slice(0, 10) });
+  liste.push({ score, pilote: PL.titulaire(partie)?.nom || 'Garage Piston', heritage: partie.heritage, date: new Date().toISOString().slice(0, 10) });
   liste.sort((a, b) => b.score - a.score);
   try { localStorage.setItem(CLE_PALMARES, JSON.stringify(liste.slice(0, 10))); } catch { /* sans stockage, tant pis */ }
   return { score, rangPalmares: liste.findIndex((x) => x.score === score) + 1 };
@@ -861,8 +885,9 @@ export function nouvellePartiePlus(ancienne) {
   p.medailles = { ...ancienne.medailles };
   p.meilleursTours = { ...ancienne.meilleursTours };
   p.memoireVille = { records: { ...ancienne.memoireVille?.records }, affiches: { ...ancienne.memoireVille?.affiches } };
-  p.piloteNiv = ancienne.piloteNiv; p.piloteStats = { ...ancienne.piloteStats }; p.pilotePoints = ancienne.pilotePoints;
-  p.pilote = ancienne.pilote;
+  // Les pilotes restent sous contrat, avec leur niveau.
+  p.pilotes = JSON.parse(JSON.stringify(ancienne.pilotes || p.pilotes));
+  p.titulaire = ancienne.titulaire || p.pilotes[0]?.uid || null;
   p.cadeau = { ...ancienne.cadeau };
   p.terrain.combos = { ...ancienne.terrain?.combos };   // les combos découverts restent dans l'album
   return p;
