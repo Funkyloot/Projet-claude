@@ -15,18 +15,18 @@
 
 import { creerAlea, entre } from './outils.js';
 
-export const LARGEUR = 64;              // largeur de piste (4 cases)
+export const LARGEUR = 96;              // largeur de piste : 6 cases, plus de trois voitures de front
 export const DEMI = LARGEUR / 2;
-export const VIBREUR = 6;               // bande de vibreurs au bord
-export const BARRIERE = DEMI + 34;      // distance centre → barrière
+export const VIBREUR = 8;               // bande de vibreurs au bord
+export const BARRIERE = DEMI + 40;      // distance centre → barrière
 export const PUBLIC_DEBUT = BARRIERE + 6;
-export const PUBLIC_FIN = BARRIERE + 70;
+export const PUBLIC_FIN = BARRIERE + 76;
 export const MARGE = 340;               // décor autour du circuit
 
 const PAS = 6;                          // espacement des points du tracé
-const SEPARATION = 150;                 // écart mini entre deux portions
+const SEPARATION = 196;                 // écart mini entre deux portions (barrières jamais collées)
 const CELLULE = 64;                     // grille d'accélération
-const PORTEE = 190;                     // distance utile autour de la piste
+const PORTEE = 230;                     // distance utile autour de la piste
 
 function catmullRom(ctrl, parSegment) {
   const n = ctrl.length;
@@ -251,6 +251,7 @@ export function genererCircuit(def, rayonMin = 100) {
   for (let essai = 0; essai < 60 && !points; essai++) {
     points = essayer(creerAlea(def.graine * 7919 + essai * 104729), def, rayonMin);
   }
+  const secours = !points;
   if (!points) {
     // Filet de sécurité : un ovale, toujours valide.
     const ctrl = [];
@@ -283,7 +284,7 @@ export function genererCircuit(def, rayonMin = 100) {
   const largeur = Math.ceil(maxX - minX + MARGE * 2);
   const hauteur = Math.ceil(maxY - minY + MARGE * 2);
 
-  const circuit = { def, points, longueur: L, pas, largeur, hauteur, grille: new Map(), ligneDroite: lg * pas };
+  const circuit = { def, points, longueur: L, pas, largeur, hauteur, grille: new Map(), ligneDroite: lg * pas, secours };
   circuit.interieur = coteInterieur(points);
   indexer(circuit);
   return circuit;

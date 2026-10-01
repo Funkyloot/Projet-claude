@@ -11,25 +11,27 @@
 
 import { DEMI, VIBREUR, BARRIERE, PUBLIC_DEBUT, PUBLIC_FIN, pointA } from './circuit.js';
 import { hash2, creerAlea, rgb, melangerCouleur } from './outils.js';
-import { objet, tuile, PERSONNAGES, idPersonnage, directionVers, DIRECTION, spriteVoiture, T } from './sprites.js';
+import { objet, tuile, PERSONNAGES, directionVers, T } from './sprites.js';
+import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny } from './tiny.js';
 
+// Palette des packs Kenney Tiny (relevée sur leurs tuiles) : tout le jeu a les mêmes couleurs.
 const SOLS = {
-  herbe: ['#38cbab', '#33bdae', '#3fd8ab'],
-  sable: ['#d6d4af', '#cdcaa5', '#dfddbe'],
-  terre: ['#b5916b', '#a8865f', '#c09c76'],
-  beton: ['#aaa8bd', '#a2a0b5', '#b3b1c5'],
-  eau: ['#59b6d8', '#52aed0', '#66c2e3'],
-  gravier: ['#d8cfa8', '#c6bc93', '#e4dcbb'],
-  rue: ['#5c6278', '#565c71', '#62697f'],
+  herbe: ['#84c669', '#7cbf61', '#8bd87d'],
+  sable: ['#f3d9a4', '#ecd096', '#f8e2b4'],
+  terre: ['#eaa56c', '#da9256', '#efb27e'],
+  beton: ['#c0cbdc', '#b6c1d3', '#cad4e3'],
+  eau: ['#75e3ff', '#6ad8f5', '#8ae9ff'],
+  gravier: ['#ead9ab', '#dccb98', '#f2e3bb'],
+  rue: ['#52607c', '#4b5873', '#58678a'],
 };
 
 const PISTES = {
-  asphalte: ['#5c6278', '#545a6e', '#646b83'],
-  paves: ['#7a768e', '#716d85', '#837f97'],
-  terre: ['#9a7656', '#8e6c4e', '#a68060'],
-  mouille: ['#4c546a', '#465064', '#5a6680'],
-  sable: ['#c4a874', '#b99d6b', '#cfb37f'],
-  glace: ['#b9d3e3', '#aecbdc', '#d2e6f0'],
+  asphalte: ['#52607c', '#4b5873', '#58678a'],
+  paves: ['#7d84a0', '#737a95', '#8890ab'],
+  terre: ['#c98a55', '#bd7f4c', '#d4955f'],
+  mouille: ['#46536e', '#3f4c66', '#52617f'],
+  sable: ['#e2bf7d', '#d8b472', '#ebc98a'],
+  glace: ['#c9e6f5', '#bddcee', '#dbf0fa'],
 };
 
 export const THEMES = {
@@ -42,14 +44,14 @@ export const THEMES = {
 };
 
 const SPONSORS = ['#c2504d', '#2f6fdb', '#f2c14e', '#f4f1e8', '#3fa34d', '#e86ca6'];
-const ROUGE_VIBREUR = rgb('#c2504d');
-const BLANC = rgb('#eceaf2');
+const ROUGE_VIBREUR = rgb('#e4432d');
+const BLANC = rgb('#f4f6fb');
 const NOIR_PNEU = rgb('#2a2838');
 const GRIS_PNEU = rgb('#5c6278');
-const CONTOUR = rgb('#3a3550');
-const GRADIN = rgb('#b8b6c9');
-const GRADIN_BORD = rgb('#7e7c93');
-const TOIT_TRIBUNE = rgb('#c2504d');
+const CONTOUR = rgb('#26182e');
+const GRADIN = rgb('#c0cbdc');
+const GRADIN_BORD = rgb('#8b9bb4');
+const TOIT_TRIBUNE = rgb('#e4432d');
 
 const tons = (liste) => liste.map(rgb);
 
@@ -128,7 +130,7 @@ function tribunes(circuit) {
   return ok;
 }
 
-export function rendreCircuit(circuit, planche, niveau = 1) {
+export function rendreCircuit(circuit, planche, niveau = 1, tiny = {}) {
   const { largeur: W, hauteur: H, def } = circuit;
   const theme = THEMES[def.theme] || THEMES.parc;
   const alea = creerAlea(def.graine * 31 + 7);
@@ -136,7 +138,7 @@ export function rendreCircuit(circuit, planche, niveau = 1) {
   const L = circuit.longueur;
   const exterieur = -circuit.interieur;
   const rangs = Math.min(3, niveau + 1);
-  const profondeurTribune = rangs * 12 + 6;
+  const profondeurTribune = rangs * 14 + 8;
 
   // --- 1. Grille d'environnement (cellules de 16 px) -----------------------
   const GW = Math.ceil(W / T), GH = Math.ceil(H / T);
@@ -184,8 +186,9 @@ export function rendreCircuit(circuit, planche, niveau = 1) {
 
   const ecrire = (o, c) => { px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = 255; };
   const ton = (liste, x, y) => {
-    const h = hash2(x >> 1, y >> 1, graine);
-    return liste[h < 0.68 ? 0 : h < 0.88 ? 1 : 2];
+    // Aplats nets façon Tiny : la couleur de base presque partout, quelques touches.
+    const h = hash2(x >> 2, y >> 2, graine);
+    return liste[h < 0.9 ? 0 : h < 0.96 ? 1 : 2];
   };
 
   for (let y = 0; y < H; y++) {
@@ -207,7 +210,7 @@ export function rendreCircuit(circuit, planche, niveau = 1) {
         if (sd < 6) {
           const damier = (Math.floor((s + 6) / 3) + Math.floor((lat + DEMI) / 3)) & 1;
           ecrire(o, damier ? BLANC : NOIR_PNEU);
-        } else if (s > L - 40 - 26 * nbPlaces && s < L - 20 && Math.abs((L - 30 - s) % 26) < 1.2 && Math.abs(Math.abs(lat) - 15) < 7) {
+        } else if (s > L - 50 - 54 * nbPlaces && s < L - 26 && Math.abs((L - 28 - s) % 54) < 1.5 && Math.abs(Math.abs(lat) - 22) < 13) {
           ecrire(o, BLANC);
         } else if (def.surface === 'paves' && ((x % 6 === 0) || ((y + (Math.floor(x / 6) % 2) * 3) % 6 === 0))) {
           ecrire(o, ombre(piste[0]));
@@ -236,7 +239,7 @@ export function rendreCircuit(circuit, planche, niveau = 1) {
         ecrire(o, CONTOUR);
       } else if (cote === exterieur && ok[m.i] && d >= PUBLIC_DEBUT && d < PUBLIC_DEBUT + profondeurTribune) {
         const e = d - PUBLIC_DEBUT;
-        ecrire(o, e > profondeurTribune - 4 ? TOIT_TRIBUNE : e % 12 < 1.5 ? GRADIN_BORD : GRADIN);
+        ecrire(o, e > profondeurTribune - 4 ? TOIT_TRIBUNE : e % 14 < 1.5 ? GRADIN_BORD : GRADIN);
       } else {
         const base = type === C.ABORDS ? solsEnv[C.ABORDS] : solsEnv[type] || solsEnv[C.LIBRE];
         const c = ton(base, x, y);
@@ -247,7 +250,7 @@ export function rendreCircuit(circuit, planche, niveau = 1) {
   ctx.putImageData(img, 0, 0);
 
   // --- 3. Détails d'environnement (rues, bâtiments, eau) et objets ---------
-  dessinerEnvironnement(ctx, planche, { GW, GH, at, cel, theme, graine, statiques, env });
+  dessinerEnvironnement(ctx, planche, { GW, GH, at, cel, theme, graine, statiques, env, tiny });
 
   // Paddock : tentes des écuries à l'intérieur, avant la ligne de départ.
   const paddock = [];
@@ -255,7 +258,7 @@ export function rendreCircuit(circuit, planche, niveau = 1) {
     const p = pointA(circuit, L - 120 - j * 46, -exterieur * (BARRIERE + 30));
     paddock.push(p);
     statiques.push({ y: p.y + 12, dessin: (c) => tente(c, p.x, p.y, SPONSORS[(j + 1) % SPONSORS.length]) });
-    statiques.push({ y: p.y + 20, dessin: (c) => tuile(c, planche, idPersonnage(PERSONNAGES[3], DIRECTION.face), p.x + 10, p.y + 4) });
+    statiques.push({ y: p.y + 20, dessin: (c) => dessinerPerso(c, tenue(j * 5 + 1, 'mecano'), p.x + 18, p.y + 20, 'face') });
   }
 
   // Commissaires aux virages serrés, côté extérieur, derrière la barrière.
@@ -280,7 +283,7 @@ export function rendreCircuit(circuit, planche, niveau = 1) {
     const p = points[i];
     for (let r = 0; r < rangs; r++) {
       if (hash2(i, r, graine) < 0.25) continue;
-      const q = pointA(circuit, p.s, exterieur * (PUBLIC_DEBUT + 10 + r * 12));
+      const q = pointA(circuit, p.s, exterieur * (PUBLIC_DEBUT + 12 + r * 14));
       spectateurs.push({
         x: q.x + (hash2(i, r + 9, graine) - 0.5) * 3,
         y: q.y,
@@ -386,7 +389,7 @@ function dessinerEnvironnement(ctx, planche, g) {
       else if (bordRue && (gx + gy) % 4 === 0 && r < 0.5) statiques.push({ y: by, dessin: (c) => objet(c, planche, 'lampadaire', cx, by) });
       else if (bordRue && r > 0.93) statiques.push({ y: by, dessin: (c) => objet(c, planche, 'borneIncendie', cx, by) });
       else if (bordRue && r > 0.88) statiques.push({ y: by, dessin: (c) => objet(c, planche, 'poubelle', cx, by) });
-      else if (r > 0.97) statiques.push({ y: by, dessin: (c) => tuile(c, planche, idPersonnage(PERSONNAGES[Math.floor(h(gx, gy, 3) * 6)], Math.floor(h(gx, gy, 4) * 4)), x, y) });
+      else if (r > 0.97) statiques.push({ y: by, dessin: (c) => dessinerPerso(c, tenue(Math.floor(h(gx, gy, 3) * 40)), cx, by, ['gauche', 'face', 'dos', 'droite'][Math.floor(h(gx, gy, 4) * 4)]) });
     } else if (type === C.LIBRE || type === C.ABORDS) {
       if (type === C.ABORDS) continue;
       if (env.ville) continue;   // les lots de ville sont traités en bloc plus bas
@@ -398,20 +401,27 @@ function dessinerEnvironnement(ctx, planche, g) {
   void theme;
 }
 
+/** Arbres Kenney Tiny Town (verts et d'automne), posés au pied. */
+const ARBRES = [4, 16, 28, 4, 16, 3, 27];
+function arbreTiny(c, tiny, n, x, by) {
+  c.fillStyle = 'rgba(38,24,46,0.22)'; c.fillRect(Math.round(x) - 6, Math.round(by) - 2, 12, 3);
+  tuileTiny(c, tiny, 'town', n, x - 8, by - 15);
+}
+
 function vegetation(g, planche, gx, gy, x, y, cx, by, r) {
   const { theme, statiques, graine } = g;
   const amas = hash2(gx >> 2, gy >> 2, graine + 77);
   if (theme.sol === 'herbe') {
     const densite = theme.nom === 'Parc' ? 0.55 : 0.3;
     if (r < densite * amas) {
-      const quoi = ['arbre', 'arbreRond', 'arbreBoule', 'sapin', 'buisson', 'grosBuisson'][Math.floor(hash2(gx, gy, graine + 4) * 6)];
-      statiques.push({ y: by, dessin: (c) => objet(c, planche, quoi, cx + Math.round((r - 0.5) * 6), by) });
+      const n = ARBRES[Math.floor(hash2(gx, gy, graine + 4) * ARBRES.length)];
+      statiques.push({ y: by, dessin: (c) => arbreTiny(c, g.tiny, n, cx + Math.round((r - 0.5) * 6), by) });
     } else if (r > 0.985) {
       statiques.push({ y: by, dessin: (c) => fleurs(c, x, y, graine + gx * 7 + gy) });
     }
   } else if (theme.sol === 'sable') {
     if (r < 0.05) statiques.push({ y: by, dessin: (c) => parasol(c, cx, y + 8, hash2(gx, gy, 3)) });
-    else if (r < 0.08 && amas > 0.5) statiques.push({ y: by, dessin: (c) => objet(c, planche, 'arbreBoule', cx, by) });
+    else if (r < 0.08 && amas > 0.5) statiques.push({ y: by, dessin: (c) => arbreTiny(c, g.tiny, 28, cx, by) });
   } else if (theme.sol === 'terre') {
     if (r < 0.06) statiques.push({ y: by, dessin: (c) => tas(c, cx, y + 9) });
     else if (r < 0.1) statiques.push({ y: by, dessin: (c) => objet(c, planche, 'cone', cx, by) });
@@ -445,7 +455,7 @@ function batir(ctx, planche, g) {
     for (let a = 0; a < taille; a++) for (let b = 0; b < taille; b++) {
       const gx = x0 + a, gy = y0 + b;
       if (at(gx, gy) !== C.LIBRE) continue;
-      ctx.fillStyle = '#38cbab'; ctx.fillRect(gx * T, gy * T, T, T);
+      ctx.fillStyle = '#84c669'; ctx.fillRect(gx * T, gy * T, T, T);
       pelouse.push([gx, gy]);
     }
     let bati = null;
@@ -469,8 +479,8 @@ function batir(ctx, planche, g) {
       if (bati && x + T > bati.x && x < bati.x + bati.w && y + T > bati.y && y < bati.y + bati.h + 6) continue;
       const r = hash2(gx, gy, graine + 21);
       if (r < (banlieue ? 0.22 : 0.12)) {
-        const quoi = r < 0.07 ? 'arbre' : r < 0.14 ? 'arbreRond' : 'buisson';
-        statiques.push({ y: y + 15, dessin: (c) => objet(c, planche, quoi, x + 8, y + 15) });
+        const n = r < 0.07 ? 16 : r < 0.14 ? 4 : 28;
+        statiques.push({ y: y + 15, dessin: (c) => arbreTiny(c, g.tiny, n, x + 8, y + 15) });
       }
     }
   }
@@ -523,12 +533,7 @@ function conteneur(c, x, y, r) {
 }
 
 export function voitureGaree(c, x, y, couleur, horizontale) {
-  const s = spriteVoiture(couleur);
-  c.save();
-  c.translate(x, y);
-  if (horizontale) c.rotate(Math.PI / 2);
-  c.drawImage(s, -Math.floor(s.width / 2), -Math.floor(s.height / 2));
-  c.restore();
+  dessinerVoitureTiny(c, spriteVoitureTiny(couleur), x, y, horizontale ? 0 : Math.PI / 2);
 }
 
 function tente(c, x, y, couleur) {
@@ -543,9 +548,9 @@ function tente(c, x, y, couleur) {
 }
 
 function commissaire(c, planche, x, y) {
-  tuile(c, planche, idPersonnage(PERSONNAGES[3], DIRECTION.face), x - 8, y - 8);
-  c.fillStyle = '#2a2838'; c.fillRect(Math.round(x) + 6, Math.round(y) - 10, 1, 10);
-  c.fillStyle = '#f2c14e'; c.fillRect(Math.round(x) + 7, Math.round(y) - 10, 6, 4);
+  dessinerPerso(c, { ...tenue(2), haut: '#f39c33' }, x, y + 7, 'face');
+  c.fillStyle = '#26182e'; c.fillRect(Math.round(x) + 6, Math.round(y) - 12, 1, 12);
+  c.fillStyle = '#f2c14e'; c.fillRect(Math.round(x) + 7, Math.round(y) - 12, 6, 4);
 }
 
 function parasol(c, x, y, r) {

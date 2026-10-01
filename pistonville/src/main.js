@@ -430,7 +430,7 @@ class App {
     const gp = P.grandPrix(gpId);
     const manche = this.partie.gp.manche;
     const def = gp.manches[manche];
-    this.circuit = genererCircuit(def, gp.niveau <= 2 ? 100 : 88);
+    this.circuit = genererCircuit(def, gp.niveau <= 2 ? 120 : 108);
     const apercu = miniCarte(this.circuit, 150, 150).canvas.toDataURL();
     this.ecran = 'briefing';
     this.montrer(ecranBriefing(this, gp, manche, apercu));
@@ -445,13 +445,14 @@ class App {
   lancerCourse() {
     const gp = P.grandPrix(this.partie.gp.id);
     const def = gp.manches[this.partie.gp.manche];
-    const decor = rendreCircuit(this.circuit, this.assets.urbain, gp.niveau);
+    const decor = rendreCircuit(this.circuit, this.assets.urbain, gp.niveau, this.assets.tiny);
     const v = P.voitureActive(this.partie);
     this.adversaires = P.adversaires(gp, this.partie.gp.manche);
     this.course = new Course({
       circuit: this.circuit,
       decor,
       planche: this.assets.urbain,
+      tiny: this.assets.tiny,
       tours: def.tours,
       joueur: {
         physique: v.physique, couleur: v.couleur, looks: v.looks, pilote: this.partie.pilote,

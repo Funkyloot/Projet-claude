@@ -9,7 +9,10 @@
 import { situer, pointA, courbureDevant, DEMI, BARRIERE } from './circuit.js';
 import { Voiture, RAYON_VOITURE, DEMI_LONGUEUR, DEMI_LARGEUR } from './voiture.js';
 import { SURFACES, kmh, BOOSTS } from './regles.js';
-import { spriteVoiture, tuile, idPersonnage, bulle, police } from './sprites.js';
+import { bulle, police } from './sprites.js';
+import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, spritePerso, tenue } from './tiny.js';
+
+const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 import { clamp, lerp, angleNorm, formatTemps, ordinal, creerAlea } from './outils.js';
 
 export const HAUTEUR_PANNEAU = 112;
@@ -52,20 +55,20 @@ export class Course {
         v = new Voiture({ physique: adv.physique, couleur: adv.couleur, nom: adv.nom, equipe: adv.equipe });
         v.talent = adv.talent || 0;
         v.rival = !!adv.rival;
-        v.voie = (this.alea() - 0.5) * 24;
+        v.voie = (this.alea() - 0.5) * 36;
         v.nitroIA = 1 + Math.floor(this.niveau / 2);
         v.prochaineVoie = this.alea() * 2;
       }
       const bonusSol = v.joueur ? (o.joueur.surfaces?.[o.circuit.def.surface] || 0) : 0;
       v.adherenceSol = surface.adherence + bonusSol;
       v.vitesseSol = Math.min(1, surface.vitesse + bonusSol * 0.3);
-      const s = this.circuit.longueur - 40 - i * 26;
-      const lat = i % 2 ? -15 : 15;
+      const s = this.circuit.longueur - 50 - i * 54;
+      const lat = i % 2 ? -22 : 22;
       const p = pointA(this.circuit, s, lat);
       v.placer(p.x, p.y, p.angle);
       v.s = ((s % this.circuit.longueur) + this.circuit.longueur) % this.circuit.longueur;
       v.tour = -1;
-      v.progres = -40 - i * 26;
+      v.progres = -50 - i * 54;
       v.dernierContact = -10;
       this.voitures.push(v);
     }
@@ -152,7 +155,7 @@ export class Course {
 
   /** Aide au pilotage : sans doigt posé, la voiture se recentre doucement. */
   aider(v) {
-    const cible = pointA(this.circuit, v.s + 30 + v.vitesse * 0.3, 0);
+    const cible = pointA(this.circuit, v.s + 50 + v.vitesse * 0.3, 0);
     const ecart = angleNorm(Math.atan2(cible.y - v.y, cible.x - v.x) - v.angle);
     v.direction = clamp(ecart * 1.2, -0.55, 0.55);
   }
@@ -163,13 +166,13 @@ export class Course {
       v.prochaineVoie -= dt;
       if (v.prochaineVoie <= 0) {
         v.prochaineVoie = 0.6 + this.alea() * 1.4;
-        const devant = this.voitureDevant(v, 70);
-        if (devant) v.voie = devant.voieEstimee > 0 ? -16 : 16;
-        else v.voie = lerp(v.voie, (this.alea() - 0.5) * 24, 0.5);
+        const devant = this.voitureDevant(v, 110);
+        if (devant) v.voie = devant.voieEstimee > 0 ? -24 : 24;
+        else v.voie = lerp(v.voie, (this.alea() - 0.5) * 36, 0.5);
       }
     }
     const voie = v.voie || 0;
-    const cible = pointA(this.circuit, v.s + 24 + v.vitesse * 0.3, voie);
+    const cible = pointA(this.circuit, v.s + 44 + v.vitesse * 0.3, voie);
     const ecart = angleNorm(Math.atan2(cible.y - v.y, cible.x - v.x) - v.angle);
     v.direction = clamp(ecart * 3, -1, 1);
 
@@ -197,7 +200,7 @@ export class Course {
       const dx = autre.x - v.x, dy = autre.y - v.y;
       const avant = dx * fx + dy * fy;
       const cote = -dx * fy + dy * fx;
-      if (avant > 0 && avant < dMin && Math.abs(cote) < 18) {
+      if (avant > 0 && avant < dMin && Math.abs(cote) < 28) {
         dMin = avant; meilleure = autre;
         autre.voieEstimee = cote;
       }
@@ -207,7 +210,7 @@ export class Course {
 
   aspirations() {
     for (const v of this.voitures) {
-      const devant = this.voitureDevant(v, 46);
+      const devant = this.voitureDevant(v, 90);
       v.aspiration = !!devant && v.vitesse > 90;
     }
   }
@@ -235,7 +238,7 @@ export class Course {
     const sit = situer(this.circuit, v.x, v.y);
     if (!sit) return;
     v.situation = sit;
-    v.horsPiste = clamp((sit.d - DEMI + 2) / 14, 0, 1);
+    v.horsPiste = clamp((sit.d - DEMI + 4) / 18, 0, 1);
     const nx = sit.nx * sit.cote, ny = sit.ny * sit.cote;
     // Étendue de la voiture (rectangle orienté) vers la barrière.
     const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
@@ -312,7 +315,7 @@ export class Course {
     for (let i = 0; i < vs.length; i++) for (let k = i + 1; k < vs.length; k++) {
       const a = vs[i], b = vs[k];
       const dx = b.x - a.x, dy = b.y - a.y;
-      if (dx * dx + dy * dy > 26 * 26) continue;
+      if (dx * dx + dy * dy > 54 * 54) continue;
       const c = recouvrement(a, b);
       if (!c) continue;
       const { nx, ny, prof } = c;
@@ -326,8 +329,8 @@ export class Course {
       // Pivot : le point de contact est entre les deux coins les plus avancés.
       const pa = coinVers(a, nx, ny), pb = coinVers(b, -nx, -ny);
       const cx = (pa.x + pb.x) / 2, cy = (pa.y + pb.y) / 2;
-      a.angle += clamp(((cx - a.x) * -ny - (cy - a.y) * -nx) * imp * 0.0006, -0.12, 0.12);
-      b.angle += clamp(((cx - b.x) * ny - (cy - b.y) * nx) * imp * 0.0006, -0.12, 0.12);
+      a.angle += clamp(((cx - a.x) * -ny - (cy - a.y) * -nx) * imp * 0.0003, -0.12, 0.12);
+      b.angle += clamp(((cx - b.x) * ny - (cy - b.y) * nx) * imp * 0.0003, -0.12, 0.12);
       a.durabilite = Math.max(0, a.durabilite - imp / 30);
       b.durabilite = Math.max(0, b.durabilite - imp / 30);
       if (a.joueur) b.dernierContact = this.temps;
@@ -379,13 +382,13 @@ export class Course {
     const alea = creerAlea(this.circuit.def.graine * 13 + 5);
     const bonus = [];
     for (let s = 260; s < L - 160; s += 200 + alea() * 120) {
-      const voie = [-18, 0, 18][Math.floor(alea() * 3)];
+      const voie = [-28, 0, 28][Math.floor(alea() * 3)];
       if (alea() < 0.16) {
         const p = pointA(this.circuit, s, voie);
         bonus.push({ type: 'disque', x: p.x, y: p.y, pris: false });
       } else {
         for (let k = 0; k < 3; k++) {
-          const p = pointA(this.circuit, s + k * 16, voie);
+          const p = pointA(this.circuit, s + k * 22, voie);
           bonus.push({ type: 'piece', x: p.x, y: p.y, pris: false });
         }
       }
@@ -401,7 +404,7 @@ export class Course {
     for (const b of this.bonus) {
       if (b.pris) continue;
       const dx = b.x - j.x, dy = b.y - j.y;
-      if (dx * dx + dy * dy > 13 * 13) continue;
+      if (dx * dx + dy * dy > 20 * 20) continue;
       b.pris = true;
       if (b.type === 'piece') {
         const valeur = 10 * this.niveau;
@@ -490,7 +493,7 @@ export class Course {
       if (v.nitro > 0 || v.aura > 0) {
         const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
         this.particules.push({
-          x: v.x - fx * 11 + (Math.random() - 0.5) * 3, y: v.y - fy * 11 + (Math.random() - 0.5) * 3,
+          x: v.x - fx * 24 + (Math.random() - 0.5) * 6, y: v.y - fy * 24 + (Math.random() - 0.5) * 6,
           vx: -fx * 40 + (Math.random() - 0.5) * 20, vy: -fy * 40 + (Math.random() - 0.5) * 20,
           vie: 0.3, max: 0.3, couleur: v.aura > 0 ? '#f472b6' : Math.random() < 0.5 ? '#ff8a00' : '#ffe066', taille: 2,
         });
@@ -514,8 +517,8 @@ export class Course {
     const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
     const lx = -fy, ly = fx;
     this.terrain.fillStyle = v.horsPiste > 0.3 ? 'rgba(90,70,50,0.25)' : 'rgba(30,28,40,0.32)';
-    for (const c of [-4, 4]) {
-      this.terrain.fillRect(Math.round(v.x - fx * 7 + lx * c), Math.round(v.y - fy * 7 + ly * c), 1, 1);
+    for (const c of [-10, 10]) {
+      this.terrain.fillRect(Math.round(v.x - fx * 15 + lx * c), Math.round(v.y - fy * 15 + ly * c), 2, 2);
     }
   }
 
@@ -607,8 +610,7 @@ export class Course {
     for (const s of visibles) {
       if (s.joie > 0) s.joie -= 1 / 60;
       const saute = s.joie > 0 && Math.sin(t * 14 + s.phase) > 0;
-      const pas = saute ? 1 : 0;
-      tuile(ctx, this.planche, idPersonnage(s.base, s.dir, pas), s.x - 8, s.y - 12 - (saute ? 2 : 0));
+      dessinerPerso(ctx, tenue(Math.floor(s.phase * 7) + s.base), s.x, s.y + 3 - (saute ? 3 : 0), NOMS_DIRECTION[s.dir] || 'face', saute ? 1 : 0);
     }
 
     // Bonus : pièces qui tournent, disquettes qui flottent.
@@ -617,29 +619,34 @@ export class Course {
       dessinerBonus(ctx, b, t);
     }
 
-    // Ombres puis voitures.
-    for (const v of this.voitures) {
-      ctx.fillStyle = 'rgba(30,28,40,0.28)';
-      ctx.save(); ctx.translate(Math.round(v.x) + 2, Math.round(v.y) + 2); ctx.rotate(v.angle + Math.PI / 2);
-      ctx.fillRect(-7, -11, 14, 23); ctx.restore();
-    }
-    for (const v of this.voitures) {
-      const sprite = spriteVoiture(v.couleur, v.joueur ? '#f2c14e' : '#f4f1e8', v.looks || []);
-      ctx.save();
-      ctx.translate(Math.round(v.x), Math.round(v.y));
-      ctx.rotate(v.angle + Math.PI / 2);
+    // Voitures à l'échelle (vue 3/4 : ombre, flanc, dessus), de haut en bas de l'écran.
+    const ordre = this.voitures.slice().sort((a, b) => a.y - b.y);
+    for (const v of ordre) {
+      if (v.x < camX - 40 || v.x > camX + W + 40 || v.y < camY - 40 || v.y > camY + hVue + 40) continue;
       if (v.aura > 0) {
-        ctx.fillStyle = `rgba(244,114,182,${0.25 + 0.15 * Math.sin(t * 20)})`;
-        ctx.fillRect(-9, -13, 18, 27);
+        ctx.fillStyle = `rgba(244,114,182,${0.22 + 0.14 * Math.sin(t * 20)})`;
+        ctx.beginPath(); ctx.ellipse(v.x, v.y + 2, 30, 24, v.angle, 0, Math.PI * 2); ctx.fill();
       }
-      ctx.drawImage(sprite, -Math.floor(sprite.width / 2), -Math.floor(sprite.height / 2));
-      ctx.restore();
+      if (v.nitro > 0) {
+        const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+        const l = 10 + Math.random() * 8;
+        for (const [k, c] of [[1, '#ffe066'], [0.6, '#ff8a00']]) {
+          ctx.fillStyle = c;
+          ctx.beginPath();
+          ctx.moveTo(v.x - fx * 23 - fy * 7 * k, v.y - fy * 23 + fx * 7 * k + 3);
+          ctx.lineTo(v.x - fx * (23 + l * k), v.y - fy * (23 + l * k) + 3);
+          ctx.lineTo(v.x - fx * 23 + fy * 7 * k, v.y - fy * 23 - fx * 7 * k + 3);
+          ctx.fill();
+        }
+      }
+      const sprite = spriteVoitureTiny(v.couleur, v.joueur ? '#f2c14e' : null, v.looks || []);
+      dessinerVoitureTiny(ctx, sprite, v.x, v.y, v.angle);
     }
 
-    for (const v of this.voitures) if (v.rival) texte(ctx, 'RIVAL', v.x, v.y - 18, 7, '#ff8a80', 'center');
+    for (const v of this.voitures) if (v.rival) texte(ctx, 'RIVAL', v.x, v.y - 30, 7, '#ff8a80', 'center');
 
     // Repère au-dessus du joueur : une flèche jaune qui rebondit.
-    const bx = Math.round(j.x), by = Math.round(j.y) - 24 + (Math.sin(t * 6) > 0 ? 1 : 0);
+    const bx = Math.round(j.x), by = Math.round(j.y) - 34 + (Math.sin(t * 6) > 0 ? 1 : 0);
     ctx.fillStyle = '#1a1626';
     for (let i = 0; i < 6; i++) ctx.fillRect(bx - 6 + i, by + i - 1, 13 - i * 2, 2);
     ctx.fillStyle = '#f2c14e';
@@ -654,39 +661,43 @@ export class Course {
     }
     ctx.globalAlpha = 1;
 
-    for (const s of visibles) if (s.bulle) bulle(ctx, s.x, s.y - 14, s.bulle.texte);
+    for (const s of visibles) if (s.bulle) bulle(ctx, s.x, s.y - 16, s.bulle.texte);
     for (const m of this.messages) if (m.ancre) {
       const a = 1 - m.vie / m.max;
-      texte(ctx, m.texte, m.ancre.x, m.ancre.y - 24 - a * 16, 10, m.couleur, 'center');
+      texte(ctx, m.texte, m.ancre.x, m.ancre.y - 38 - a * 16, 10, m.couleur, 'center');
     }
     ctx.restore();
 
     this.dessinerInterface(ctx, W, H, t);
   }
 
+  /** Portique de départ en vue 3/4 : deux poteaux posés au sol, la poutre et ses feux en hauteur. */
   dessinerPortique(ctx) {
-    const a = pointA(this.circuit, 0, -(DEMI + 9));
-    const b = pointA(this.circuit, 0, DEMI + 9);
-    ctx.fillStyle = 'rgba(30,28,40,0.3)';
-    ctx.fillRect(Math.round(a.x) - 2, Math.round(a.y), 6, 6);
-    ctx.fillRect(Math.round(b.x) - 2, Math.round(b.y), 6, 6);
-    ctx.fillStyle = '#3a3550';
-    ctx.fillRect(Math.round(a.x) - 3, Math.round(a.y) - 3, 6, 6);
-    ctx.fillRect(Math.round(b.x) - 3, Math.round(b.y) - 3, 6, 6);
+    const H = 30;   // hauteur de la poutre au-dessus du sol, en pixels d'écran
+    const a = pointA(this.circuit, 0, -(DEMI + 12));
+    const b = pointA(this.circuit, 0, DEMI + 12);
+    for (const p of [a, b]) {
+      const x = Math.round(p.x), y = Math.round(p.y);
+      ctx.fillStyle = 'rgba(38,24,46,0.3)'; ctx.fillRect(x - 3, y - 1, 9, 4);
+      ctx.fillStyle = '#26182e'; ctx.fillRect(x - 3, y - H, 6, H + 1);
+      ctx.fillStyle = '#c0cbdc'; ctx.fillRect(x - 2, y - H + 1, 4, H - 1);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 2, y - H + 1, 1, H - 1);
+    }
     const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy);
     ctx.save();
-    ctx.translate(a.x, a.y - 10);
+    ctx.translate(a.x, a.y - H);
     ctx.rotate(Math.atan2(dy, dx));
-    ctx.fillStyle = '#2a2838'; ctx.fillRect(0, -4, l, 8);
-    ctx.fillStyle = '#5c6278'; ctx.fillRect(1, -3, l - 2, 6);
+    ctx.fillStyle = '#26182e'; ctx.fillRect(-2, -6, l + 4, 12);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(-1, -5, l + 2, 10);
+    for (let x = 0; x < l; x += 8) { ctx.fillStyle = (x / 8) % 2 ? '#26182e' : '#ffffff'; ctx.fillRect(x, 3, 8, 2); }
     const feux = 5;
     const allumes = this.etat === 'compte' ? clamp(Math.floor((this.temps + COMPTE_A_REBOURS) / (COMPTE_A_REBOURS / feux)) + 1, 0, feux) : 0;
     for (let i = 0; i < feux; i++) {
       let c = '#3a3550';
       if (this.etat === 'compte' && i < allumes) c = '#e4432d';
       if (this.etat !== 'compte' && this.temps < 2) c = '#5ad16a';
-      ctx.fillStyle = c;
-      ctx.fillRect(l / 2 - feux * 4 + i * 8 + 1, -2, 5, 4);
+      ctx.fillStyle = '#26182e'; ctx.fillRect(l / 2 - feux * 5 + i * 10, -4, 8, 7);
+      ctx.fillStyle = c; ctx.fillRect(l / 2 - feux * 5 + i * 10 + 1, -3, 6, 5);
     }
     ctx.restore();
   }
@@ -748,7 +759,7 @@ export class Course {
     ctx.fillRect(pr.x - 2, pr.y - 2, pr.w + 4, pr.h + 4);
     ctx.fillStyle = '#fff6e0'; ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
     ctx.save(); ctx.translate(pr.x + 18, pr.y + 18); ctx.scale(2, 2);
-    tuile(ctx, this.planche, idPersonnage(104, 1, 0), -8, -8);
+    ctx.drawImage(spritePerso({ ...tenue(4), casque: '#e4432d', haut: '#f4f1e8' }, 'face', 0), -8, -8);
     ctx.restore();
 
     texte(ctx, j.nom, 54, y0 + 16, 11, '#f4f1e8', 'left');

@@ -9,10 +9,13 @@
 import { BOOSTS } from './regles.js';
 import { clamp } from './outils.js';
 
-export const RAYON_VOITURE = 8;
-/** La voiture est un rectangle de 12 × 21 px (moitiés), pour les chocs. */
-export const DEMI_LONGUEUR = 10.5;
-export const DEMI_LARGEUR = 6;
+export const RAYON_VOITURE = 16;
+/**
+ * La voiture est un rectangle de 26 × 44 px pour les chocs : à l'échelle des
+ * personnages et des tuiles de 16 px (1 case ≈ 1 m, une voiture ≈ 2 × 3 cases).
+ */
+export const DEMI_LONGUEUR = 22;
+export const DEMI_LARGEUR = 13;
 
 export class Voiture {
   constructor({ physique, couleur, nom, joueur = false, equipe = null }) {

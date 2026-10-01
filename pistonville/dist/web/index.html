@@ -773,17 +773,17 @@ body {
   var ordinal = (n) => n === 1 ? "1er" : `${n}e`;
 
   // pistonville/src/circuit.js
-  var LARGEUR = 64;
+  var LARGEUR = 96;
   var DEMI = LARGEUR / 2;
-  var VIBREUR = 6;
-  var BARRIERE = DEMI + 34;
+  var VIBREUR = 8;
+  var BARRIERE = DEMI + 40;
   var PUBLIC_DEBUT = BARRIERE + 6;
-  var PUBLIC_FIN = BARRIERE + 70;
+  var PUBLIC_FIN = BARRIERE + 76;
   var MARGE = 340;
   var PAS = 6;
-  var SEPARATION = 150;
+  var SEPARATION = 196;
   var CELLULE = 64;
-  var PORTEE = 190;
+  var PORTEE = 230;
   function catmullRom(ctrl, parSegment) {
     const n = ctrl.length;
     const out = [];
@@ -982,6 +982,7 @@ body {
     for (let essai = 0; essai < 60 && !points; essai++) {
       points = essayer(creerAlea(def.graine * 7919 + essai * 104729), def, rayonMin);
     }
+    const secours = !points;
     if (!points) {
       const ctrl = [];
       for (let i = 0; i < 8; i++) {
@@ -1013,7 +1014,7 @@ body {
     }
     const largeur = Math.ceil(maxX - minX + MARGE * 2);
     const hauteur = Math.ceil(maxY - minY + MARGE * 2);
-    const circuit = { def, points, longueur: L, pas, largeur, hauteur, grille: /* @__PURE__ */ new Map(), ligneDroite: lg * pas };
+    const circuit = { def, points, longueur: L, pas, largeur, hauteur, grille: /* @__PURE__ */ new Map(), ligneDroite: lg * pas, secours };
     circuit.interieur = coteInterieur(points);
     indexer(circuit);
     return circuit;
@@ -1282,23 +1283,252 @@ body {
     ctx.fillText(texte2, Math.round(x), by + 5.5);
   }
 
+  // pistonville/src/tiny.js
+  var CONTOUR = "#26182e";
+  var COLONNES2 = { factory: 12, town: 12, battle: 18, ski: 12, farm: 12 };
+  function tuileTiny(ctx, planches, pack, n, x, y) {
+    const img = planches[pack];
+    if (!img) return;
+    const c3 = COLONNES2[pack];
+    ctx.drawImage(img, n % c3 * 16, Math.floor(n / c3) * 16, 16, 16, Math.round(x), Math.round(y), 16, 16);
+  }
+  function toile(w, h) {
+    const c3 = document.createElement("canvas");
+    c3.width = w;
+    c3.height = h;
+    const ctx = c3.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    return { c: c3, ctx };
+  }
+  var PEAUX = ["#f2c9a0", "#e0ac7e", "#b97a52", "#8a5636", "#f6d8bd", "#c8916a"];
+  var CHEVEUX = ["#2a1e1e", "#f0c85a", "#6b3e1f", "#c2504d", "#3a3550", "#e8e4d6"];
+  var HAUTS = ["#c2504d", "#2f6fdb", "#3fa34d", "#f2c14e", "#8a6ad6", "#e86ca6", "#f39c33", "#4f7ddb"];
+  var BAS = ["#3a4a6b", "#2a2838", "#5c6278", "#6b4a32"];
+  function tenue(apparence = 0, metier = null) {
+    const a = Math.abs(apparence | 0);
+    const t = { peau: PEAUX[a % PEAUX.length], cheveux: CHEVEUX[(a * 3 + 1) % CHEVEUX.length], haut: HAUTS[(a * 5 + 2) % HAUTS.length], bas: BAS[a * 7 % BAS.length], casque: null, blouse: false };
+    if (metier === "mecano") {
+      t.casque = "#f2c14e";
+      t.haut = "#2f6fdb";
+    }
+    if (metier === "ingenieur") {
+      t.blouse = true;
+    }
+    if (metier === "commercial") {
+      t.haut = ["#c2504d", "#3fa34d", "#8a6ad6"][a % 3];
+    }
+    return t;
+  }
+  var cachePersos = /* @__PURE__ */ new Map();
+  function spritePerso(t, dir = "face", pas = 0) {
+    const cle = `${t.peau}${t.cheveux}${t.haut}${t.bas}${t.casque}${t.blouse}${dir}${pas}`;
+    if (cachePersos.has(cle)) return cachePersos.get(cle);
+    const { c: c3, ctx } = toile(16, 16);
+    const px = (x, y, w, h, col) => {
+      ctx.fillStyle = col;
+      ctx.fillRect(x, y, w, h);
+    };
+    const haut = t.blouse ? "#f4f1e8" : t.haut;
+    const profil = dir === "gauche" || dir === "droite";
+    const j1 = pas === 1 ? 1 : 0, j2 = pas === 2 ? 1 : 0;
+    px(5, 12, 6, 4 - Math.max(j1, j2), CONTOUR);
+    px(5, 12, 2, 4 - j1, CONTOUR);
+    px(9, 12, 2, 4 - j2, CONTOUR);
+    px(6, 12, 1, 3 - j1, t.bas);
+    px(9, 12, 1, 3 - j2, t.bas);
+    px(4, 8, 8, 5, CONTOUR);
+    px(5, 9, 6, 3, haut);
+    if (t.blouse) px(7, 9, 2, 3, t.haut);
+    if (!profil) {
+      px(3, 9, 1, 3, CONTOUR);
+      px(12, 9, 1, 3, CONTOUR);
+      px(3, 11, 1, 1, t.peau);
+      px(12, 11, 1, 1, t.peau);
+    } else {
+      const bx = dir === "gauche" ? 7 : 8;
+      px(bx, 9, 1, 3, melangerCouleur(haut, "#000000", 0.25));
+    }
+    px(3, 1, 10, 8, CONTOUR);
+    px(4, 2, 8, 6, t.peau);
+    const coiffe = t.casque || t.cheveux;
+    if (dir === "dos") px(4, 2, 8, 6, coiffe);
+    else if (profil) {
+      px(4, 2, 8, 3, coiffe);
+      if (dir === "gauche") px(9, 2, 3, 5, coiffe);
+      else px(4, 2, 3, 5, coiffe);
+      px(dir === "gauche" ? 5 : 10, 5, 1, 1, CONTOUR);
+    } else {
+      px(4, 2, 8, 2, coiffe);
+      px(4, 4, 1, 2, coiffe);
+      px(11, 4, 1, 2, coiffe);
+      px(6, 5, 1, 1, CONTOUR);
+      px(9, 5, 1, 1, CONTOUR);
+    }
+    if (t.casque) {
+      px(3, 4, 10, 1, CONTOUR);
+      px(5, 2, 3, 1, melangerCouleur(t.casque, "#ffffff", 0.5));
+    }
+    cachePersos.set(cle, c3);
+    return c3;
+  }
+  function dessinerPerso(ctx, t, x, y, dir = "face", pas = 0) {
+    ctx.fillStyle = "rgba(20,16,34,0.28)";
+    ctx.fillRect(Math.round(x) - 5, Math.round(y) - 1, 10, 2);
+    ctx.drawImage(spritePerso(t, dir, pas), Math.round(x) - 8, Math.round(y) - 15);
+  }
+  var VOITURE_LARGEUR = 28;
+  var VOITURE_LONGUEUR = 46;
+  var cacheVoitures2 = /* @__PURE__ */ new Map();
+  function spriteVoitureTiny(couleur, bande = null, looks = []) {
+    const cle = `${couleur}|${bande}|${looks.join(",")}`;
+    if (cacheVoitures2.has(cle)) return cacheVoitures2.get(cle);
+    const L = VOITURE_LONGUEUR + 8, l = VOITURE_LARGEUR + 6;
+    const ox = 4, oy = 3;
+    const a = new Set(looks);
+    const fonce = melangerCouleur(couleur, "#000000", 0.38);
+    const clair = melangerCouleur(couleur, "#ffffff", 0.32);
+    const vitre = "#5f91c8", vitreClaire = "#a9d4f2";
+    const f = toile(L, l);
+    const fx = f.ctx;
+    const larges = a.has("larges") ? 2 : 0;
+    fx.fillStyle = CONTOUR;
+    for (const rx of [ox + 6, ox + VOITURE_LONGUEUR - 15]) {
+      fx.fillRect(rx, oy - 2 - larges, 10, 4 + larges);
+      fx.fillRect(rx, oy + VOITURE_LARGEUR - 2, 10, 4 + larges);
+    }
+    rond(fx, ox, oy, VOITURE_LONGUEUR, VOITURE_LARGEUR, 7, CONTOUR);
+    rond(fx, ox + 1, oy + 1, VOITURE_LONGUEUR - 2, VOITURE_LARGEUR - 2, 6, fonce);
+    const d2 = toile(L, l);
+    const dx = d2.ctx;
+    rond(dx, ox, oy, VOITURE_LONGUEUR, VOITURE_LARGEUR, 7, CONTOUR);
+    rond(dx, ox + 1, oy + 1, VOITURE_LONGUEUR - 2, VOITURE_LARGEUR - 2, 6, couleur);
+    dx.fillStyle = clair;
+    dx.fillRect(ox + 4, oy + 2, VOITURE_LONGUEUR - 10, 2);
+    dx.fillStyle = fonce;
+    dx.fillRect(ox + 4, oy + VOITURE_LARGEUR - 4, VOITURE_LONGUEUR - 10, 2);
+    rond(dx, ox + 12, oy + 4, 22, VOITURE_LARGEUR - 8, 4, CONTOUR);
+    dx.fillStyle = vitre;
+    dx.fillRect(ox + 27, oy + 5, 6, VOITURE_LARGEUR - 10);
+    dx.fillStyle = vitreClaire;
+    dx.fillRect(ox + 28, oy + 6, 2, VOITURE_LARGEUR - 14);
+    dx.fillStyle = vitre;
+    dx.fillRect(ox + 13, oy + 5, 4, VOITURE_LARGEUR - 10);
+    dx.fillStyle = a.has("carbone") ? "#2c2c38" : clair;
+    dx.fillRect(ox + 17, oy + 5, 10, VOITURE_LARGEUR - 10);
+    if (a.has("carbone")) {
+      dx.fillStyle = "#3c3c4a";
+      for (let i = 0; i < 10; i += 2) dx.fillRect(ox + 17 + i, oy + 5, 1, VOITURE_LARGEUR - 10);
+    }
+    if (bande) {
+      dx.fillStyle = bande;
+      dx.fillRect(ox + 1, oy + VOITURE_LARGEUR / 2 - 2, VOITURE_LONGUEUR - 2, 4);
+    }
+    dx.fillStyle = "#fff4b8";
+    dx.fillRect(ox + VOITURE_LONGUEUR - 3, oy + 3, 2, 5);
+    dx.fillRect(ox + VOITURE_LONGUEUR - 3, oy + VOITURE_LARGEUR - 8, 2, 5);
+    dx.fillStyle = "#e4432d";
+    dx.fillRect(ox + 1, oy + 3, 2, 4);
+    dx.fillRect(ox + 1, oy + VOITURE_LARGEUR - 7, 2, 4);
+    dx.fillStyle = CONTOUR;
+    dx.fillRect(ox + 28, oy - 2, 3, 3);
+    dx.fillRect(ox + 28, oy + VOITURE_LARGEUR - 1, 3, 3);
+    if (a.has("prise") || a.has("turbine")) {
+      dx.fillStyle = CONTOUR;
+      dx.fillRect(ox + 36, oy + 9, 6, VOITURE_LARGEUR - 18);
+      dx.fillStyle = a.has("turbine") ? "#f39c33" : "#5c6278";
+      dx.fillRect(ox + 37, oy + 10, 4, VOITURE_LARGEUR - 20);
+    }
+    if (a.has("arceau")) {
+      dx.fillStyle = CONTOUR;
+      dx.fillRect(ox + 16, oy + 4, 2, VOITURE_LARGEUR - 8);
+    }
+    if (a.has("nitro1") || a.has("nitro2")) {
+      const ys = a.has("nitro2") ? [oy + 6, oy + VOITURE_LARGEUR - 10] : [oy + VOITURE_LARGEUR / 2 - 2];
+      for (const y of ys) {
+        dx.fillStyle = CONTOUR;
+        dx.fillRect(ox + 5, y - 1, 7, 6);
+        dx.fillStyle = "#2a7fd6";
+        dx.fillRect(ox + 6, y, 5, 4);
+        dx.fillStyle = "#7fd0ff";
+        dx.fillRect(ox + 6, y, 5, 1);
+      }
+    }
+    if (a.has("becquet")) {
+      dx.fillStyle = CONTOUR;
+      dx.fillRect(ox + 2, oy + 2, 2, VOITURE_LARGEUR - 4);
+    }
+    if (a.has("aileron") || a.has("aileronGT")) {
+      const gt = a.has("aileronGT");
+      dx.fillStyle = CONTOUR;
+      dx.fillRect(ox - 3, oy - 1, 5, VOITURE_LARGEUR + 2);
+      dx.fillStyle = gt ? bande || "#f4f1e8" : fonce;
+      dx.fillRect(ox - 2, oy, 3, VOITURE_LARGEUR);
+      dx.fillStyle = CONTOUR;
+      dx.fillRect(ox + 2, oy + 6, 3, 2);
+      dx.fillRect(ox + 2, oy + VOITURE_LARGEUR - 8, 3, 2);
+    }
+    const o3 = toile(L, l);
+    o3.ctx.drawImage(f.c, 0, 0);
+    o3.ctx.globalCompositeOperation = "source-in";
+    o3.ctx.fillStyle = "rgba(20,16,34,0.32)";
+    o3.ctx.fillRect(0, 0, L, l);
+    const sprite = { flanc: f.c, dessus: d2.c, ombre: o3.c, cx: ox + VOITURE_LONGUEUR / 2, cy: oy + VOITURE_LARGEUR / 2 };
+    cacheVoitures2.set(cle, sprite);
+    return sprite;
+  }
+  function rond(ctx, x, y, w, h, r, col) {
+    ctx.fillStyle = col;
+    ctx.fillRect(x + r, y, w - 2 * r, h);
+    ctx.fillRect(x, y + r, w, h - 2 * r);
+    for (let i = 0; i < r; i++) {
+      const k = Math.round(r - Math.sqrt(r * r - (r - i - 0.5) ** 2));
+      ctx.fillRect(x + k, y + i, w - 2 * k, 1);
+      ctx.fillRect(x + k, y + h - 1 - i, w - 2 * k, 1);
+    }
+  }
+  function dessinerVoitureTiny(ctx, sprite, x, y, angle, echelle = 1, ombre = true) {
+    const { flanc, dessus, cx, cy } = sprite;
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    if (ombre) {
+      ctx.save();
+      ctx.translate(3 * echelle, 5 * echelle);
+      ctx.rotate(angle);
+      ctx.scale(echelle, echelle);
+      ctx.drawImage(sprite.ombre, -cx, -cy);
+      ctx.restore();
+    }
+    for (let k = 3; k >= 1; k--) {
+      ctx.save();
+      ctx.translate(0, k * echelle);
+      ctx.rotate(angle);
+      ctx.scale(echelle, echelle);
+      ctx.drawImage(flanc, -cx, -cy);
+      ctx.restore();
+    }
+    ctx.rotate(angle);
+    ctx.scale(echelle, echelle);
+    ctx.drawImage(dessus, -cx, -cy);
+    ctx.restore();
+  }
+
   // pistonville/src/rendu-circuit.js
   var SOLS = {
-    herbe: ["#38cbab", "#33bdae", "#3fd8ab"],
-    sable: ["#d6d4af", "#cdcaa5", "#dfddbe"],
-    terre: ["#b5916b", "#a8865f", "#c09c76"],
-    beton: ["#aaa8bd", "#a2a0b5", "#b3b1c5"],
-    eau: ["#59b6d8", "#52aed0", "#66c2e3"],
-    gravier: ["#d8cfa8", "#c6bc93", "#e4dcbb"],
-    rue: ["#5c6278", "#565c71", "#62697f"]
+    herbe: ["#84c669", "#7cbf61", "#8bd87d"],
+    sable: ["#f3d9a4", "#ecd096", "#f8e2b4"],
+    terre: ["#eaa56c", "#da9256", "#efb27e"],
+    beton: ["#c0cbdc", "#b6c1d3", "#cad4e3"],
+    eau: ["#75e3ff", "#6ad8f5", "#8ae9ff"],
+    gravier: ["#ead9ab", "#dccb98", "#f2e3bb"],
+    rue: ["#52607c", "#4b5873", "#58678a"]
   };
   var PISTES = {
-    asphalte: ["#5c6278", "#545a6e", "#646b83"],
-    paves: ["#7a768e", "#716d85", "#837f97"],
-    terre: ["#9a7656", "#8e6c4e", "#a68060"],
-    mouille: ["#4c546a", "#465064", "#5a6680"],
-    sable: ["#c4a874", "#b99d6b", "#cfb37f"],
-    glace: ["#b9d3e3", "#aecbdc", "#d2e6f0"]
+    asphalte: ["#52607c", "#4b5873", "#58678a"],
+    paves: ["#7d84a0", "#737a95", "#8890ab"],
+    terre: ["#c98a55", "#bd7f4c", "#d4955f"],
+    mouille: ["#46536e", "#3f4c66", "#52617f"],
+    sable: ["#e2bf7d", "#d8b472", "#ebc98a"],
+    glace: ["#c9e6f5", "#bddcee", "#dbf0fa"]
   };
   var THEMES = {
     banlieue: { nom: "Banlieue", sol: "herbe", degagement: "herbe", abords: "herbe" },
@@ -1309,14 +1539,14 @@ body {
     chantier: { nom: "Chantier", sol: "terre", degagement: "terre", abords: "terre" }
   };
   var SPONSORS = ["#c2504d", "#2f6fdb", "#f2c14e", "#f4f1e8", "#3fa34d", "#e86ca6"];
-  var ROUGE_VIBREUR = rgb("#c2504d");
-  var BLANC = rgb("#eceaf2");
+  var ROUGE_VIBREUR = rgb("#e4432d");
+  var BLANC = rgb("#f4f6fb");
   var NOIR_PNEU = rgb("#2a2838");
   var GRIS_PNEU = rgb("#5c6278");
-  var CONTOUR = rgb("#3a3550");
-  var GRADIN = rgb("#b8b6c9");
-  var GRADIN_BORD = rgb("#7e7c93");
-  var TOIT_TRIBUNE = rgb("#c2504d");
+  var CONTOUR2 = rgb("#26182e");
+  var GRADIN = rgb("#c0cbdc");
+  var GRADIN_BORD = rgb("#8b9bb4");
+  var TOIT_TRIBUNE = rgb("#e4432d");
   var tons = (liste) => liste.map(rgb);
   var C = { ABORDS: 1, LIBRE: 2, EAU: 3, QUAI: 4, RUE: 5, TROTTOIR: 6, LOT: 7, BATI: 8, JARDIN: 9, PRIS: 10 };
   function indexRendu(circuit, portee) {
@@ -1395,7 +1625,7 @@ body {
     }
     return ok;
   }
-  function rendreCircuit(circuit, planche, niveau = 1) {
+  function rendreCircuit(circuit, planche, niveau = 1, tiny = {}) {
     const { largeur: W2, hauteur: H2, def } = circuit;
     const theme = THEMES[def.theme] || THEMES.parc;
     const alea = creerAlea(def.graine * 31 + 7);
@@ -1403,7 +1633,7 @@ body {
     const L = circuit.longueur;
     const exterieur = -circuit.interieur;
     const rangs = Math.min(3, niveau + 1);
-    const profondeurTribune = rangs * 12 + 6;
+    const profondeurTribune = rangs * 14 + 8;
     const GW = Math.ceil(W2 / T), GH = Math.ceil(H2 / T);
     const cel = new Uint8Array(GW * GH);
     const R = indexRendu(circuit, PUBLIC_FIN + 40);
@@ -1453,8 +1683,8 @@ body {
       px[o3 + 3] = 255;
     };
     const ton = (liste, x, y) => {
-      const h = hash2(x >> 1, y >> 1, graine);
-      return liste[h < 0.68 ? 0 : h < 0.88 ? 1 : 2];
+      const h = hash2(x >> 2, y >> 2, graine);
+      return liste[h < 0.9 ? 0 : h < 0.96 ? 1 : 2];
     };
     for (let y = 0; y < H2; y++) {
       for (let x = 0; x < W2; x++) {
@@ -1474,7 +1704,7 @@ body {
           if (sd < 6) {
             const damier = Math.floor((s2 + 6) / 3) + Math.floor((lat + DEMI) / 3) & 1;
             ecrire2(o3, damier ? BLANC : NOIR_PNEU);
-          } else if (s2 > L - 40 - 26 * nbPlaces && s2 < L - 20 && Math.abs((L - 30 - s2) % 26) < 1.2 && Math.abs(Math.abs(lat) - 15) < 7) {
+          } else if (s2 > L - 50 - 54 * nbPlaces && s2 < L - 26 && Math.abs((L - 28 - s2) % 54) < 1.5 && Math.abs(Math.abs(lat) - 22) < 13) {
             ecrire2(o3, BLANC);
           } else if (def.surface === "paves" && (x % 6 === 0 || (y + Math.floor(x / 6) % 2 * 3) % 6 === 0)) {
             ecrire2(o3, ombre(piste[0]));
@@ -1500,10 +1730,10 @@ body {
         } else if (d2 < BARRIERE + 2) {
           ecrire2(o3, sponsors[Math.floor(s2 / 36) % sponsors.length]);
         } else if (d2 < BARRIERE + 3) {
-          ecrire2(o3, CONTOUR);
+          ecrire2(o3, CONTOUR2);
         } else if (cote === exterieur && ok[m.i] && d2 >= PUBLIC_DEBUT && d2 < PUBLIC_DEBUT + profondeurTribune) {
           const e3 = d2 - PUBLIC_DEBUT;
-          ecrire2(o3, e3 > profondeurTribune - 4 ? TOIT_TRIBUNE : e3 % 12 < 1.5 ? GRADIN_BORD : GRADIN);
+          ecrire2(o3, e3 > profondeurTribune - 4 ? TOIT_TRIBUNE : e3 % 14 < 1.5 ? GRADIN_BORD : GRADIN);
         } else {
           const base = type === C.ABORDS ? solsEnv[C.ABORDS] : solsEnv[type] || solsEnv[C.LIBRE];
           const c3 = ton(base, x, y);
@@ -1512,13 +1742,13 @@ body {
       }
     }
     ctx.putImageData(img, 0, 0);
-    dessinerEnvironnement(ctx, planche, { GW, GH, at, cel, theme, graine, statiques, env });
+    dessinerEnvironnement(ctx, planche, { GW, GH, at, cel, theme, graine, statiques, env, tiny });
     const paddock = [];
     for (let j = 0; j < 3; j++) {
       const p3 = pointA(circuit, L - 120 - j * 46, -exterieur * (BARRIERE + 30));
       paddock.push(p3);
       statiques.push({ y: p3.y + 12, dessin: (c3) => tente(c3, p3.x, p3.y, SPONSORS[(j + 1) % SPONSORS.length]) });
-      statiques.push({ y: p3.y + 20, dessin: (c3) => tuile(c3, planche, idPersonnage(PERSONNAGES[3], DIRECTION.face), p3.x + 10, p3.y + 4) });
+      statiques.push({ y: p3.y + 20, dessin: (c3) => dessinerPerso(c3, tenue(j * 5 + 1, "mecano"), p3.x + 18, p3.y + 20, "face") });
     }
     const { points } = circuit;
     let dernier = -1e9;
@@ -1538,7 +1768,7 @@ body {
       const p3 = points[i];
       for (let r = 0; r < rangs; r++) {
         if (hash2(i, r, graine) < 0.25) continue;
-        const q = pointA(circuit, p3.s, exterieur * (PUBLIC_DEBUT + 10 + r * 12));
+        const q = pointA(circuit, p3.s, exterieur * (PUBLIC_DEBUT + 12 + r * 14));
         spectateurs.push({
           x: q.x + (hash2(i, r + 9, graine) - 0.5) * 3,
           y: q.y,
@@ -1653,7 +1883,7 @@ body {
         else if (bordRue && (gx + gy) % 4 === 0 && r < 0.5) statiques.push({ y: by, dessin: (c3) => objet(c3, planche, "lampadaire", cx, by) });
         else if (bordRue && r > 0.93) statiques.push({ y: by, dessin: (c3) => objet(c3, planche, "borneIncendie", cx, by) });
         else if (bordRue && r > 0.88) statiques.push({ y: by, dessin: (c3) => objet(c3, planche, "poubelle", cx, by) });
-        else if (r > 0.97) statiques.push({ y: by, dessin: (c3) => tuile(c3, planche, idPersonnage(PERSONNAGES[Math.floor(h(gx, gy, 3) * 6)], Math.floor(h(gx, gy, 4) * 4)), x, y) });
+        else if (r > 0.97) statiques.push({ y: by, dessin: (c3) => dessinerPerso(c3, tenue(Math.floor(h(gx, gy, 3) * 40)), cx, by, ["gauche", "face", "dos", "droite"][Math.floor(h(gx, gy, 4) * 4)]) });
       } else if (type === C.LIBRE || type === C.ABORDS) {
         if (type === C.ABORDS) continue;
         if (env.ville) continue;
@@ -1663,20 +1893,26 @@ body {
     if (env.ville) batir(ctx, planche, g);
     void theme;
   }
+  var ARBRES = [4, 16, 28, 4, 16, 3, 27];
+  function arbreTiny(c3, tiny, n, x, by) {
+    c3.fillStyle = "rgba(38,24,46,0.22)";
+    c3.fillRect(Math.round(x) - 6, Math.round(by) - 2, 12, 3);
+    tuileTiny(c3, tiny, "town", n, x - 8, by - 15);
+  }
   function vegetation(g, planche, gx, gy, x, y, cx, by, r) {
     const { theme, statiques, graine } = g;
     const amas = hash2(gx >> 2, gy >> 2, graine + 77);
     if (theme.sol === "herbe") {
       const densite = theme.nom === "Parc" ? 0.55 : 0.3;
       if (r < densite * amas) {
-        const quoi = ["arbre", "arbreRond", "arbreBoule", "sapin", "buisson", "grosBuisson"][Math.floor(hash2(gx, gy, graine + 4) * 6)];
-        statiques.push({ y: by, dessin: (c3) => objet(c3, planche, quoi, cx + Math.round((r - 0.5) * 6), by) });
+        const n = ARBRES[Math.floor(hash2(gx, gy, graine + 4) * ARBRES.length)];
+        statiques.push({ y: by, dessin: (c3) => arbreTiny(c3, g.tiny, n, cx + Math.round((r - 0.5) * 6), by) });
       } else if (r > 0.985) {
         statiques.push({ y: by, dessin: (c3) => fleurs(c3, x, y, graine + gx * 7 + gy) });
       }
     } else if (theme.sol === "sable") {
       if (r < 0.05) statiques.push({ y: by, dessin: (c3) => parasol(c3, cx, y + 8, hash2(gx, gy, 3)) });
-      else if (r < 0.08 && amas > 0.5) statiques.push({ y: by, dessin: (c3) => objet(c3, planche, "arbreBoule", cx, by) });
+      else if (r < 0.08 && amas > 0.5) statiques.push({ y: by, dessin: (c3) => arbreTiny(c3, g.tiny, 28, cx, by) });
     } else if (theme.sol === "terre") {
       if (r < 0.06) statiques.push({ y: by, dessin: (c3) => tas(c3, cx, y + 9) });
       else if (r < 0.1) statiques.push({ y: by, dessin: (c3) => objet(c3, planche, "cone", cx, by) });
@@ -1706,7 +1942,7 @@ body {
       for (let a = 0; a < taille; a++) for (let b2 = 0; b2 < taille; b2++) {
         const gx = x0 + a, gy = y0 + b2;
         if (at(gx, gy) !== C.LIBRE) continue;
-        ctx.fillStyle = "#38cbab";
+        ctx.fillStyle = "#84c669";
         ctx.fillRect(gx * T, gy * T, T, T);
         pelouse.push([gx, gy]);
       }
@@ -1730,8 +1966,8 @@ body {
         if (bati && x + T > bati.x && x < bati.x + bati.w && y + T > bati.y && y < bati.y + bati.h + 6) continue;
         const r = hash2(gx, gy, graine + 21);
         if (r < (banlieue ? 0.22 : 0.12)) {
-          const quoi = r < 0.07 ? "arbre" : r < 0.14 ? "arbreRond" : "buisson";
-          statiques.push({ y: y + 15, dessin: (c3) => objet(c3, planche, quoi, x + 8, y + 15) });
+          const n = r < 0.07 ? 16 : r < 0.14 ? 4 : 28;
+          statiques.push({ y: y + 15, dessin: (c3) => arbreTiny(c3, g.tiny, n, x + 8, y + 15) });
         }
       }
     }
@@ -1798,12 +2034,7 @@ body {
     for (let i = x + 3; i < x + 15; i += 3) c3.fillRect(i, y + 4, 1, 8);
   }
   function voitureGaree(c3, x, y, couleur, horizontale) {
-    const s2 = spriteVoiture(couleur);
-    c3.save();
-    c3.translate(x, y);
-    if (horizontale) c3.rotate(Math.PI / 2);
-    c3.drawImage(s2, -Math.floor(s2.width / 2), -Math.floor(s2.height / 2));
-    c3.restore();
+    dessinerVoitureTiny(c3, spriteVoitureTiny(couleur), x, y, horizontale ? 0 : Math.PI / 2);
   }
   function tente(c3, x, y, couleur) {
     x = Math.round(x);
@@ -1820,11 +2051,11 @@ body {
     c3.fillRect(x - 14, y - 10, 28, 2);
   }
   function commissaire(c3, planche, x, y) {
-    tuile(c3, planche, idPersonnage(PERSONNAGES[3], DIRECTION.face), x - 8, y - 8);
-    c3.fillStyle = "#2a2838";
-    c3.fillRect(Math.round(x) + 6, Math.round(y) - 10, 1, 10);
+    dessinerPerso(c3, { ...tenue(2), haut: "#f39c33" }, x, y + 7, "face");
+    c3.fillStyle = "#26182e";
+    c3.fillRect(Math.round(x) + 6, Math.round(y) - 12, 1, 12);
     c3.fillStyle = "#f2c14e";
-    c3.fillRect(Math.round(x) + 7, Math.round(y) - 10, 6, 4);
+    c3.fillRect(Math.round(x) + 7, Math.round(y) - 12, 6, 4);
   }
   function parasol(c3, x, y, r) {
     const col = ["#c2504d", "#2f6fdb", "#f2c14e", "#3fa34d"][Math.floor(r * 4)];
@@ -1993,8 +2224,8 @@ body {
   }
 
   // pistonville/src/voiture.js
-  var DEMI_LONGUEUR = 10.5;
-  var DEMI_LARGEUR = 6;
+  var DEMI_LONGUEUR = 22;
+  var DEMI_LARGEUR = 13;
   var Voiture = class {
     constructor({ physique: physique2, couleur, nom, joueur = false, equipe = null }) {
       this.p = physique2;
@@ -2097,6 +2328,7 @@ body {
   };
 
   // pistonville/src/course.js
+  var NOMS_DIRECTION = ["gauche", "face", "dos", "droite"];
   var HAUTEUR_PANNEAU = 112;
   var COMPTE_A_REBOURS = 3.2;
   var TEXTES_PUBLIC = ["Bravo !", "Ouah !", "Allez !", "Ooh !", "Vas-y !"];
@@ -2135,20 +2367,20 @@ body {
           v2 = new Voiture({ physique: adv.physique, couleur: adv.couleur, nom: adv.nom, equipe: adv.equipe });
           v2.talent = adv.talent || 0;
           v2.rival = !!adv.rival;
-          v2.voie = (this.alea() - 0.5) * 24;
+          v2.voie = (this.alea() - 0.5) * 36;
           v2.nitroIA = 1 + Math.floor(this.niveau / 2);
           v2.prochaineVoie = this.alea() * 2;
         }
         const bonusSol = v2.joueur ? o3.joueur.surfaces?.[o3.circuit.def.surface] || 0 : 0;
         v2.adherenceSol = surface.adherence + bonusSol;
         v2.vitesseSol = Math.min(1, surface.vitesse + bonusSol * 0.3);
-        const s2 = this.circuit.longueur - 40 - i * 26;
-        const lat = i % 2 ? -15 : 15;
+        const s2 = this.circuit.longueur - 50 - i * 54;
+        const lat = i % 2 ? -22 : 22;
         const p3 = pointA(this.circuit, s2, lat);
         v2.placer(p3.x, p3.y, p3.angle);
         v2.s = (s2 % this.circuit.longueur + this.circuit.longueur) % this.circuit.longueur;
         v2.tour = -1;
-        v2.progres = -40 - i * 26;
+        v2.progres = -50 - i * 54;
         v2.dernierContact = -10;
         this.voitures.push(v2);
       }
@@ -2236,7 +2468,7 @@ body {
     }
     /** Aide au pilotage : sans doigt posé, la voiture se recentre doucement. */
     aider(v2) {
-      const cible = pointA(this.circuit, v2.s + 30 + v2.vitesse * 0.3, 0);
+      const cible = pointA(this.circuit, v2.s + 50 + v2.vitesse * 0.3, 0);
       const ecart2 = angleNorm(Math.atan2(cible.y - v2.y, cible.x - v2.x) - v2.angle);
       v2.direction = clamp(ecart2 * 1.2, -0.55, 0.55);
     }
@@ -2246,13 +2478,13 @@ body {
         v2.prochaineVoie -= dt;
         if (v2.prochaineVoie <= 0) {
           v2.prochaineVoie = 0.6 + this.alea() * 1.4;
-          const devant = this.voitureDevant(v2, 70);
-          if (devant) v2.voie = devant.voieEstimee > 0 ? -16 : 16;
-          else v2.voie = lerp(v2.voie, (this.alea() - 0.5) * 24, 0.5);
+          const devant = this.voitureDevant(v2, 110);
+          if (devant) v2.voie = devant.voieEstimee > 0 ? -24 : 24;
+          else v2.voie = lerp(v2.voie, (this.alea() - 0.5) * 36, 0.5);
         }
       }
       const voie2 = v2.voie || 0;
-      const cible = pointA(this.circuit, v2.s + 24 + v2.vitesse * 0.3, voie2);
+      const cible = pointA(this.circuit, v2.s + 44 + v2.vitesse * 0.3, voie2);
       const ecart2 = angleNorm(Math.atan2(cible.y - v2.y, cible.x - v2.x) - v2.angle);
       v2.direction = clamp(ecart2 * 3, -1, 1);
       const k = courbureDevant(this.circuit, v2.s + 10, 40 + v2.vitesse * 0.8);
@@ -2275,7 +2507,7 @@ body {
         const dx = autre.x - v2.x, dy = autre.y - v2.y;
         const avant = dx * fx + dy * fy;
         const cote = -dx * fy + dy * fx;
-        if (avant > 0 && avant < dMin && Math.abs(cote) < 18) {
+        if (avant > 0 && avant < dMin && Math.abs(cote) < 28) {
           dMin = avant;
           meilleure = autre;
           autre.voieEstimee = cote;
@@ -2285,7 +2517,7 @@ body {
     }
     aspirations() {
       for (const v2 of this.voitures) {
-        const devant = this.voitureDevant(v2, 46);
+        const devant = this.voitureDevant(v2, 90);
         v2.aspiration = !!devant && v2.vitesse > 90;
       }
     }
@@ -2310,7 +2542,7 @@ body {
       const sit = situer(this.circuit, v2.x, v2.y);
       if (!sit) return;
       v2.situation = sit;
-      v2.horsPiste = clamp((sit.d - DEMI + 2) / 14, 0, 1);
+      v2.horsPiste = clamp((sit.d - DEMI + 4) / 18, 0, 1);
       const nx = sit.nx * sit.cote, ny = sit.ny * sit.cote;
       const fx = Math.cos(v2.angle), fy = Math.sin(v2.angle);
       const etendue2 = DEMI_LONGUEUR * Math.abs(fx * nx + fy * ny) + DEMI_LARGEUR * Math.abs(-fy * nx + fx * ny);
@@ -2387,7 +2619,7 @@ body {
       for (let i = 0; i < vs.length; i++) for (let k = i + 1; k < vs.length; k++) {
         const a = vs[i], b2 = vs[k];
         const dx = b2.x - a.x, dy = b2.y - a.y;
-        if (dx * dx + dy * dy > 26 * 26) continue;
+        if (dx * dx + dy * dy > 54 * 54) continue;
         const c3 = recouvrement(a, b2);
         if (!c3) continue;
         const { nx, ny, prof } = c3;
@@ -2404,8 +2636,8 @@ body {
         b2.vy += ny * imp;
         const pa = coinVers(a, nx, ny), pb = coinVers(b2, -nx, -ny);
         const cx = (pa.x + pb.x) / 2, cy = (pa.y + pb.y) / 2;
-        a.angle += clamp(((cx - a.x) * -ny - (cy - a.y) * -nx) * imp * 6e-4, -0.12, 0.12);
-        b2.angle += clamp(((cx - b2.x) * ny - (cy - b2.y) * nx) * imp * 6e-4, -0.12, 0.12);
+        a.angle += clamp(((cx - a.x) * -ny - (cy - a.y) * -nx) * imp * 3e-4, -0.12, 0.12);
+        b2.angle += clamp(((cx - b2.x) * ny - (cy - b2.y) * nx) * imp * 3e-4, -0.12, 0.12);
         a.durabilite = Math.max(0, a.durabilite - imp / 30);
         b2.durabilite = Math.max(0, b2.durabilite - imp / 30);
         if (a.joueur) b2.dernierContact = this.temps;
@@ -2472,13 +2704,13 @@ body {
       const alea = creerAlea(this.circuit.def.graine * 13 + 5);
       const bonus = [];
       for (let s2 = 260; s2 < L - 160; s2 += 200 + alea() * 120) {
-        const voie2 = [-18, 0, 18][Math.floor(alea() * 3)];
+        const voie2 = [-28, 0, 28][Math.floor(alea() * 3)];
         if (alea() < 0.16) {
           const p3 = pointA(this.circuit, s2, voie2);
           bonus.push({ type: "disque", x: p3.x, y: p3.y, pris: false });
         } else {
           for (let k = 0; k < 3; k++) {
-            const p3 = pointA(this.circuit, s2 + k * 16, voie2);
+            const p3 = pointA(this.circuit, s2 + k * 22, voie2);
             bonus.push({ type: "piece", x: p3.x, y: p3.y, pris: false });
           }
         }
@@ -2495,7 +2727,7 @@ body {
       for (const b2 of this.bonus) {
         if (b2.pris) continue;
         const dx = b2.x - j.x, dy = b2.y - j.y;
-        if (dx * dx + dy * dy > 13 * 13) continue;
+        if (dx * dx + dy * dy > 20 * 20) continue;
         b2.pris = true;
         if (b2.type === "piece") {
           const valeur = 10 * this.niveau;
@@ -2583,8 +2815,8 @@ body {
         if (v2.nitro > 0 || v2.aura > 0) {
           const fx = Math.cos(v2.angle), fy = Math.sin(v2.angle);
           this.particules.push({
-            x: v2.x - fx * 11 + (Math.random() - 0.5) * 3,
-            y: v2.y - fy * 11 + (Math.random() - 0.5) * 3,
+            x: v2.x - fx * 24 + (Math.random() - 0.5) * 6,
+            y: v2.y - fy * 24 + (Math.random() - 0.5) * 6,
             vx: -fx * 40 + (Math.random() - 0.5) * 20,
             vy: -fy * 40 + (Math.random() - 0.5) * 20,
             vie: 0.3,
@@ -2618,8 +2850,8 @@ body {
       const fx = Math.cos(v2.angle), fy = Math.sin(v2.angle);
       const lx = -fy, ly = fx;
       this.terrain.fillStyle = v2.horsPiste > 0.3 ? "rgba(90,70,50,0.25)" : "rgba(30,28,40,0.32)";
-      for (const c3 of [-4, 4]) {
-        this.terrain.fillRect(Math.round(v2.x - fx * 7 + lx * c3), Math.round(v2.y - fy * 7 + ly * c3), 1, 1);
+      for (const c3 of [-10, 10]) {
+        this.terrain.fillRect(Math.round(v2.x - fx * 15 + lx * c3), Math.round(v2.y - fy * 15 + ly * c3), 2, 2);
       }
     }
     etincelles(x, y, force) {
@@ -2704,35 +2936,38 @@ body {
       for (const s2 of visibles) {
         if (s2.joie > 0) s2.joie -= 1 / 60;
         const saute = s2.joie > 0 && Math.sin(t * 14 + s2.phase) > 0;
-        const pas = saute ? 1 : 0;
-        tuile(ctx, this.planche, idPersonnage(s2.base, s2.dir, pas), s2.x - 8, s2.y - 12 - (saute ? 2 : 0));
+        dessinerPerso(ctx, tenue(Math.floor(s2.phase * 7) + s2.base), s2.x, s2.y + 3 - (saute ? 3 : 0), NOMS_DIRECTION[s2.dir] || "face", saute ? 1 : 0);
       }
       for (const b2 of this.bonus) {
         if (b2.pris || b2.x < camX - 8 || b2.x > camX + W2 + 8 || b2.y < camY - 8 || b2.y > camY + hVue + 8) continue;
         dessinerBonus(ctx, b2, t);
       }
-      for (const v2 of this.voitures) {
-        ctx.fillStyle = "rgba(30,28,40,0.28)";
-        ctx.save();
-        ctx.translate(Math.round(v2.x) + 2, Math.round(v2.y) + 2);
-        ctx.rotate(v2.angle + Math.PI / 2);
-        ctx.fillRect(-7, -11, 14, 23);
-        ctx.restore();
-      }
-      for (const v2 of this.voitures) {
-        const sprite = spriteVoiture(v2.couleur, v2.joueur ? "#f2c14e" : "#f4f1e8", v2.looks || []);
-        ctx.save();
-        ctx.translate(Math.round(v2.x), Math.round(v2.y));
-        ctx.rotate(v2.angle + Math.PI / 2);
+      const ordre = this.voitures.slice().sort((a, b2) => a.y - b2.y);
+      for (const v2 of ordre) {
+        if (v2.x < camX - 40 || v2.x > camX + W2 + 40 || v2.y < camY - 40 || v2.y > camY + hVue + 40) continue;
         if (v2.aura > 0) {
-          ctx.fillStyle = `rgba(244,114,182,${0.25 + 0.15 * Math.sin(t * 20)})`;
-          ctx.fillRect(-9, -13, 18, 27);
+          ctx.fillStyle = `rgba(244,114,182,${0.22 + 0.14 * Math.sin(t * 20)})`;
+          ctx.beginPath();
+          ctx.ellipse(v2.x, v2.y + 2, 30, 24, v2.angle, 0, Math.PI * 2);
+          ctx.fill();
         }
-        ctx.drawImage(sprite, -Math.floor(sprite.width / 2), -Math.floor(sprite.height / 2));
-        ctx.restore();
+        if (v2.nitro > 0) {
+          const fx = Math.cos(v2.angle), fy = Math.sin(v2.angle);
+          const l = 10 + Math.random() * 8;
+          for (const [k, c3] of [[1, "#ffe066"], [0.6, "#ff8a00"]]) {
+            ctx.fillStyle = c3;
+            ctx.beginPath();
+            ctx.moveTo(v2.x - fx * 23 - fy * 7 * k, v2.y - fy * 23 + fx * 7 * k + 3);
+            ctx.lineTo(v2.x - fx * (23 + l * k), v2.y - fy * (23 + l * k) + 3);
+            ctx.lineTo(v2.x - fx * 23 + fy * 7 * k, v2.y - fy * 23 - fx * 7 * k + 3);
+            ctx.fill();
+          }
+        }
+        const sprite = spriteVoitureTiny(v2.couleur, v2.joueur ? "#f2c14e" : null, v2.looks || []);
+        dessinerVoitureTiny(ctx, sprite, v2.x, v2.y, v2.angle);
       }
-      for (const v2 of this.voitures) if (v2.rival) texte(ctx, "RIVAL", v2.x, v2.y - 18, 7, "#ff8a80", "center");
-      const bx = Math.round(j.x), by = Math.round(j.y) - 24 + (Math.sin(t * 6) > 0 ? 1 : 0);
+      for (const v2 of this.voitures) if (v2.rival) texte(ctx, "RIVAL", v2.x, v2.y - 30, 7, "#ff8a80", "center");
+      const bx = Math.round(j.x), by = Math.round(j.y) - 34 + (Math.sin(t * 6) > 0 ? 1 : 0);
       ctx.fillStyle = "#1a1626";
       for (let i = 0; i < 6; i++) ctx.fillRect(bx - 6 + i, by + i - 1, 13 - i * 2, 2);
       ctx.fillStyle = "#f2c14e";
@@ -2744,39 +2979,52 @@ body {
         ctx.fillRect(Math.round(p3.x), Math.round(p3.y), p3.taille, p3.taille);
       }
       ctx.globalAlpha = 1;
-      for (const s2 of visibles) if (s2.bulle) bulle(ctx, s2.x, s2.y - 14, s2.bulle.texte);
+      for (const s2 of visibles) if (s2.bulle) bulle(ctx, s2.x, s2.y - 16, s2.bulle.texte);
       for (const m of this.messages) if (m.ancre) {
         const a = 1 - m.vie / m.max;
-        texte(ctx, m.texte, m.ancre.x, m.ancre.y - 24 - a * 16, 10, m.couleur, "center");
+        texte(ctx, m.texte, m.ancre.x, m.ancre.y - 38 - a * 16, 10, m.couleur, "center");
       }
       ctx.restore();
       this.dessinerInterface(ctx, W2, H2, t);
     }
+    /** Portique de départ en vue 3/4 : deux poteaux posés au sol, la poutre et ses feux en hauteur. */
     dessinerPortique(ctx) {
-      const a = pointA(this.circuit, 0, -(DEMI + 9));
-      const b2 = pointA(this.circuit, 0, DEMI + 9);
-      ctx.fillStyle = "rgba(30,28,40,0.3)";
-      ctx.fillRect(Math.round(a.x) - 2, Math.round(a.y), 6, 6);
-      ctx.fillRect(Math.round(b2.x) - 2, Math.round(b2.y), 6, 6);
-      ctx.fillStyle = "#3a3550";
-      ctx.fillRect(Math.round(a.x) - 3, Math.round(a.y) - 3, 6, 6);
-      ctx.fillRect(Math.round(b2.x) - 3, Math.round(b2.y) - 3, 6, 6);
+      const H2 = 30;
+      const a = pointA(this.circuit, 0, -(DEMI + 12));
+      const b2 = pointA(this.circuit, 0, DEMI + 12);
+      for (const p3 of [a, b2]) {
+        const x = Math.round(p3.x), y = Math.round(p3.y);
+        ctx.fillStyle = "rgba(38,24,46,0.3)";
+        ctx.fillRect(x - 3, y - 1, 9, 4);
+        ctx.fillStyle = "#26182e";
+        ctx.fillRect(x - 3, y - H2, 6, H2 + 1);
+        ctx.fillStyle = "#c0cbdc";
+        ctx.fillRect(x - 2, y - H2 + 1, 4, H2 - 1);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x - 2, y - H2 + 1, 1, H2 - 1);
+      }
       const dx = b2.x - a.x, dy = b2.y - a.y, l = Math.hypot(dx, dy);
       ctx.save();
-      ctx.translate(a.x, a.y - 10);
+      ctx.translate(a.x, a.y - H2);
       ctx.rotate(Math.atan2(dy, dx));
-      ctx.fillStyle = "#2a2838";
-      ctx.fillRect(0, -4, l, 8);
-      ctx.fillStyle = "#5c6278";
-      ctx.fillRect(1, -3, l - 2, 6);
+      ctx.fillStyle = "#26182e";
+      ctx.fillRect(-2, -6, l + 4, 12);
+      ctx.fillStyle = "#f2c14e";
+      ctx.fillRect(-1, -5, l + 2, 10);
+      for (let x = 0; x < l; x += 8) {
+        ctx.fillStyle = x / 8 % 2 ? "#26182e" : "#ffffff";
+        ctx.fillRect(x, 3, 8, 2);
+      }
       const feux = 5;
       const allumes = this.etat === "compte" ? clamp(Math.floor((this.temps + COMPTE_A_REBOURS) / (COMPTE_A_REBOURS / feux)) + 1, 0, feux) : 0;
       for (let i = 0; i < feux; i++) {
         let c3 = "#3a3550";
         if (this.etat === "compte" && i < allumes) c3 = "#e4432d";
         if (this.etat !== "compte" && this.temps < 2) c3 = "#5ad16a";
+        ctx.fillStyle = "#26182e";
+        ctx.fillRect(l / 2 - feux * 5 + i * 10, -4, 8, 7);
         ctx.fillStyle = c3;
-        ctx.fillRect(l / 2 - feux * 4 + i * 8 + 1, -2, 5, 4);
+        ctx.fillRect(l / 2 - feux * 5 + i * 10 + 1, -3, 6, 5);
       }
       ctx.restore();
     }
@@ -2832,7 +3080,7 @@ body {
       ctx.save();
       ctx.translate(pr.x + 18, pr.y + 18);
       ctx.scale(2, 2);
-      tuile(ctx, this.planche, idPersonnage(104, 1, 0), -8, -8);
+      ctx.drawImage(spritePerso({ ...tenue(4), casque: "#e4432d", haut: "#f4f1e8" }, "face", 0), -8, -8);
       ctx.restore();
       texte(ctx, j.nom, 54, y0 + 16, 11, "#f4f1e8", "left");
       texte(ctx, `${kmh(j.vitesse)}`, W2 - 52, y0 + 22, 20, "#ffe066", "right");
@@ -2951,235 +3199,6 @@ body {
       ctx.fillStyle = "#f4f1e8";
       ctx.fillRect(x - 3, y + 0 - f, 7, 3);
     }
-  }
-
-  // pistonville/src/tiny.js
-  var CONTOUR2 = "#26182e";
-  var COLONNES2 = { factory: 12, town: 12, battle: 18, ski: 12, farm: 12 };
-  function tuileTiny(ctx, planches, pack, n, x, y) {
-    const img = planches[pack];
-    if (!img) return;
-    const c3 = COLONNES2[pack];
-    ctx.drawImage(img, n % c3 * 16, Math.floor(n / c3) * 16, 16, 16, Math.round(x), Math.round(y), 16, 16);
-  }
-  function toile(w, h) {
-    const c3 = document.createElement("canvas");
-    c3.width = w;
-    c3.height = h;
-    const ctx = c3.getContext("2d");
-    ctx.imageSmoothingEnabled = false;
-    return { c: c3, ctx };
-  }
-  var PEAUX = ["#f2c9a0", "#e0ac7e", "#b97a52", "#8a5636", "#f6d8bd", "#c8916a"];
-  var CHEVEUX = ["#2a1e1e", "#f0c85a", "#6b3e1f", "#c2504d", "#3a3550", "#e8e4d6"];
-  var HAUTS = ["#c2504d", "#2f6fdb", "#3fa34d", "#f2c14e", "#8a6ad6", "#e86ca6", "#f39c33", "#4f7ddb"];
-  var BAS = ["#3a4a6b", "#2a2838", "#5c6278", "#6b4a32"];
-  function tenue(apparence = 0, metier = null) {
-    const a = Math.abs(apparence | 0);
-    const t = { peau: PEAUX[a % PEAUX.length], cheveux: CHEVEUX[(a * 3 + 1) % CHEVEUX.length], haut: HAUTS[(a * 5 + 2) % HAUTS.length], bas: BAS[a * 7 % BAS.length], casque: null, blouse: false };
-    if (metier === "mecano") {
-      t.casque = "#f2c14e";
-      t.haut = "#2f6fdb";
-    }
-    if (metier === "ingenieur") {
-      t.blouse = true;
-    }
-    if (metier === "commercial") {
-      t.haut = ["#c2504d", "#3fa34d", "#8a6ad6"][a % 3];
-    }
-    return t;
-  }
-  var cachePersos = /* @__PURE__ */ new Map();
-  function spritePerso(t, dir = "face", pas = 0) {
-    const cle = `${t.peau}${t.cheveux}${t.haut}${t.bas}${t.casque}${t.blouse}${dir}${pas}`;
-    if (cachePersos.has(cle)) return cachePersos.get(cle);
-    const { c: c3, ctx } = toile(16, 16);
-    const px = (x, y, w, h, col) => {
-      ctx.fillStyle = col;
-      ctx.fillRect(x, y, w, h);
-    };
-    const haut = t.blouse ? "#f4f1e8" : t.haut;
-    const profil = dir === "gauche" || dir === "droite";
-    const j1 = pas === 1 ? 1 : 0, j2 = pas === 2 ? 1 : 0;
-    px(5, 12, 6, 4 - Math.max(j1, j2), CONTOUR2);
-    px(5, 12, 2, 4 - j1, CONTOUR2);
-    px(9, 12, 2, 4 - j2, CONTOUR2);
-    px(6, 12, 1, 3 - j1, t.bas);
-    px(9, 12, 1, 3 - j2, t.bas);
-    px(4, 8, 8, 5, CONTOUR2);
-    px(5, 9, 6, 3, haut);
-    if (t.blouse) px(7, 9, 2, 3, t.haut);
-    if (!profil) {
-      px(3, 9, 1, 3, CONTOUR2);
-      px(12, 9, 1, 3, CONTOUR2);
-      px(3, 11, 1, 1, t.peau);
-      px(12, 11, 1, 1, t.peau);
-    } else {
-      const bx = dir === "gauche" ? 7 : 8;
-      px(bx, 9, 1, 3, melangerCouleur(haut, "#000000", 0.25));
-    }
-    px(3, 1, 10, 8, CONTOUR2);
-    px(4, 2, 8, 6, t.peau);
-    const coiffe = t.casque || t.cheveux;
-    if (dir === "dos") px(4, 2, 8, 6, coiffe);
-    else if (profil) {
-      px(4, 2, 8, 3, coiffe);
-      if (dir === "gauche") px(9, 2, 3, 5, coiffe);
-      else px(4, 2, 3, 5, coiffe);
-      px(dir === "gauche" ? 5 : 10, 5, 1, 1, CONTOUR2);
-    } else {
-      px(4, 2, 8, 2, coiffe);
-      px(4, 4, 1, 2, coiffe);
-      px(11, 4, 1, 2, coiffe);
-      px(6, 5, 1, 1, CONTOUR2);
-      px(9, 5, 1, 1, CONTOUR2);
-    }
-    if (t.casque) {
-      px(3, 4, 10, 1, CONTOUR2);
-      px(5, 2, 3, 1, melangerCouleur(t.casque, "#ffffff", 0.5));
-    }
-    cachePersos.set(cle, c3);
-    return c3;
-  }
-  function dessinerPerso(ctx, t, x, y, dir = "face", pas = 0) {
-    ctx.fillStyle = "rgba(20,16,34,0.28)";
-    ctx.fillRect(Math.round(x) - 5, Math.round(y) - 1, 10, 2);
-    ctx.drawImage(spritePerso(t, dir, pas), Math.round(x) - 8, Math.round(y) - 15);
-  }
-  var VOITURE_LARGEUR = 28;
-  var VOITURE_LONGUEUR = 46;
-  var cacheVoitures2 = /* @__PURE__ */ new Map();
-  function spriteVoitureTiny(couleur, bande = null, looks = []) {
-    const cle = `${couleur}|${bande}|${looks.join(",")}`;
-    if (cacheVoitures2.has(cle)) return cacheVoitures2.get(cle);
-    const L = VOITURE_LONGUEUR + 8, l = VOITURE_LARGEUR + 6;
-    const ox = 4, oy = 3;
-    const a = new Set(looks);
-    const fonce = melangerCouleur(couleur, "#000000", 0.38);
-    const clair = melangerCouleur(couleur, "#ffffff", 0.32);
-    const vitre = "#5f91c8", vitreClaire = "#a9d4f2";
-    const f = toile(L, l);
-    const fx = f.ctx;
-    const larges = a.has("larges") ? 2 : 0;
-    fx.fillStyle = CONTOUR2;
-    for (const rx of [ox + 6, ox + VOITURE_LONGUEUR - 15]) {
-      fx.fillRect(rx, oy - 2 - larges, 10, 4 + larges);
-      fx.fillRect(rx, oy + VOITURE_LARGEUR - 2, 10, 4 + larges);
-    }
-    rond(fx, ox, oy, VOITURE_LONGUEUR, VOITURE_LARGEUR, 7, CONTOUR2);
-    rond(fx, ox + 1, oy + 1, VOITURE_LONGUEUR - 2, VOITURE_LARGEUR - 2, 6, fonce);
-    const d2 = toile(L, l);
-    const dx = d2.ctx;
-    rond(dx, ox, oy, VOITURE_LONGUEUR, VOITURE_LARGEUR, 7, CONTOUR2);
-    rond(dx, ox + 1, oy + 1, VOITURE_LONGUEUR - 2, VOITURE_LARGEUR - 2, 6, couleur);
-    dx.fillStyle = clair;
-    dx.fillRect(ox + 4, oy + 2, VOITURE_LONGUEUR - 10, 2);
-    dx.fillStyle = fonce;
-    dx.fillRect(ox + 4, oy + VOITURE_LARGEUR - 4, VOITURE_LONGUEUR - 10, 2);
-    rond(dx, ox + 12, oy + 4, 22, VOITURE_LARGEUR - 8, 4, CONTOUR2);
-    dx.fillStyle = vitre;
-    dx.fillRect(ox + 27, oy + 5, 6, VOITURE_LARGEUR - 10);
-    dx.fillStyle = vitreClaire;
-    dx.fillRect(ox + 28, oy + 6, 2, VOITURE_LARGEUR - 14);
-    dx.fillStyle = vitre;
-    dx.fillRect(ox + 13, oy + 5, 4, VOITURE_LARGEUR - 10);
-    dx.fillStyle = a.has("carbone") ? "#2c2c38" : clair;
-    dx.fillRect(ox + 17, oy + 5, 10, VOITURE_LARGEUR - 10);
-    if (a.has("carbone")) {
-      dx.fillStyle = "#3c3c4a";
-      for (let i = 0; i < 10; i += 2) dx.fillRect(ox + 17 + i, oy + 5, 1, VOITURE_LARGEUR - 10);
-    }
-    if (bande) {
-      dx.fillStyle = bande;
-      dx.fillRect(ox + 1, oy + VOITURE_LARGEUR / 2 - 2, VOITURE_LONGUEUR - 2, 4);
-    }
-    dx.fillStyle = "#fff4b8";
-    dx.fillRect(ox + VOITURE_LONGUEUR - 3, oy + 3, 2, 5);
-    dx.fillRect(ox + VOITURE_LONGUEUR - 3, oy + VOITURE_LARGEUR - 8, 2, 5);
-    dx.fillStyle = "#e4432d";
-    dx.fillRect(ox + 1, oy + 3, 2, 4);
-    dx.fillRect(ox + 1, oy + VOITURE_LARGEUR - 7, 2, 4);
-    dx.fillStyle = CONTOUR2;
-    dx.fillRect(ox + 28, oy - 2, 3, 3);
-    dx.fillRect(ox + 28, oy + VOITURE_LARGEUR - 1, 3, 3);
-    if (a.has("prise") || a.has("turbine")) {
-      dx.fillStyle = CONTOUR2;
-      dx.fillRect(ox + 36, oy + 9, 6, VOITURE_LARGEUR - 18);
-      dx.fillStyle = a.has("turbine") ? "#f39c33" : "#5c6278";
-      dx.fillRect(ox + 37, oy + 10, 4, VOITURE_LARGEUR - 20);
-    }
-    if (a.has("arceau")) {
-      dx.fillStyle = CONTOUR2;
-      dx.fillRect(ox + 16, oy + 4, 2, VOITURE_LARGEUR - 8);
-    }
-    if (a.has("nitro1") || a.has("nitro2")) {
-      const ys = a.has("nitro2") ? [oy + 6, oy + VOITURE_LARGEUR - 10] : [oy + VOITURE_LARGEUR / 2 - 2];
-      for (const y of ys) {
-        dx.fillStyle = CONTOUR2;
-        dx.fillRect(ox + 5, y - 1, 7, 6);
-        dx.fillStyle = "#2a7fd6";
-        dx.fillRect(ox + 6, y, 5, 4);
-        dx.fillStyle = "#7fd0ff";
-        dx.fillRect(ox + 6, y, 5, 1);
-      }
-    }
-    if (a.has("becquet")) {
-      dx.fillStyle = CONTOUR2;
-      dx.fillRect(ox + 2, oy + 2, 2, VOITURE_LARGEUR - 4);
-    }
-    if (a.has("aileron") || a.has("aileronGT")) {
-      const gt = a.has("aileronGT");
-      dx.fillStyle = CONTOUR2;
-      dx.fillRect(ox - 3, oy - 1, 5, VOITURE_LARGEUR + 2);
-      dx.fillStyle = gt ? bande || "#f4f1e8" : fonce;
-      dx.fillRect(ox - 2, oy, 3, VOITURE_LARGEUR);
-      dx.fillStyle = CONTOUR2;
-      dx.fillRect(ox + 2, oy + 6, 3, 2);
-      dx.fillRect(ox + 2, oy + VOITURE_LARGEUR - 8, 3, 2);
-    }
-    const o3 = toile(L, l);
-    o3.ctx.drawImage(f.c, 0, 0);
-    o3.ctx.globalCompositeOperation = "source-in";
-    o3.ctx.fillStyle = "rgba(20,16,34,0.32)";
-    o3.ctx.fillRect(0, 0, L, l);
-    const sprite = { flanc: f.c, dessus: d2.c, ombre: o3.c, cx: ox + VOITURE_LONGUEUR / 2, cy: oy + VOITURE_LARGEUR / 2 };
-    cacheVoitures2.set(cle, sprite);
-    return sprite;
-  }
-  function rond(ctx, x, y, w, h, r, col) {
-    ctx.fillStyle = col;
-    ctx.fillRect(x + r, y, w - 2 * r, h);
-    ctx.fillRect(x, y + r, w, h - 2 * r);
-    for (let i = 0; i < r; i++) {
-      const k = Math.round(r - Math.sqrt(r * r - (r - i - 0.5) ** 2));
-      ctx.fillRect(x + k, y + i, w - 2 * k, 1);
-      ctx.fillRect(x + k, y + h - 1 - i, w - 2 * k, 1);
-    }
-  }
-  function dessinerVoitureTiny(ctx, sprite, x, y, angle, echelle = 1, ombre = true) {
-    const { flanc, dessus, cx, cy } = sprite;
-    ctx.save();
-    ctx.translate(Math.round(x), Math.round(y));
-    if (ombre) {
-      ctx.save();
-      ctx.translate(3 * echelle, 5 * echelle);
-      ctx.rotate(angle);
-      ctx.scale(echelle, echelle);
-      ctx.drawImage(sprite.ombre, -cx, -cy);
-      ctx.restore();
-    }
-    for (let k = 3; k >= 1; k--) {
-      ctx.save();
-      ctx.translate(0, k * echelle);
-      ctx.rotate(angle);
-      ctx.scale(echelle, echelle);
-      ctx.drawImage(flanc, -cx, -cy);
-      ctx.restore();
-    }
-    ctx.rotate(angle);
-    ctx.scale(echelle, echelle);
-    ctx.drawImage(dessus, -cx, -cy);
-    ctx.restore();
   }
 
   // pistonville/contenu/base/vehicules.js
@@ -5721,7 +5740,7 @@ body {
   var CASE = 32;
   var X0 = (320 - COLONNES_TERRAIN * CASE) / 2;
   var Y0 = 184;
-  var NOMS_DIRECTION = ["gauche", "face", "dos", "droite"];
+  var NOMS_DIRECTION2 = ["gauche", "face", "dos", "droite"];
   var PAROLES = { mecano: ["Clac !", "Serr\xE9 !", "Huile ?"], ingenieur: ["Eur\xEAka !", "Hmm\u2026", "3,14"], commercial: ["Merci !", "Promo !", "Souriez !"] };
   var SceneGarage = class {
     constructor(planche, tiny = {}) {
@@ -5962,7 +5981,7 @@ body {
         const n = i >= 0 && i < 3 ? [69, 70, 71][i] : [44, 46, 47, 57, 46, 58, 59, 47][x / 16 % 8];
         tuileTiny(ctx, tiny, "factory", n, o3.x + x, o3.y - 16);
       }
-      ctx.fillStyle = CONTOUR2;
+      ctx.fillStyle = CONTOUR;
       ctx.fillRect(o3.x + 6, o3.y - 40, 88, 18);
       ctx.fillStyle = "#f2c14e";
       ctx.fillRect(o3.x + 8, o3.y - 38, 84, 14);
@@ -6010,7 +6029,7 @@ body {
       for (const { s: s2, m, pos } of persos) {
         const px = o3.x + pos.x * CASE + 16, py = o3.y + pos.y * CASE + 26;
         const pas = m.marche ? Math.floor(t * 6) % 2 + 1 : 0;
-        dessinerPerso(ctx, tenue(s2.apparence, s2.metier), px, py, NOMS_DIRECTION[m.dir] || "face", pas);
+        dessinerPerso(ctx, tenue(s2.apparence, s2.metier), px, py, NOMS_DIRECTION2[m.dir] || "face", pas);
         if (s2.auRepos) {
           ctx.fillStyle = "#7dd3fc";
           ctx.fillRect(px + 6, py - 18, 3, 3);
@@ -6067,11 +6086,11 @@ body {
     }
   };
   function cadreTiny(ctx, x, y, w, h) {
-    ctx.fillStyle = CONTOUR2;
+    ctx.fillStyle = CONTOUR;
     ctx.fillRect(x - 1, y - 1, w + 2, h + 2);
     ctx.fillStyle = "#c4cbda";
     ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = CONTOUR2;
+    ctx.fillStyle = CONTOUR;
     ctx.fillRect(x + 2, y + 2, w - 4, h - 4);
   }
   function rangee(ctx, tiny, ns, x, y) {
@@ -6100,7 +6119,7 @@ body {
   function etoiles(ctx, xd, y, n) {
     for (let i = 0; i < n; i++) {
       const x = xd - 5 - i * 6;
-      ctx.fillStyle = CONTOUR2;
+      ctx.fillStyle = CONTOUR;
       ctx.fillRect(x - 1, y - 1, 6, 6);
       ctx.fillStyle = "#ffe066";
       ctx.fillRect(x, y, 4, 4);
@@ -6121,14 +6140,14 @@ body {
     switch (d2.id) {
       case "pont": {
         piece2(ctx, tiny, x, y, w, h, null, 0);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 8, y + 4, w - 16, h - 8);
         ctx.fillStyle = "#9aa1b5";
         ctx.fillRect(x + 9, y + 5, w - 18, h - 10);
         ctx.fillStyle = "#80879c";
         for (let yy = y + 9; yy < y + h - 6; yy += 6) ctx.fillRect(x + 10, yy, w - 20, 1);
         for (const [a, c3] of [[3, 2], [w - 9, 2], [3, h - 12], [w - 9, h - 12]]) {
-          ctx.fillStyle = CONTOUR2;
+          ctx.fillStyle = CONTOUR;
           ctx.fillRect(x + a, y + c3, 6, 10);
           ctx.fillStyle = "#f2c14e";
           ctx.fillRect(x + a + 1, y + c3 + 1, 4, 8);
@@ -6174,7 +6193,7 @@ body {
         return nom();
       case "repos": {
         piece2(ctx, tiny, x, y, w, h, [44, 58, 59, 45]);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 3, y + 17, 38, 13);
         ctx.fillStyle = "#e86ca6";
         ctx.fillRect(x + 4, y + 18, 36, 6);
@@ -6192,14 +6211,14 @@ body {
         return nom();
       case "sport": {
         piece2(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 4, y + 18, 22, 12);
         ctx.fillRect(x + 22, y + 13, 3, 8);
         ctx.fillStyle = "#5c6278";
         ctx.fillRect(x + 5, y + 19, 20, 10);
         ctx.fillStyle = "#2a2838";
         for (let i = 0; i < 20; i += 4) ctx.fillRect(x + 5 + (i + Math.floor(t * 20)) % 20, y + 19, 1, 10);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 34, y + 24, 20, 2);
         ctx.fillRect(x + 32, y + 20, 5, 10);
         ctx.fillRect(x + 51, y + 20, 5, 10);
@@ -6220,7 +6239,7 @@ body {
         piece2(ctx, tiny, x, y, w, h, null, 0);
         for (let r = 0; r < 3; r++) {
           const yy = y + 6 + r * 16;
-          ctx.fillStyle = CONTOUR2;
+          ctx.fillStyle = CONTOUR;
           ctx.fillRect(x + 2, yy + 10, w - 4, 7);
           ctx.fillStyle = r % 2 ? "#aab1c4" : "#c4cbda";
           ctx.fillRect(x + 3, yy + 11, w - 6, 5);
@@ -6234,7 +6253,7 @@ body {
         const tapis = { "simu-route": "#5c6278", "simu-terre": "#a8865f", "simu-glace": "#a9c6d8" }[d2.id];
         piece2(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
         rangee(ctx, tiny, [111, 112], x + 2, y + 10);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 36, y + 14, 22, 16);
         ctx.fillStyle = tapis;
         ctx.fillRect(x + 37, y + 15, 20, 14);
@@ -6247,7 +6266,7 @@ body {
       // --- Décor -----------------------------------------------------------------------------
       case "fleurs": {
         piece2(ctx, tiny, x, y, w, h, null, 0);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 3, y + 12, 26, 15);
         ctx.fillStyle = "#8a5a3b";
         ctx.fillRect(x + 4, y + 20, 24, 6);
@@ -6266,7 +6285,7 @@ body {
         return;
       case "arbre": {
         piece2(ctx, tiny, x, y, w, h, null, 0);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 9, y + 22, 14, 9);
         ctx.fillStyle = "#c2504d";
         ctx.fillRect(x + 10, y + 23, 12, 7);
@@ -6277,7 +6296,7 @@ body {
         piece2(ctx, tiny, x, y, w, h, null, 0);
         ctx.fillStyle = "rgba(38,24,46,0.3)";
         ctx.fillRect(x + 12, y + 28, 10, 2);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 15, y + 6, 3, 23);
         ctx.fillRect(x + 10, y + 3, 13, 5);
         ctx.fillStyle = "#fff2a8";
@@ -6292,7 +6311,7 @@ body {
       case "fontaine":
       case "bassin": {
         piece2(ctx, tiny, x, y, w, h, null, 0);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 3, y + 5, w - 6, h - 8);
         ctx.fillStyle = "#c4cbda";
         ctx.fillRect(x + 4, y + 6, w - 8, h - 10);
@@ -6303,7 +6322,7 @@ body {
         ctx.fillRect(x + 10 + k * 4, y + 12, 6, 1);
         ctx.fillRect(x + w - 18 - k * 3, y + h - 12, 6, 1);
         if (d2.id === "fontaine") {
-          ctx.fillStyle = CONTOUR2;
+          ctx.fillStyle = CONTOUR;
           ctx.fillRect(x + w / 2 - 4, y + h / 2 - 9, 8, 13);
           ctx.fillStyle = "#c9ccd4";
           ctx.fillRect(x + w / 2 - 3, y + h / 2 - 8, 6, 11);
@@ -6317,7 +6336,7 @@ body {
       }
       case "statue": {
         piece2(ctx, tiny, x, y, w, h, null, 0);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 7, y + 21, 18, 9);
         ctx.fillRect(x + 12, y + 1, 8, 21);
         ctx.fillStyle = "#7e7c93";
@@ -6334,7 +6353,7 @@ body {
         piece2(ctx, tiny, x, y, w, h, null, 0);
         ctx.fillStyle = "rgba(38,24,46,0.3)";
         ctx.fillRect(x + 18, y + 10, w - 28, h - 12);
-        ctx.fillStyle = CONTOUR2;
+        ctx.fillStyle = CONTOUR;
         ctx.fillRect(x + 14, y + 4, w - 28, h - 8);
         ctx.fillStyle = "#c9ccd4";
         ctx.fillRect(x + 15, y + 5, w - 30, h - 10);
@@ -9956,7 +9975,7 @@ body {
       const gp = grandPrix(gpId);
       const manche = this.partie.gp.manche;
       const def = gp.manches[manche];
-      this.circuit = genererCircuit(def, gp.niveau <= 2 ? 100 : 88);
+      this.circuit = genererCircuit(def, gp.niveau <= 2 ? 120 : 108);
       const apercu = miniCarte(this.circuit, 150, 150).canvas.toDataURL();
       this.ecran = "briefing";
       this.montrer(ecranBriefing(this, gp, manche, apercu));
@@ -9968,13 +9987,14 @@ body {
     lancerCourse() {
       const gp = grandPrix(this.partie.gp.id);
       const def = gp.manches[this.partie.gp.manche];
-      const decor = rendreCircuit(this.circuit, this.assets.urbain, gp.niveau);
+      const decor = rendreCircuit(this.circuit, this.assets.urbain, gp.niveau, this.assets.tiny);
       const v2 = voitureActive(this.partie);
       this.adversaires = adversaires(gp, this.partie.gp.manche);
       this.course = new Course({
         circuit: this.circuit,
         decor,
         planche: this.assets.urbain,
+        tiny: this.assets.tiny,
         tours: def.tours,
         joueur: {
           physique: v2.physique,
