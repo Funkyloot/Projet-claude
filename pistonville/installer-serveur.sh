@@ -5,13 +5,14 @@
 #
 #   bash /opt/pistonville/pistonville/installer-serveur.sh
 #
-# Le jeu est servi sur le port 8080 (PORT=9000 bash … pour en changer).
+# Le jeu est servi sur le port 8090 (PORT=9000 bash … pour en changer) ; si ce
+# port est déjà pris par une autre application, le script en choisit un libre.
 # Aucune installation nécessaire : seulement git et python3, déjà présents.
 
 set -e
 DOSSIER="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCHE="claude/kairosoft-hybrid-racing-game-5x34eg"
-PORT="${PORT:-8080}"
+PORT="${PORT:-8090}"
 
 # 1. Récupérer la dernière version (puis relancer ce script, à jour lui aussi).
 if [ "$1" != "--deja-a-jour" ] && git -C "$DOSSIER" rev-parse >/dev/null 2>&1; then
@@ -27,6 +28,19 @@ if [ ! -f "$WEB/index.html" ]; then
   exit 1
 fi
 command -v python3 >/dev/null || { echo "→ Installation de python3…"; apt-get update -q && apt-get install -y -q python3; }
+
+# Un port déjà utilisé par une autre application (hors Pistonville) ? On prend le suivant libre.
+systemctl stop pistonville 2>/dev/null || true
+port_pris() {
+  python3 -c "import socket,sys; s=socket.socket(); s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+try: s.bind(('0.0.0.0', $1))
+except OSError: sys.exit(0)
+sys.exit(1)"
+}
+while port_pris "$PORT"; do
+  echo "   Le port $PORT est déjà utilisé par une autre application, j'essaie $((PORT + 1))."
+  PORT=$((PORT + 1))
+done
 
 # 2. Le service : un petit serveur web en lecture seule, sous un utilisateur jetable.
 echo "→ Installation du service pistonville (port $PORT)…"
@@ -50,8 +64,15 @@ EOF
 systemctl daemon-reload
 systemctl enable -q pistonville
 systemctl restart pistonville
-sleep 1
-systemctl is-active --quiet pistonville && echo "✓ Pistonville tourne." || { echo "Le service n'a pas démarré :" >&2; journalctl -u pistonville -n 20 --no-pager; exit 1; }
+sleep 2
+# On vérifie que c'est bien le jeu qui répond sur ce port.
+if systemctl is-active --quiet pistonville && python3 -c "import urllib.request,sys; sys.exit(0 if b'Pistonville' in urllib.request.urlopen('http://127.0.0.1:$PORT/', timeout=5).read() else 1)" 2>/dev/null; then
+  echo "✓ Pistonville tourne sur le port $PORT."
+else
+  echo "Le service n'a pas démarré correctement :" >&2
+  journalctl -u pistonville -n 20 --no-pager
+  exit 1
+fi
 
 # 3. Les adresses.
 echo

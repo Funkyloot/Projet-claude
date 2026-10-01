@@ -31,7 +31,7 @@ la maison. Pour mettre à jour plus tard : `bash /opt/pistonville/pistonville/in
 
 La fenêtre affiche les adresses. **À la maison, sur le même Wi-Fi**, ouvre sur
 le téléphone l'adresse « Téléphone (même Wi-Fi) », par exemple
-`http://192.168.1.20:8080`. Si Windows demande d'autoriser Node.js sur le
+`http://192.168.1.20:8090` (le port est affiché). Si Windows demande d'autoriser Node.js sur le
 réseau, accepte pour les **réseaux privés**.
 
 ## 3. Hors de la maison : deux possibilités
