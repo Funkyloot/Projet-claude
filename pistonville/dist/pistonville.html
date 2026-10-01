@@ -6377,14 +6377,17 @@ body {
   }
 
   // pistonville/src/ville-vie.js
-  var PERIODE = 14;
+  var CASES_RUE = 6;
+  var CASES_ILOT = 10;
+  var PERIODE = CASES_RUE + 2 + CASES_ILOT;
   var PAS_RUE = PERIODE * T;
-  var LARGEUR_RUE = 4 * T;
+  var LARGEUR_RUE = CASES_RUE * T;
   var DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
   var CYCLE = 9;
+  var NOMS_DIRECTION3 = ["gauche", "face", "dos", "droite"];
   function voie(dir, k) {
     const base = k * PAS_RUE;
-    return [base + 46, base + 18, base + 18, base + 46][dir];
+    return [base + 72, base + 24, base + 24, base + 72][dir];
   }
   var Feux = class {
     constructor(n, graine) {
@@ -6435,21 +6438,21 @@ body {
         let cible = c3.vmax;
         if (!dedans) {
           c3.choix = null;
-          const avant = dx ? c3.x + dx * 11 : c3.y + dy * 11;
+          const avant = dx ? c3.x + dx * 23 : c3.y + dy * 23;
           const pos = dx ? c3.x : c3.y;
           const prochain = dx > 0 || dy > 0 ? (Math.floor(pos / PAS_RUE) + 1) * PAS_RUE : Math.floor(pos / PAS_RUE) * PAS_RUE + LARGEUR_RUE;
           const dist = (dx || dy) > 0 ? prochain - avant : avant - prochain;
           const kx = dx ? Math.round((prochain - (dx > 0 ? 0 : LARGEUR_RUE)) / PAS_RUE) : Math.floor(c3.x / PAS_RUE);
           const ky = dy ? Math.round((prochain - (dy > 0 ? 0 : LARGEUR_RUE)) / PAS_RUE) : Math.floor(c3.y / PAS_RUE);
-          if (dist < 10 && dist > -3 && this.feux.etat(kx, ky, !!dx, t) !== "vert") cible = 0;
-          else if (dist < 40 && dist > 0 && this.feux.etat(kx, ky, !!dx, t) !== "vert") cible = Math.min(cible, dist * 2);
+          if (dist < 22 && dist > -3 && this.feux.etat(kx, ky, !!dx, t) !== "vert") cible = 0;
+          else if (dist < 60 && dist > 0 && this.feux.etat(kx, ky, !!dx, t) !== "vert") cible = Math.min(cible, (dist - 18) * 2);
         } else if (!c3.choix) {
           c3.choix = this.choisir(c3, dedans);
         }
         const devant = (ox, oy) => {
           const rx = ox - c3.x, ry = oy - c3.y;
           const a = rx * dx + ry * dy, l = Math.abs(-rx * dy + ry * dx);
-          return a > 0 && a < 30 && l < 10;
+          return a > 0 && a < 62 && l < 20;
         };
         let gene = false;
         if (!dedans) {
@@ -6508,25 +6511,14 @@ body {
     }
     dessiner(ctx, camX, camY, W2, H2) {
       for (const c3 of this.voitures) {
-        if (c3.x < camX - 20 || c3.x > camX + W2 + 20 || c3.y < camY - 20 || c3.y > camY + H2 + 20) continue;
-        ctx.fillStyle = "rgba(30,28,40,0.28)";
-        ctx.save();
-        ctx.translate(Math.round(c3.x) + 2, Math.round(c3.y) + 2);
-        ctx.rotate(c3.angle + Math.PI / 2);
-        ctx.fillRect(-7, -11, 14, 23);
-        ctx.restore();
-        const s2 = spriteVoiture(c3.couleur, "#f4f1e8");
-        ctx.save();
-        ctx.translate(Math.round(c3.x), Math.round(c3.y));
-        ctx.rotate(c3.angle + Math.PI / 2);
-        ctx.drawImage(s2, -Math.floor(s2.width / 2), -Math.floor(s2.height / 2));
+        if (c3.x < camX - 40 || c3.x > camX + W2 + 40 || c3.y < camY - 40 || c3.y > camY + H2 + 40) continue;
+        dessinerVoitureTiny(ctx, spriteVoitureTiny(c3.couleur), c3.x, c3.y, c3.angle);
         if (c3.v < c3.vmax * 0.5) {
+          const fx = Math.cos(c3.angle), fy = Math.sin(c3.angle);
           ctx.fillStyle = "#ff3b30";
-          ctx.fillRect(-5, 10, 2, 1);
-          ctx.fillRect(3, 10, 2, 1);
+          for (const k of [-8, 8]) ctx.fillRect(Math.round(c3.x - fx * 21 - fy * k) - 1, Math.round(c3.y - fy * 21 + fx * k) - 1, 3, 3);
         }
-        ctx.restore();
-        if (c3.klaxon > 0.6) bulle(ctx, c3.x, c3.y - 14, "Pouet !");
+        if (c3.klaxon > 0.6) bulle(ctx, c3.x, c3.y - 26, "Pouet !");
       }
     }
   };
@@ -6535,8 +6527,8 @@ body {
       this.liste = [];
       for (let i = 0; i < nombre; i++) {
         const bx = Math.floor(alea() * ilots), by = Math.floor(alea() * ilots);
-        const x0 = (bx * PERIODE + 5) * T - 8, y0 = (by * PERIODE + 5) * T - 8;
-        const cote = 8 * T + 16;
+        const x0 = (bx * PERIODE + CASES_RUE + 1) * T - 8, y0 = (by * PERIODE + CASES_RUE + 1) * T - 8;
+        const cote = CASES_ILOT * T + 16;
         this.liste.push({
           x0,
           y0,
@@ -6545,6 +6537,7 @@ body {
           sens: alea() < 0.5 ? 1 : -1,
           v: 14 + alea() * 10,
           base: PERSONNAGES[Math.floor(alea() * PERSONNAGES.length)],
+          tenue: tenue(Math.floor(alea() * 60)),
           saut: 0,
           ecart: 0,
           bulle: null,
@@ -6592,7 +6585,7 @@ body {
         p3.ecartY = (p3.ecartY || 0) * Math.pow(0.2, dt);
         const dx = p3.x - joueur.x, dy = p3.y - joueur.y;
         const d2 = Math.hypot(dx, dy);
-        if (d2 < 16 && vitesse > 25) {
+        if (d2 < 28 && vitesse > 25) {
           p3.saut = 0.5;
           p3.ecartX = (p3.ecartX || 0) + dx / (d2 || 1) * 14;
           p3.ecartY = (p3.ecartY || 0) + dy / (d2 || 1) * 14;
@@ -6609,20 +6602,211 @@ body {
     dessiner(ctx, planche, t, camX, camY, W2, H2) {
       for (const p3 of this.liste) {
         if (p3.x < camX - 16 || p3.x > camX + W2 + 16 || p3.y < camY - 20 || p3.y > camY + H2 + 20) continue;
-        const pas = p3.saut > 0 ? 1 : Math.floor(t * 6 + p3.s) % 3 === 0 ? 0 : Math.floor(t * 6) % 2 + 1;
-        tuile(ctx, planche, idPersonnage(p3.base, p3.dir, pas), p3.x - 8, p3.y - 14 - (p3.saut > 0 ? 3 : 0));
+        const pas = p3.saut > 0 ? 1 : Math.floor(t * 6 + p3.s * 0.1) % 2 + 1;
+        dessinerPerso(ctx, p3.tenue, p3.x, p3.y + 6 - (p3.saut > 0 ? 3 : 0), NOMS_DIRECTION3[p3.dir] || "face", pas);
       }
-      for (const p3 of this.liste) if (p3.bulle) bulle(ctx, p3.x, p3.y - 16, p3.bulle.texte);
+      for (const p3 of this.liste) if (p3.bulle) bulle(ctx, p3.x, p3.y - 12, p3.bulle.texte);
     }
   };
 
+  // pistonville/src/ville-dessins.js
+  var VITRE = "#5f91c8";
+  var VITRE_CLAIRE = "#a9d4f2";
+  function cadre(c3, x, y, w, h, coul) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x, y, w, h);
+    c3.fillStyle = coul;
+    c3.fillRect(x + 1, y + 1, w - 2, h - 2);
+  }
+  var hauteurBatiment = (etages) => 32 + etages * 32;
+  function batimentModerne(c3, x, y, w, etages, o3) {
+    const h = hauteurBatiment(etages);
+    const yt = y + 32;
+    const yb = y + h;
+    c3.fillStyle = "rgba(38,24,46,0.25)";
+    c3.fillRect(x + 4, yb - 2, w, 6);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x, y, w, h);
+    c3.fillStyle = o3.toit;
+    c3.fillRect(x + 1, y + 1, w - 2, 30);
+    c3.fillStyle = melangerCouleur(o3.toit, "#ffffff", 0.22);
+    c3.fillRect(x + 1, y + 1, w - 2, 3);
+    c3.fillStyle = melangerCouleur(o3.toit, "#000000", 0.15);
+    c3.fillRect(x + 1, y + 27, w - 2, 4);
+    if (o3.clim !== false) {
+      cadre(c3, x + 8, y + 8, 14, 13, "#c0cbdc");
+      c3.fillStyle = "#8b9bb4";
+      c3.fillRect(x + 11, y + 11, 8, 7);
+      if (w > 90) {
+        cadre(c3, x + w - 30, y + 7, 20, 15, "#c0cbdc");
+        c3.fillStyle = "#8b9bb4";
+        c3.fillRect(x + w - 27, y + 10, 14, 2);
+      }
+    }
+    c3.fillStyle = o3.facade;
+    c3.fillRect(x + 1, yt, w - 2, h - 33);
+    c3.fillStyle = melangerCouleur(o3.facade, "#000000", 0.28);
+    c3.fillRect(x + 1, yt, w - 2, 3);
+    for (let e3 = 0; e3 < etages - 1; e3++) {
+      const fy = yt + 8 + e3 * 32;
+      for (let fx = x + 8; fx + 14 <= x + w - 8; fx += 24) {
+        cadre(c3, fx, fy, 14, 16, VITRE);
+        c3.fillStyle = VITRE_CLAIRE;
+        c3.fillRect(fx + 2, fy + 2, 10, 3);
+        c3.fillStyle = CONTOUR;
+        c3.fillRect(fx + 6, fy + 1, 2, 14);
+      }
+    }
+    const rz = yb - 32;
+    if (o3.enseigne) {
+      cadre(c3, x + 6, rz + 2, w - 12, 10, o3.enseigne);
+      if (o3.nom) texteEnseigne(c3, o3.nom, x + w / 2, rz + 7, o3.enseigne);
+    }
+    if (o3.auvent) for (let i = 0, ax = x + 1; ax < x + w - 1; ax += 8, i++) {
+      c3.fillStyle = i % 2 ? "#f4f6fb" : o3.auvent;
+      c3.fillRect(ax, rz + 12, Math.min(8, x + w - 1 - ax), 5);
+    }
+    if (o3.garage) {
+      const gx = x + Math.round((w - 48) / 2);
+      c3.fillStyle = CONTOUR;
+      c3.fillRect(gx, rz + 13, 48, 19);
+      c3.fillStyle = "#9aa1b5";
+      c3.fillRect(gx + 1, rz + 14, 46, 18);
+      c3.fillStyle = "#80879c";
+      for (let gy = rz + 16; gy < yb; gy += 4) c3.fillRect(gx + 1, gy, 46, 1);
+    } else {
+      if (o3.vitrine) {
+        cadre(c3, x + 6, rz + 17, w - 36, 14, o3.vitrine);
+        c3.fillStyle = "#ffffff";
+        c3.fillRect(x + 8, rz + 19, 6, 2);
+      }
+      const px = x + w - 24;
+      cadre(c3, px, rz + 14, 16, 18, "#7ab3e0");
+      c3.fillStyle = CONTOUR;
+      c3.fillRect(px + 7, rz + 15, 2, 17);
+    }
+  }
+  function texteEnseigne(c3, nom, x, y, fond) {
+    c3.save();
+    c3.font = '10px "Jersey 10", monospace';
+    c3.textAlign = "center";
+    c3.textBaseline = "middle";
+    const clair = parseInt(fond.slice(1, 3), 16) * 0.3 + parseInt(fond.slice(3, 5), 16) * 0.59 + parseInt(fond.slice(5, 7), 16) * 0.11 > 150;
+    c3.fillStyle = clair ? "#1f2a44" : "#ffffff";
+    c3.fillText(nom, Math.round(x), Math.round(y) + 1);
+    c3.restore();
+  }
+  function maisonModerne(c3, x, y, w, toit, facade) {
+    const h = 64;
+    c3.fillStyle = "rgba(38,24,46,0.25)";
+    c3.fillRect(x + 4, y + h - 2, w, 6);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x, y, w, h);
+    c3.fillStyle = melangerCouleur(toit, "#ffffff", 0.18);
+    c3.fillRect(x + 1, y + 1, w - 2, 15);
+    c3.fillStyle = toit;
+    c3.fillRect(x + 1, y + 16, w - 2, 15);
+    c3.fillStyle = melangerCouleur(toit, "#000000", 0.25);
+    for (let tx = x + 4; tx < x + w - 2; tx += 6) {
+      c3.fillRect(tx, y + 6, 1, 6);
+      c3.fillRect(tx + 3, y + 21, 1, 6);
+    }
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x + 1, y + 15, w - 2, 1);
+    c3.fillStyle = facade;
+    c3.fillRect(x + 1, y + 32, w - 2, 31);
+    c3.fillStyle = melangerCouleur(facade, "#000000", 0.25);
+    c3.fillRect(x + 1, y + 32, w - 2, 2);
+    const porte = x + Math.round(w / 2) - 8;
+    cadre(c3, porte, y + 44, 16, 20, "#8a5a3b");
+    c3.fillStyle = "#f2c14e";
+    c3.fillRect(porte + 12, y + 54, 2, 2);
+    for (const fx of [x + 6, x + w - 20]) {
+      cadre(c3, fx, y + 40, 14, 14, VITRE);
+      c3.fillStyle = VITRE_CLAIRE;
+      c3.fillRect(fx + 2, y + 42, 10, 3);
+    }
+  }
+  function conteneur2(c3, x, y, couleur) {
+    c3.fillStyle = "rgba(38,24,46,0.25)";
+    c3.fillRect(x + 3, y + 40, 32, 5);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x, y, 32, 44);
+    c3.fillStyle = melangerCouleur(couleur, "#ffffff", 0.15);
+    c3.fillRect(x + 1, y + 1, 30, 26);
+    c3.fillStyle = couleur;
+    c3.fillRect(x + 1, y + 27, 30, 16);
+    c3.fillStyle = melangerCouleur(couleur, "#000000", 0.25);
+    for (let k = x + 4; k < x + 30; k += 4) c3.fillRect(k, y + 28, 1, 14);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x + 1, y + 27, 30, 1);
+  }
+  function lampadaire(c3, x, y) {
+    c3.fillStyle = "rgba(38,24,46,0.25)";
+    c3.fillRect(x - 4, y - 1, 9, 3);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 1, y - 30, 3, 30);
+    c3.fillRect(x - 5, y - 33, 11, 5);
+    c3.fillStyle = "#8b9bb4";
+    c3.fillRect(x, y - 29, 1, 28);
+    c3.fillStyle = "#fff2a8";
+    c3.fillRect(x - 4, y - 29, 9, 1);
+  }
+  function banc(c3, x, y) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 12, y - 10, 24, 10);
+    c3.fillStyle = "#c98a55";
+    c3.fillRect(x - 11, y - 9, 22, 3);
+    c3.fillRect(x - 11, y - 5, 22, 3);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 10, y - 2, 2, 3);
+    c3.fillRect(x + 8, y - 2, 2, 3);
+  }
+  function poubelle(c3, x, y) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 5, y - 13, 10, 13);
+    c3.fillStyle = "#3fa34d";
+    c3.fillRect(x - 4, y - 12, 8, 11);
+    c3.fillStyle = "#65c46a";
+    c3.fillRect(x - 4, y - 12, 8, 2);
+  }
+  function borne(c3, x, y) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 4, y - 12, 8, 12);
+    c3.fillStyle = "#e4432d";
+    c3.fillRect(x - 3, y - 11, 6, 10);
+    c3.fillStyle = "#ff8a7a";
+    c3.fillRect(x - 3, y - 11, 2, 3);
+  }
+  function feuTricolore(c3, x, y, etat) {
+    c3.fillStyle = "rgba(38,24,46,0.25)";
+    c3.fillRect(x - 3, y - 1, 7, 3);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 1, y - 24, 3, 24);
+    c3.fillRect(x - 5, y - 40, 11, 18);
+    const r = etat === "rouge", o3 = etat === "orange", v2 = etat === "vert";
+    c3.fillStyle = r ? "#ff4a3a" : "#5a2a2a";
+    c3.fillRect(x - 3, y - 38, 7, 4);
+    c3.fillStyle = o3 ? "#ffb02e" : "#5a4a2a";
+    c3.fillRect(x - 3, y - 33, 7, 4);
+    c3.fillStyle = v2 ? "#5af07a" : "#2a4a2a";
+    c3.fillRect(x - 3, y - 28, 7, 4);
+  }
+  function fleurs2(c3, x, y, graine = 0) {
+    const cs = ["#e86ca6", "#f2c14e", "#ffffff", "#e4432d"];
+    for (let i = 0; i < 5; i++) {
+      c3.fillStyle = cs[(i + graine) % 4];
+      c3.fillRect(x + 2 + (i * 5 + graine) % 11, y + 3 + (i * 7 + graine) % 9, 3, 3);
+    }
+  }
+
   // pistonville/src/ville.js
   var ILOTS = 6;
-  var CASES = ILOTS * PERIODE + 4;
+  var CASES = ILOTS * PERIODE + CASES_RUE;
   var TAILLE_VILLE = CASES * T;
   var DUREE_BALADE = 120;
   var HAUT_HUD = 52;
-  var TAILLE_ILOT = 8 * T;
+  var TAILLE_ILOT = CASES_ILOT * T;
   var GRAINE_PLAN = 4242;
   var BATIMENTS2 = [
     { id: "garage", nom: "Garage Piston", ilot: [2, 2], toit: "#f2c14e" },
@@ -6640,7 +6824,24 @@ body {
     "mm.idi",
     "qqqqkq"
   ];
-  var origineIlot = (bx, by) => ({ x: (bx * PERIODE + 5) * T, y: (by * PERIODE + 5) * T });
+  var origineIlot = (bx, by) => ({ x: (bx * PERIODE + CASES_RUE + 1) * T, y: (by * PERIODE + CASES_RUE + 1) * T });
+  var STYLES_BATIMENTS = {
+    garage: { facade: "#aab4c8", toit: "#f2c14e", garage: true, enseigne: "#f2c14e" },
+    bureau: { facade: "#f2d7c4", toit: "#c2504d", vitrine: "#ffe6a8", enseigne: "#c2504d" },
+    concession: { facade: "#e6ebf2", toit: "#2f6fdb", vitrine: "#cfe8ff", enseigne: "#2f6fdb" },
+    pieces: { facade: "#e9f3e0", toit: "#3fa34d", vitrine: "#cfe8ff", auvent: "#3fa34d", enseigne: "#3fa34d" },
+    tombola: { facade: "#fbe3ef", toit: "#e86ca6", vitrine: "#ffd6ea", auvent: "#e86ca6", enseigne: "#e86ca6" },
+    cafe: { facade: "#f4e6c8", toit: "#8a5a3b", vitrine: "#fff0c8", auvent: "#d08a3e", enseigne: "#8a5a3b" }
+  };
+  function cone(c3, x, y) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 6, y - 2, 12, 3);
+    c3.fillRect(x - 4, y - 12, 8, 11);
+    c3.fillStyle = "#f39c33";
+    c3.fillRect(x - 3, y - 11, 6, 9);
+    c3.fillStyle = "#ffffff";
+    c3.fillRect(x - 3, y - 7, 6, 2);
+  }
   var centreCarrefour = (kx, ky) => ({ x: kx * PAS_RUE + LARGEUR_RUE / 2, y: ky * PAS_RUE + LARGEUR_RUE / 2 });
   var AFFICHES = 8;
   var Ville = class {
@@ -6649,6 +6850,7 @@ body {
      */
     constructor(o3) {
       this.planche = o3.planche;
+      this.tiny = o3.tiny || {};
       this.son = o3.son;
       this.memoire = o3.memoire || { records: {}, affiches: {} };
       this.memoire.records = this.memoire.records || {};
@@ -6675,7 +6877,7 @@ body {
       this.voiture.looks = o3.voiture.looks || [];
       this.voiture.braquageMin = 0.6;
       const garage = this.portes.find((g) => g.id === "garage");
-      this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h / 2, Math.PI / 2);
+      this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h + 18, Math.PI / 2);
       this.ignorer = "garage";
       this.camera = { x: this.voiture.x, y: this.voiture.y };
       this.temps = 0;
@@ -6714,177 +6916,194 @@ body {
     dessin(y, f) {
       this.statiques.push({ y, dessin: f });
     }
+    /** Pelouse d'un îlot (sous tout le reste). */
+    pelouse(o3, couleur = "#84c669") {
+      this.dessin(-1, (c3) => {
+        c3.fillStyle = couleur;
+        c3.fillRect(o3.x, o3.y, TAILLE_ILOT, TAILLE_ILOT);
+        for (let i = 0; i < 6; i++) {
+          const x = o3.x + 8 + hash2(o3.x, i, 3) * (TAILLE_ILOT - 24), y = o3.y + 8 + hash2(o3.y, i, 4) * (TAILLE_ILOT - 24);
+          tuileTiny(c3, this.tiny, "town", i % 3 === 0 ? 2 : 1, x, y);
+        }
+      });
+    }
+    /** Arbre Kenney Tiny Town : un obstacle rond au pied. */
+    arbre(x, y, n = 4) {
+      this.ajouter({ type: "cercle", x, y: y - 4, r: 6 });
+      this.dessin(y, (c3) => {
+        c3.fillStyle = "rgba(38,24,46,0.22)";
+        c3.fillRect(x - 6, y - 2, 12, 3);
+        tuileTiny(c3, this.tiny, "town", n, x - 8, y - 15);
+      });
+    }
+    /** Bâtiment où l'on entre : enseigne, porte sur le trottoir du bas, zone jaune devant. */
     ilotBatiment(o3, bat) {
-      const b2 = this.ajouter({ type: "rect", x: o3.x + 8, y: o3.y + 8, w: TAILLE_ILOT - 16, h: 88, bat });
-      this.dessin(b2.y + b2.h, (c3) => batimentSpecial(c3, b2, bat));
-      this.portes.push({ id: bat.id, nom: bat.nom, x: o3.x + 40, y: b2.y + b2.h + 4, w: 48, h: 22, couleur: bat.toit });
-      for (const dx of [16, TAILLE_ILOT - 16]) {
-        this.ajouter({ type: "cercle", x: o3.x + dx, y: b2.y + b2.h + 14, r: 5 });
-        this.dessin(b2.y + b2.h + 20, (c3) => objet(c3, this.planche, "jardiniere", o3.x + dx, b2.y + b2.h + 20));
-      }
+      this.pelouse(o3);
+      const style = STYLES_BATIMENTS[bat.id] || { facade: "#e6ebf2", toit: bat.toit };
+      const w = TAILLE_ILOT - 16, etages = bat.id === "bureau" ? 3 : 2;
+      const h = hauteurBatiment(etages);
+      const b2 = this.ajouter({ type: "rect", x: o3.x + 8, y: o3.y + TAILLE_ILOT - 8 - h, w, h, bat });
+      this.dessin(b2.y + b2.h, (c3) => batimentModerne(c3, b2.x, b2.y, b2.w, etages, { ...style, nom: bat.nom, enseigne: style.enseigne || bat.toit }));
+      const centre = bat.id === "garage" ? b2.x + w / 2 : b2.x + w - 16;
+      this.portes.push({ id: bat.id, nom: bat.nom, x: centre - 26, y: b2.y + b2.h + 2, w: 52, h: 22, couleur: bat.toit });
+      this.arbre(o3.x + 14, o3.y + 30, 16);
+      this.arbre(o3.x + TAILLE_ILOT - 14, o3.y + 26, 4);
+      this.dessin(o3.y + 40, (c3) => fleurs2(c3, o3.x + 60, o3.y + 20, bat.id.length));
     }
     ilotMaisons(o3, bx, by) {
-      for (let i = 0; i < 4; i++) {
-        const lx = o3.x + i % 2 * 64, ly = o3.y + Math.floor(i / 2) * 64;
-        const r = hash2(bx * 2 + i % 2, by * 2 + Math.floor(i / 2), 77);
-        const toit = ["#c2504d", "#4f7ddb", "#7a5a9e", "#3fa34d", "#d08a3e"][Math.floor(r * 5)];
-        const m = this.ajouter({ type: "rect", x: lx + 8, y: ly + 6, w: 48, h: 40 });
-        this.dessin(m.y + m.h, (c3) => maison(c3, m.x, m.y, m.w, m.h, toit));
-        this.maisons.push({ x: m.x + m.w / 2, y: m.y + m.h + 9 });
-        const ax = lx + (r < 0.5 ? 6 : 58), ay = ly + 60;
-        this.ajouter({ type: "cercle", x: ax, y: ay - 4, r: 5 });
-        this.dessin(ay, (c3) => objet(c3, this.planche, r < 0.3 ? "arbreRond" : r < 0.6 ? "buisson" : "arbreBoule", ax, ay));
+      this.pelouse(o3);
+      for (let i = 0; i < 2; i++) {
+        const r = hash2(bx * 2 + i, by, 77);
+        const toit = ["#e4432d", "#4f7ddb", "#8a6ad6", "#3fa34d", "#d08a3e"][Math.floor(r * 5)];
+        const facade = ["#f4e6c8", "#e6ebf2", "#f2d7c4", "#dfe7d0"][Math.floor(hash2(i, bx + by, 5) * 4)];
+        const x = o3.x + 8 + i * 80, y = o3.y + TAILLE_ILOT - 6 - 64;
+        const m = this.ajouter({ type: "rect", x, y, w: 64, h: 64 });
+        this.dessin(m.y + m.h, (c3) => maisonModerne(c3, m.x, m.y, m.w, toit, facade));
+        this.maisons.push({ x: x + 32, y: o3.y + TAILLE_ILOT + 8 });
+        this.arbre(x + (r < 0.5 ? 14 : 50), o3.y + 40, r < 0.3 ? 4 : r < 0.6 ? 16 : 28);
+        this.dessin(o3.y + 50, (c3) => fleurs2(c3, x + 20, o3.y + 52, i + bx));
       }
     }
     ilotImmeubles(o3, bx, by) {
+      this.pelouse(o3, "#c0cbdc");
       const r = hash2(bx, by, 9);
+      const facades = ["#e6ebf2", "#f2d7c4", "#dfe7d0", "#c9d3e6"];
+      const toits = ["#8b9bb4", "#4f7ddb", "#c2504d", "#6a7690"];
       if (r < 0.35) {
-        const m = this.ajouter({ type: "rect", x: o3.x + 10, y: o3.y + 6, w: 108, h: 80 });
-        const toit = ["#5c6278", "#4f7ddb", "#c2504d"][Math.floor(r * 9) % 3];
-        this.dessin(m.y + m.h, (c3) => immeuble(c3, m.x, m.y, m.w, m.h, toit, r));
-        this.dessin(0, (c3) => {
-          c3.fillStyle = "#b3b1c5";
-          c3.fillRect(o3.x + 6, o3.y + 90, 116, 34);
-        });
-        for (const dx of [24, 64, 104]) {
-          this.ajouter({ type: "cercle", x: o3.x + dx, y: o3.y + 104, r: 3 });
-          this.dessin(o3.y + 108, (c3) => objet(c3, this.planche, "banc", o3.x + dx, o3.y + 110));
-        }
+        const etages = 3, h = hauteurBatiment(etages);
+        const m = this.ajouter({ type: "rect", x: o3.x + 8, y: o3.y + TAILLE_ILOT - 8 - h, w: TAILLE_ILOT - 16, h });
+        this.dessin(m.y + m.h, (c3) => batimentModerne(c3, m.x, m.y, m.w, etages, { facade: facades[Math.floor(r * 4)], toit: toits[Math.floor(r * 9) % 4], vitrine: "#cfe8ff" }));
+        this.arbre(o3.x + 20, o3.y + 20, 28);
+        this.arbre(o3.x + TAILLE_ILOT - 20, o3.y + 20, 28);
       } else {
-        for (let i = 0; i < 4; i++) {
-          const lx = o3.x + i % 2 * 64, ly = o3.y + Math.floor(i / 2) * 64;
-          const rr = hash2(bx * 2 + i % 2, by * 2 + Math.floor(i / 2), 13);
-          const toit = ["#c2504d", "#4f7ddb", "#7a5a9e", "#5c6278", "#d08a3e"][Math.floor(rr * 5)];
-          const m = this.ajouter({ type: "rect", x: lx + 4, y: ly + 4, w: 56, h: 52 });
-          this.dessin(m.y + m.h, (c3) => immeuble(c3, m.x, m.y, m.w, m.h, toit, rr));
+        for (let i = 0; i < 2; i++) {
+          const rr = hash2(bx * 2 + i, by * 3, 13);
+          const etages = rr < 0.5 ? 2 : 3, h = hauteurBatiment(etages);
+          const m = this.ajouter({ type: "rect", x: o3.x + 6 + i * 78, y: o3.y + TAILLE_ILOT - 6 - h, w: 70, h });
+          this.dessin(m.y + m.h, (c3) => batimentModerne(c3, m.x, m.y, m.w, etages, { facade: facades[Math.floor(rr * 4)], toit: toits[Math.floor(rr * 7) % 4], vitrine: rr < 0.4 ? "#ffe6a8" : null }));
         }
+        this.dessin(o3.y + 20, (c3) => banc(c3, o3.x + 80, o3.y + 22));
+        this.ajouter({ type: "cercle", x: o3.x + 80, y: o3.y + 17, r: 6 });
       }
     }
     ilotParc(o3) {
+      this.pelouse(o3);
       const a = this.alea;
-      const bassin = this.ajouter({ type: "rect", x: o3.x + 32, y: o3.y + 40, w: 64, h: 40, eau: true });
+      const bassin = this.ajouter({ type: "rect", x: o3.x + 40, y: o3.y + 48, w: 80, h: 48, eau: true });
       this.dessin(0, (c3) => {
-        c3.fillStyle = "#d8cfa8";
-        c3.fillRect(o3.x + 58, o3.y, 12, TAILLE_ILOT);
-        c3.fillRect(o3.x, o3.y + 98, TAILLE_ILOT, 10);
-        c3.fillStyle = "#7e7c93";
+        c3.fillStyle = "#ead9ab";
+        c3.fillRect(o3.x + 72, o3.y, 16, TAILLE_ILOT);
+        c3.fillRect(o3.x, o3.y + 120, TAILLE_ILOT, 14);
+        c3.fillStyle = CONTOUR;
+        c3.fillRect(bassin.x - 3, bassin.y - 3, bassin.w + 6, bassin.h + 6);
+        c3.fillStyle = "#c0cbdc";
         c3.fillRect(bassin.x - 2, bassin.y - 2, bassin.w + 4, bassin.h + 4);
-        c3.fillStyle = "#59b6d8";
+        c3.fillStyle = "#75e3ff";
         c3.fillRect(bassin.x, bassin.y, bassin.w, bassin.h);
-        c3.fillStyle = "#9fdcef";
-        c3.fillRect(bassin.x + 8, bassin.y + 10, 10, 1);
-        c3.fillRect(bassin.x + 36, bassin.y + 26, 12, 1);
+        c3.fillStyle = "#d9f7ff";
+        c3.fillRect(bassin.x + 10, bassin.y + 12, 12, 2);
+        c3.fillRect(bassin.x + 46, bassin.y + 30, 14, 2);
       });
-      for (let i = 0; i < 10; i++) {
-        const x = o3.x + 10 + a() * (TAILLE_ILOT - 20), y = o3.y + 14 + a() * (TAILLE_ILOT - 24);
-        if (x > bassin.x - 12 && x < bassin.x + bassin.w + 12 && y > bassin.y - 8 && y < bassin.y + bassin.h + 16) continue;
-        if (Math.abs(x - (o3.x + 64)) < 14 || Math.abs(y - (o3.y + 103)) < 14) continue;
-        this.ajouter({ type: "cercle", x, y: y - 4, r: 5 });
-        const nom = ["arbre", "arbreRond", "arbreBoule", "sapin"][Math.floor(a() * 4)];
-        this.dessin(y, (c3) => objet(c3, this.planche, nom, x, y));
+      for (let i = 0; i < 12; i++) {
+        const x = o3.x + 12 + a() * (TAILLE_ILOT - 24), y = o3.y + 18 + a() * (TAILLE_ILOT - 28);
+        if (x > bassin.x - 14 && x < bassin.x + bassin.w + 14 && y > bassin.y - 8 && y < bassin.y + bassin.h + 20) continue;
+        if (Math.abs(x - (o3.x + 80)) < 18 || Math.abs(y - (o3.y + 127)) < 18) continue;
+        this.arbre(x, y, [4, 16, 28, 3, 27][Math.floor(a() * 5)]);
+      }
+      for (const dx of [36, 124]) {
+        this.ajouter({ type: "cercle", x: o3.x + dx, y: o3.y + 113, r: 6 });
+        this.dessin(o3.y + 118, (c3) => banc(c3, o3.x + dx, o3.y + 118));
       }
     }
     /** Arène de drift : un grand parking vide, des cônes autour. */
     ilotArene(o3) {
       this.arene = { x: o3.x, y: o3.y, w: TAILLE_ILOT, h: TAILLE_ILOT };
-      this.dessin(0, (c3) => {
-        c3.fillStyle = "#62697f";
+      this.dessin(-1, (c3) => {
+        c3.fillStyle = "#58678a";
         c3.fillRect(o3.x - 4, o3.y - 4, TAILLE_ILOT + 8, TAILLE_ILOT + 8);
         c3.fillStyle = "#f2c14e";
-        for (let i = 0; i < TAILLE_ILOT; i += 12) {
-          c3.fillRect(o3.x + i, o3.y - 4, 6, 3);
-          c3.fillRect(o3.x + i, o3.y + TAILLE_ILOT + 1, 6, 3);
+        for (let i = 0; i < TAILLE_ILOT; i += 16) {
+          c3.fillRect(o3.x + i, o3.y - 4, 8, 3);
+          c3.fillRect(o3.x + i, o3.y + TAILLE_ILOT + 1, 8, 3);
         }
-        c3.strokeStyle = "#d9d6e6";
+        c3.strokeStyle = "#e8e4d6";
         c3.lineWidth = 2;
         c3.beginPath();
-        c3.arc(o3.x + 64, o3.y + 64, 30, 0, Math.PI * 2);
+        c3.arc(o3.x + 80, o3.y + 80, 40, 0, Math.PI * 2);
         c3.stroke();
       });
-      for (const [dx, dy] of [[64, 64]]) {
-        this.ajouter({ type: "cercle", x: o3.x + dx, y: o3.y + dy, r: 5 });
-        this.dessin(o3.y + dy + 6, (c3) => objet(c3, this.planche, "cone", o3.x + dx, o3.y + dy + 6));
-      }
+      this.ajouter({ type: "cercle", x: o3.x + 80, y: o3.y + 80, r: 6 });
+      this.dessin(o3.y + 86, (c3) => cone(c3, o3.x + 80, o3.y + 86));
     }
     ilotParking(o3) {
-      this.dessin(0, (c3) => {
-        c3.fillStyle = "#62697f";
+      this.dessin(-1, (c3) => {
+        c3.fillStyle = "#58678a";
         c3.fillRect(o3.x, o3.y, TAILLE_ILOT, TAILLE_ILOT);
-        c3.fillStyle = "#d9d6e6";
-        for (let x = o3.x + 8; x <= o3.x + TAILLE_ILOT - 8; x += 20) {
-          c3.fillRect(x, o3.y + 6, 1, 28);
-          c3.fillRect(x, o3.y + TAILLE_ILOT - 34, 1, 28);
+        c3.fillStyle = "#e8e4d6";
+        for (let x = o3.x + 6; x <= o3.x + TAILLE_ILOT - 6; x += 37) {
+          c3.fillRect(x, o3.y + 8, 2, 54);
+          c3.fillRect(x, o3.y + TAILLE_ILOT - 62, 2, 54);
         }
       });
-      for (let x = o3.x + 18; x < o3.x + TAILLE_ILOT - 8; x += 20) {
-        if (this.alea() < 0.6) this.voitureGaree(x, o3.y + 20, false);
-        if (this.alea() < 0.6) this.voitureGaree(x, o3.y + TAILLE_ILOT - 20, false);
+      for (let i = 0; i < 4; i++) {
+        const x = o3.x + 25 + i * 37;
+        if (this.alea() < 0.7) this.voitureGaree(x, o3.y + 36, false);
+        if (this.alea() < 0.7) this.voitureGaree(x, o3.y + TAILLE_ILOT - 36, false);
       }
     }
-    /** Port : entrepôts et conteneurs empilés, ruelles entre eux. */
+    /** Port : entrepôt, conteneurs en rangées, allées entre eux. */
     ilotPort(o3, bx) {
-      this.dessin(0, (c3) => {
-        c3.fillStyle = "#aaa8bd";
+      this.dessin(-1, (c3) => {
+        c3.fillStyle = "#c0cbdc";
         c3.fillRect(o3.x, o3.y, TAILLE_ILOT, TAILLE_ILOT);
       });
+      const couleurs = ["#e4432d", "#2f6fdb", "#3fa34d", "#f39c33"];
       if (bx % 2 === 0) {
-        const m = this.ajouter({ type: "rect", x: o3.x + 6, y: o3.y + 6, w: 116, h: 64 });
-        this.dessin(m.y + m.h, (c3) => immeuble(c3, m.x, m.y, m.w, m.h, "#7e7c93", 0.7));
+        const m = this.ajouter({ type: "rect", x: o3.x + 8, y: o3.y + 6, w: TAILLE_ILOT - 16, h: hauteurBatiment(1) });
+        this.dessin(m.y + m.h, (c3) => batimentModerne(c3, m.x, m.y, m.w, 1, { facade: "#aab4c8", toit: "#8b9bb4", garage: true }));
       }
-      const couleurs = ["#c2504d", "#2f6fdb", "#3fa34d", "#f39c33"];
+      const y0 = bx % 2 === 0 ? o3.y + 100 : o3.y + 20;
       for (let i = 0; i < 4; i++) {
-        const x = o3.x + 8 + i * 30, y = o3.y + (bx % 2 === 0 ? 84 : 14 + i % 2 * 50);
-        const coul = couleurs[(i + bx) % 4];
-        const r = this.ajouter({ type: "rect", x, y, w: 22, h: 34 });
-        this.dessin(r.y + r.h, (c3) => {
-          c3.fillStyle = "#3a3550";
-          c3.fillRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
-          c3.fillStyle = coul;
-          c3.fillRect(r.x, r.y, r.w, r.h);
-          c3.fillStyle = "rgba(0,0,0,0.18)";
-          for (let k = 3; k < r.w; k += 4) c3.fillRect(r.x + k, r.y, 1, r.h);
-        });
+        for (let j = 0; j < (bx % 2 === 0 ? 1 : 2); j++) {
+          const x = o3.x + 8 + i * 38, y = y0 + j * 64;
+          const coul = couleurs[(i + j + bx) % 4];
+          const r = this.ajouter({ type: "rect", x, y, w: 32, h: 44 });
+          this.dessin(r.y + r.h, (c3) => conteneur2(c3, r.x, r.y, coul));
+        }
       }
     }
     voitureGaree(x, y, horizontale) {
       const couleur = ["#c2504d", "#4f7ddb", "#f4f1e8", "#3fa34d", "#8a6ad6", "#2a2838"][Math.floor(this.alea() * 6)];
-      const ob = horizontale ? { type: "rect", x: x - 11, y: y - 7, w: 22, h: 14 } : { type: "rect", x: x - 7, y: y - 11, w: 14, h: 22 };
+      const ob = horizontale ? { type: "rect", x: x - 22, y: y - 13, w: 44, h: 26 } : { type: "rect", x: x - 13, y: y - 22, w: 26, h: 44 };
       ob.voiture = true;
       this.ajouter(ob);
-      this.dessin(y + 10, (c3) => {
-        const s2 = spriteVoiture(couleur);
-        c3.save();
-        c3.translate(x, y);
-        if (horizontale) c3.rotate(Math.PI / 2);
-        c3.drawImage(s2, -Math.floor(s2.width / 2), -Math.floor(s2.height / 2));
-        c3.restore();
-      });
+      this.dessin(y + 22, (c3) => dessinerVoitureTiny(c3, spriteVoitureTiny(couleur), x, y, horizontale ? 0 : Math.PI / 2));
     }
-    /** Mobilier du trottoir : lampadaires, boîtes aux lettres, bornes, poubelles. */
+    /** Mobilier du trottoir : lampadaires, poubelles, bornes ; jamais devant une porte. */
     trottoirs(o3, bat, type) {
       const a = this.alea;
-      const bord = 6;
       const cotes = [
-        (s2) => ({ x: o3.x + s2, y: o3.y - T + bord + 9 }),
-        (s2) => ({ x: o3.x + s2, y: o3.y + TAILLE_ILOT + T - bord }),
-        (s2) => ({ x: o3.x - T + bord, y: o3.y + s2 + 8 }),
-        (s2) => ({ x: o3.x + TAILLE_ILOT + T - bord, y: o3.y + s2 + 8 })
+        (s2) => ({ x: o3.x + s2, y: o3.y - 3 }),
+        // trottoir du haut
+        (s2) => ({ x: o3.x + s2, y: o3.y + TAILLE_ILOT + 13 }),
+        // trottoir du bas (côté portes)
+        (s2) => ({ x: o3.x - 8, y: o3.y + s2 }),
+        (s2) => ({ x: o3.x + TAILLE_ILOT + 8, y: o3.y + s2 })
       ];
       cotes.forEach((pos, ci) => {
-        for (let s2 = 16; s2 < TAILLE_ILOT; s2 += 32) {
-          if (bat && ci === 1 && s2 > 24 && s2 < 104) continue;
+        for (let s2 = 48; s2 < TAILLE_ILOT - 32; s2 += 32) {
           if (type === "d") continue;
+          if (ci === 1 && s2 === 80) continue;
           const p3 = pos(s2);
           const r = a();
-          let nom = null;
-          if (s2 % 64 === 16) nom = "lampadaire";
-          else if (type === "m" && r < 0.18) nom = "boiteAuxLettres";
-          else if (r < 0.12) nom = "borneIncendie";
-          else if (r < 0.2) nom = "poubelle";
-          if (!nom) continue;
-          if (nom === "lampadaire") this.lampes.push({ x: p3.x, y: p3.y - 26 });
-          this.ajouter({ type: "cercle", x: p3.x, y: p3.y - 3, r: nom === "lampadaire" ? 3 : 4 });
-          this.dessin(p3.y, (c3) => objet(c3, this.planche, nom, p3.x, p3.y));
+          let quoi = null;
+          if (s2 !== 80) quoi = "lampadaire";
+          else if (r < 0.12) quoi = "borne";
+          else if (r < 0.22) quoi = "poubelle";
+          if (!quoi) continue;
+          if (quoi === "lampadaire") this.lampes.push({ x: p3.x, y: p3.y - 30 });
+          this.ajouter({ type: "cercle", x: p3.x, y: p3.y - 3, r: 4 });
+          this.dessin(p3.y, (c3) => ({ lampadaire, borne, poubelle })[quoi](c3, p3.x, p3.y));
         }
       });
     }
@@ -6928,7 +7147,7 @@ body {
             continue;
           }
           for (let i = 0; i < 3; i++) {
-            const d2 = s2 + i * 16;
+            const d2 = s2 + i * 22;
             this.bonus.push({ type: "piece", x: horizontal ? d2 : milieu, y: horizontal ? milieu : d2, pris: false });
           }
         }
@@ -6937,8 +7156,8 @@ body {
       for (let i = 0; i < 8; i++) {
         const bx = Math.floor(a() * ILOTS), by = Math.floor(a() * ILOTS);
         const o3 = origineIlot(bx, by);
-        const x = o3.x + 20 + a() * 88, y = o3.y + TAILLE_ILOT + 9;
-        this.fans.push({ x, y, base: PERSONNAGES[Math.floor(a() * PERSONNAGES.length)], content: 0, vu: false });
+        const x = o3.x + 20 + a() * (TAILLE_ILOT - 40), y = o3.y + TAILLE_ILOT + 14;
+        this.fans.push({ x, y, base: PERSONNAGES[Math.floor(a() * PERSONNAGES.length)], tenue: tenue(Math.floor(a() * 60)), content: 0, vu: false });
       }
     }
     // --- Défis -----------------------------------------------------------------------------
@@ -6948,15 +7167,15 @@ body {
         { id: "sprint-nord", type: "sprint", nom: "Sprint du Nord", ...c3(1, 1), etapes: [c3(5, 1), c3(5, 3), c3(3, 0)] },
         { id: "sprint-port", type: "sprint", nom: "Sprint du Port", ...c3(4, 4), etapes: [c3(0, 6), c3(6, 6), c3(6, 4)] },
         { id: "sprint-centre", type: "sprint", nom: "Tour du Centre", ...c3(2, 5), etapes: [c3(1, 2), c3(4, 2), c3(4, 5)] },
-        { id: "livraison", type: "livraison", nom: "Livraison express", x: 3 * PAS_RUE + 120, y: 4 * PAS_RUE + LARGEUR_RUE / 2 },
-        { id: "livraison-2", type: "livraison", nom: "Colis du port", x: 1 * PAS_RUE + 120, y: 5 * PAS_RUE + LARGEUR_RUE / 2 },
-        { id: "drift", type: "drift", nom: "Ar\xE8ne de drift", x: this.arene.x + 64, y: this.arene.y + 110 }
+        { id: "livraison", type: "livraison", nom: "Livraison express", x: 3 * PAS_RUE + LARGEUR_RUE + 96, y: 4 * PAS_RUE + LARGEUR_RUE / 2 },
+        { id: "livraison-2", type: "livraison", nom: "Colis du port", x: 1 * PAS_RUE + LARGEUR_RUE + 96, y: 5 * PAS_RUE + LARGEUR_RUE / 2 },
+        { id: "drift", type: "drift", nom: "Ar\xE8ne de drift", x: this.arene.x + 80, y: this.arene.y + 136 }
       ];
       for (const d2 of this.defis) d2.fait = false;
       this.radars = [
-        { id: "radar-a", x: 1 * PAS_RUE + 140, y: 3 * PAS_RUE + 46 },
-        { id: "radar-b", x: 5 * PAS_RUE + 46, y: 2 * PAS_RUE + 140 },
-        { id: "radar-c", x: 3 * PAS_RUE + 140, y: 1 * PAS_RUE + 18 }
+        { id: "radar-a", x: 1 * PAS_RUE + LARGEUR_RUE + 96, y: 3 * PAS_RUE + 72 },
+        { id: "radar-b", x: 5 * PAS_RUE + 72, y: 2 * PAS_RUE + LARGEUR_RUE + 96 },
+        { id: "radar-c", x: 3 * PAS_RUE + LARGEUR_RUE + 96, y: 1 * PAS_RUE + 24 }
       ].map((r) => ({ ...r, attente: 0 }));
       this.cameras = [[2, 2], [3, 3], [4, 2], [1, 4], [5, 5]].map(([kx, ky]) => ({ kx, ky }));
       const a = creerAlea(GRAINE_PLAN + 1);
@@ -6968,7 +7187,7 @@ body {
         if (!zones.includes(PLAN[by][bx])) continue;
         if (this.affiches.some((f) => f.bx === bx && f.by === by)) continue;
         const o3 = origineIlot(bx, by);
-        const x = o3.x + 10 + a() * 108, y = o3.y + 10 + a() * 108;
+        const x = o3.x + 12 + a() * (TAILLE_ILOT - 24), y = o3.y + 12 + a() * (TAILLE_ILOT - 24);
         if (!this.libre(x, y, 12)) continue;
         this.affiches.push({ id: `affiche-${this.affiches.length + 1}`, x, y, bx, by });
       }
@@ -6992,7 +7211,7 @@ body {
         this.defi = { d: d2, type: "livraison", t: 0, limite, cible: dest, intact: 1 };
         this.annonce("Colis fragile ! Livre-le sans casse.", "#ffe066");
       } else if (d2.type === "drift") {
-        this.defi = { d: d2, type: "drift", t: 0, limite: 20, score: 0, cible: { x: this.arene.x + 64, y: this.arene.y + 64 } };
+        this.defi = { d: d2, type: "drift", t: 0, limite: 20, score: 0, cible: { x: this.arene.x + 80, y: this.arene.y + 80 } };
         this.annonce("20 s : drifte dans l'ar\xE8ne !", "#c4b5fd");
       }
       this.son?.bip(660, 0.15);
@@ -7002,21 +7221,21 @@ body {
       const v2 = this.voiture;
       for (const d2 of this.defis) {
         if (this.defi || d2.fait) continue;
-        if ((d2.x - v2.x) ** 2 + (d2.y - v2.y) ** 2 < 18 * 18) this.lancerDefi(d2);
+        if ((d2.x - v2.x) ** 2 + (d2.y - v2.y) ** 2 < 28 * 28) this.lancerDefi(d2);
       }
       const f = this.defi;
       if (!f) return;
       f.t += dt;
-      const proche = (p3, r = 22) => (p3.x - v2.x) ** 2 + (p3.y - v2.y) ** 2 < r * r;
+      const proche = (p3, r = 32) => (p3.x - v2.x) ** 2 + (p3.y - v2.y) ** 2 < r * r;
       if (f.type === "sprint") {
-        if (proche(f.cible, 26)) {
+        if (proche(f.cible, 40)) {
           f.etape++;
           this.son?.piece();
           if (f.etape >= f.d.etapes.length) return this.finDefi(true);
           f.cible = f.d.etapes[f.etape];
         }
       } else if (f.type === "livraison") {
-        if (proche(f.cible, 18)) return this.finDefi(true);
+        if (proche(f.cible, 28)) return this.finDefi(true);
       } else if (f.type === "drift") {
         const dans = v2.x > this.arene.x - 8 && v2.x < this.arene.x + this.arene.w + 8 && v2.y > this.arene.y - 8 && v2.y < this.arene.y + this.arene.h + 8;
         if (dans && v2.vitesse > 45 && v2.direction !== 0) f.score += dt * (v2.drift ? 10 : 4) * clamp(v2.vitesse / 80, 0.6, 1.4);
@@ -7126,7 +7345,7 @@ body {
       if (this.temps >= DUREE_BALADE) this.fini = true;
     }
     chocs(v2) {
-      const m = 12;
+      const m = 24;
       if (v2.x < m || v2.x > TAILLE_VILLE - m) {
         v2.x = clamp(v2.x, m, TAILLE_VILLE - m);
         v2.vx *= -0.5;
@@ -7155,7 +7374,7 @@ body {
     /** Chocs avec la circulation : la voiture d'en face ne bouge pas, on rebondit. */
     chocsTrafic(v2) {
       for (const t of this.trafic.voitures) {
-        if ((t.x - v2.x) ** 2 + (t.y - v2.y) ** 2 > 28 * 28) continue;
+        if ((t.x - v2.x) ** 2 + (t.y - v2.y) ** 2 > 56 * 56) continue;
         const c3 = recouvrement(v2, t);
         if (!c3) continue;
         v2.x -= c3.nx * c3.prof;
@@ -7181,7 +7400,7 @@ body {
     impact(v2, c3, choc) {
       this.son?.choc(choc);
       this.secousse = Math.min(4, choc / 30);
-      for (let i = 0; i < 6; i++) this.particules.push({ x: v2.x - c3.nx * 10, y: v2.y - c3.ny * 10, vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, vie: 0.25 });
+      for (let i = 0; i < 6; i++) this.particules.push({ x: v2.x - c3.nx * 20, y: v2.y - c3.ny * 20, vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, vie: 0.25 });
       if (choc > 60 && this.defi?.type === "livraison") {
         this.defi.intact = Math.max(0.25, this.defi.intact - 0.25);
         this.message("Le colis !", "#fca5a5", v2);
@@ -7207,7 +7426,7 @@ body {
           r.attente -= dt;
           continue;
         }
-        if ((r.x - v2.x) ** 2 + (r.y - v2.y) ** 2 > 22 * 22) continue;
+        if ((r.x - v2.x) ** 2 + (r.y - v2.y) ** 2 > 36 * 36) continue;
         r.attente = 4;
         const kmh2 = Math.round(v2.vitesse * 0.8);
         const seuil = Math.round(v2.p.vmax * 0.8 * 0.7);
@@ -7224,7 +7443,7 @@ body {
     }
     ramasser(v2) {
       for (const b2 of this.bonus) {
-        if (b2.pris || (b2.x - v2.x) ** 2 + (b2.y - v2.y) ** 2 > 14 * 14) continue;
+        if (b2.pris || (b2.x - v2.x) ** 2 + (b2.y - v2.y) ** 2 > 22 * 22) continue;
         b2.pris = true;
         if (b2.type === "piece") {
           this.gains.argent += 20;
@@ -7237,7 +7456,7 @@ body {
         }
       }
       for (const f of this.fans) {
-        if (f.vu || (f.x - v2.x) ** 2 + (f.y - v2.y) ** 2 > 30 * 30) continue;
+        if (f.vu || (f.x - v2.x) ** 2 + (f.y - v2.y) ** 2 > 40 * 40) continue;
         f.vu = true;
         f.content = 2;
         this.gains.fans += 5;
@@ -7246,7 +7465,7 @@ body {
         this.son?.caisse();
       }
       for (const a of this.affiches) {
-        if (this.memoire.affiches[a.id] || (a.x - v2.x) ** 2 + (a.y - v2.y) ** 2 > 18 * 18) continue;
+        if (this.memoire.affiches[a.id] || (a.x - v2.x) ** 2 + (a.y - v2.y) ** 2 > 28 * 28) continue;
         this.memoire.affiches[a.id] = true;
         const n = Object.keys(this.memoire.affiches).length;
         this.gagner({ recherche: 3, exp: 8 }, `Affiche Piston trouv\xE9e ! (${n}/${AFFICHES})`);
@@ -7271,7 +7490,7 @@ body {
       const p3 = this.entree;
       this.entree = null;
       if (!p3) return;
-      this.voiture.placer(p3.x + p3.w / 2, p3.y + p3.h / 2, Math.PI / 2);
+      this.voiture.placer(p3.x + p3.w / 2, p3.y + p3.h + 18, Math.PI / 2);
     }
     message(texteMsg, couleur, ancre) {
       this.messages.push({ texte: texteMsg, couleur, x: ancre.x, y: ancre.y, vie: 1, max: 1 });
@@ -7287,36 +7506,58 @@ body {
       canvas.height = TAILLE_VILLE;
       const c3 = canvas.getContext("2d");
       c3.imageSmoothingEnabled = false;
-      c3.fillStyle = "#38cbab";
+      c3.fillStyle = "#84c669";
       c3.fillRect(0, 0, TAILLE_VILLE, TAILLE_VILLE);
+      const BITUME = "#52607c", TROTTOIR = "#d4d9e3", BORDURE = "#8b9bb4";
       for (let gy = 0; gy < CASES; gy++) for (let gx = 0; gx < CASES; gx++) {
         const mx = gx % PERIODE, my = gy % PERIODE;
-        const rue = mx < 4 || my < 4;
-        const trottoir = !rue && (mx === 4 || mx === 13 || my === 4 || my === 13);
+        const rue = mx < CASES_RUE || my < CASES_RUE;
+        const trottoir = !rue && (mx === CASES_RUE || mx === PERIODE - 1 || my === CASES_RUE || my === PERIODE - 1);
         const x = gx * T, y = gy * T;
-        if (rue) tuile(c3, this.planche, 441, x, y);
-        else if (trottoir) tuile(c3, this.planche, 36, x, y);
-        else if (hash2(gx, gy, 5) < 0.05) {
-          c3.fillStyle = "#33bdae";
-          c3.fillRect(x + 4, y + 6, 2, 2);
+        if (rue) {
+          c3.fillStyle = BITUME;
+          c3.fillRect(x, y, T, T);
+        } else if (trottoir) {
+          c3.fillStyle = TROTTOIR;
+          c3.fillRect(x, y, T, T);
+          c3.fillStyle = "#c4cad6";
+          c3.fillRect(x + T - 1, y, 1, T);
+          c3.fillRect(x, y + T - 1, T, 1);
         }
       }
-      c3.fillStyle = "#d9d6e6";
+      c3.fillStyle = BORDURE;
+      for (let k = 0; k <= ILOTS; k++) {
+        const a = k * PAS_RUE, b2 = a + LARGEUR_RUE;
+        for (let s2 = 0; s2 < TAILLE_VILLE; s2 += PAS_RUE) {
+          const d2 = s2 + LARGEUR_RUE, f = s2 + PAS_RUE;
+          if (f > TAILLE_VILLE) continue;
+          if (a > 0) {
+            c3.fillRect(a - 2, d2, 2, f - d2);
+            c3.fillRect(d2, a - 2, f - d2, 2);
+          }
+          if (b2 < TAILLE_VILLE) {
+            c3.fillRect(b2, d2, 2, f - d2);
+            c3.fillRect(d2, b2, f - d2, 2);
+          }
+        }
+      }
+      c3.fillStyle = "#e8e4d6";
       for (let k = 0; k <= ILOTS; k++) {
         const m = k * PAS_RUE + LARGEUR_RUE / 2;
         for (let s2 = 0; s2 < TAILLE_VILLE; s2 += 24) {
-          if (s2 % PAS_RUE < LARGEUR_RUE) continue;
+          if (s2 % PAS_RUE < LARGEUR_RUE + 18 || s2 % PAS_RUE > PAS_RUE - 30) continue;
           c3.fillRect(s2, m - 1, 12, 2);
           c3.fillRect(m - 1, s2, 2, 12);
         }
       }
+      c3.fillStyle = "#f4f6fb";
       for (let kx = 0; kx <= ILOTS; kx++) for (let ky = 0; ky <= ILOTS; ky++) {
         const x0 = kx * PAS_RUE, y0 = ky * PAS_RUE;
-        for (let i = 2; i < LARGEUR_RUE; i += 6) {
-          c3.fillRect(x0 + i, y0 + LARGEUR_RUE + 1, 3, 10);
-          c3.fillRect(x0 + LARGEUR_RUE + 1, y0 + i, 10, 3);
-          if (ky > 0) c3.fillRect(x0 + i, y0 - 11, 3, 10);
-          if (kx > 0) c3.fillRect(x0 - 11, y0 + i, 10, 3);
+        for (let i = 4; i < LARGEUR_RUE - 4; i += 12) {
+          if (ky < ILOTS) c3.fillRect(x0 + i, y0 + LARGEUR_RUE + 2, 7, 13);
+          if (ky > 0) c3.fillRect(x0 + i, y0 - 15, 7, 13);
+          if (kx < ILOTS) c3.fillRect(x0 + LARGEUR_RUE + 2, y0 + i, 13, 7);
+          if (kx > 0) c3.fillRect(x0 - 15, y0 + i, 13, 7);
         }
       }
       for (const p3 of this.portes) {
@@ -7343,16 +7584,16 @@ body {
       canvas.height = n;
       const c3 = canvas.getContext("2d");
       const e3 = n / TAILLE_VILLE;
-      c3.fillStyle = "#38cbab";
+      c3.fillStyle = "#84c669";
       c3.fillRect(0, 0, n, n);
-      c3.fillStyle = "#5c6278";
+      c3.fillStyle = "#52607c";
       for (let k = 0; k <= ILOTS; k++) {
         const m = k * PAS_RUE * e3;
         c3.fillRect(m, 0, LARGEUR_RUE * e3, n);
         c3.fillRect(0, m, n, LARGEUR_RUE * e3);
       }
       for (const ob of this.obstacles) if (ob.type === "rect" && !ob.voiture) {
-        c3.fillStyle = ob.bat ? ob.bat.toit : ob.eau ? "#59b6d8" : "#9896ab";
+        c3.fillStyle = ob.bat ? ob.bat.toit : ob.eau ? "#75e3ff" : "#c0cbdc";
         c3.fillRect(ob.x * e3, ob.y * e3, Math.max(1, ob.w * e3), Math.max(1, ob.h * e3));
       }
       if (this.arene) {
@@ -7381,12 +7622,12 @@ body {
       }
       for (const d2 of this.defis) {
         if (d2.fait || this.defi || !visible(d2.x, d2.y)) continue;
-        anneau(ctx, d2.x, d2.y, 16 + Math.sin(t * 4) * 2, d2.type === "drift" ? "#c4b5fd" : d2.type === "livraison" ? "#f39c33" : "#ffe066");
-        texte(ctx, { sprint: "SPRINT", livraison: "COLIS", drift: "DRIFT" }[d2.type], d2.x, d2.y - 24, 9, "#ffffff", "center");
+        anneau(ctx, d2.x, d2.y, 24 + Math.sin(t * 4) * 2, d2.type === "drift" ? "#c4b5fd" : d2.type === "livraison" ? "#f39c33" : "#ffe066");
+        texte(ctx, { sprint: "SPRINT", livraison: "COLIS", drift: "DRIFT" }[d2.type], d2.x, d2.y - 32, 9, "#ffffff", "center");
       }
       if (this.defi) {
         const c3 = this.defi.cible;
-        anneau(ctx, c3.x, c3.y, 20 + Math.sin(t * 6) * 3, "#9fe870");
+        anneau(ctx, c3.x, c3.y, 30 + Math.sin(t * 6) * 3, "#9fe870");
         if (this.defi.type === "livraison") bulle(ctx, c3.x, c3.y - 18, "Ici !");
       }
       for (const r of this.radars) if (visible(r.x, r.y)) radar(ctx, r.x, r.y);
@@ -7396,27 +7637,16 @@ body {
       for (const f of this.fans) {
         if (!visible(f.x, f.y)) continue;
         const saute = f.content > 0 && Math.sin(t * 14) > 0;
-        tuile(ctx, this.planche, idPersonnage(f.base, DIRECTION.face, saute ? 1 : 0), f.x - 8, f.y - 14 - (saute ? 2 : 0));
-        if (!f.vu && Math.sin(t * 3 + f.x) > -0.3) bulle(ctx, f.x, f.y - 16, "Fan !");
+        dessinerPerso(ctx, f.tenue, f.x, f.y - (saute ? 3 : 0), "face", saute ? 1 : 0);
+        if (!f.vu && Math.sin(t * 3 + f.x) > -0.3) bulle(ctx, f.x, f.y - 18, "Fan !");
       }
       this.trafic.dessiner(ctx, camX, camY, W2, H2);
-      ctx.fillStyle = "rgba(30,28,40,0.28)";
-      ctx.save();
-      ctx.translate(Math.round(v2.x) + 2, Math.round(v2.y) + 2);
-      ctx.rotate(v2.angle + Math.PI / 2);
-      ctx.fillRect(-7, -11, 14, 23);
-      ctx.restore();
-      const s2 = spriteVoiture(v2.couleur, "#f2c14e", v2.looks);
-      ctx.save();
-      ctx.translate(Math.round(v2.x), Math.round(v2.y));
-      ctx.rotate(v2.angle + Math.PI / 2);
-      ctx.drawImage(s2, -Math.floor(s2.width / 2), -Math.floor(s2.height / 2));
-      ctx.restore();
+      dessinerVoitureTiny(ctx, spriteVoitureTiny(v2.couleur, "#f2c14e", v2.looks), v2.x, v2.y, v2.angle);
       ctx.fillStyle = "#ffe066";
       for (const p3 of this.particules) ctx.fillRect(Math.round(p3.x), Math.round(p3.y), 2, 2);
       for (const m of this.messages) {
         const a = 1 - m.vie / m.max;
-        texte(ctx, m.texte, m.x, m.y - 20 - a * 16, 10, m.couleur, "center");
+        texte(ctx, m.texte, m.x, m.y - 32 - a * 16, 10, m.couleur, "center");
       }
       this.dessinerSoir(ctx, camX, camY, W2, H2, visible);
       ctx.restore();
@@ -7427,27 +7657,26 @@ body {
       if (this.defi) this.fleche(ctx, W2, H2, camX, camY);
       this.dessinerInterface(ctx, W2, H2, t);
     }
+    /** Un feu sur poteau à chaque coin de carrefour, tourné vers la voie qui arrive. */
     dessinerFeux(ctx, visible) {
       for (let kx = 0; kx <= ILOTS; kx++) for (let ky = 0; ky <= ILOTS; ky++) {
         const x0 = kx * PAS_RUE, y0 = ky * PAS_RUE;
-        if (!visible(x0 + 32, y0 + 32, 80)) continue;
+        if (!visible(x0 + 48, y0 + 48, 120)) continue;
         const h = this.feux.etat(kx, ky, true, this.temps);
         const v2 = this.feux.etat(kx, ky, false, this.temps);
-        const coul = (e3) => e3 === "vert" ? "#5ad16a" : e3 === "orange" ? "#f39c33" : "#e4432d";
-        for (const [x, y, e3] of [[x0 - 6, y0 + 50, h], [x0 + 70, y0 + 14, h], [x0 + 14, y0 - 6, v2], [x0 + 50, y0 + 70, v2]]) {
-          if (x < 0 || y < 0) continue;
-          ctx.fillStyle = "#1a1626";
-          ctx.fillRect(x - 3, y - 3, 6, 6);
-          ctx.fillStyle = coul(e3);
-          ctx.fillRect(x - 2, y - 2, 4, 4);
+        const L = LARGEUR_RUE;
+        for (const [x, y, e3] of [[x0 - 8, y0 - 2, v2], [x0 + L + 8, y0 - 2, h], [x0 + L + 8, y0 + L + 14, v2], [x0 - 8, y0 + L + 14, h]]) {
+          if (x < 0 || y < 0 || x > TAILLE_VILLE || y > TAILLE_VILLE) continue;
+          feuTricolore(ctx, x, y, e3);
         }
         if (this.cameras.some((c3) => c3.kx === kx && c3.ky === ky)) {
-          ctx.fillStyle = "#1a1626";
-          ctx.fillRect(x0 + 66, y0 - 10, 9, 7);
-          ctx.fillStyle = "#9fb3d9";
-          ctx.fillRect(x0 + 67, y0 - 9, 4, 5);
+          const x = x0 + L + 8, y = y0 - 44;
+          ctx.fillStyle = CONTOUR;
+          ctx.fillRect(x - 6, y - 6, 12, 8);
+          ctx.fillStyle = "#c0cbdc";
+          ctx.fillRect(x - 5, y - 5, 7, 6);
           ctx.fillStyle = "#e4432d";
-          ctx.fillRect(x0 + 72, y0 - 9, 2, 2);
+          ctx.fillRect(x + 3, y - 5, 2, 2);
         }
       }
     }
@@ -7603,14 +7832,6 @@ body {
       return { nx: nx / l, ny: ny / l, prof: ob.r + DEMI_LARGEUR };
     }
     return { nx: nx / d2, ny: ny / d2, prof: ob.r - d2 };
-  }
-  function batimentSpecial(c3, b2, bat) {
-    immeuble(c3, b2.x, b2.y, b2.w, b2.h, bat.toit, 0.3);
-    c3.fillStyle = "#1f2a44";
-    c3.fillRect(b2.x + 6, b2.y + 18, b2.w - 12, 22);
-    c3.fillStyle = "#fff6e0";
-    c3.fillRect(b2.x + 8, b2.y + 20, b2.w - 16, 18);
-    texte(c3, bat.nom, b2.x + b2.w / 2, b2.y + 29, 9, "#1f2a44", "center");
   }
   function anneau(ctx, x, y, r, couleur) {
     ctx.save();
@@ -9911,7 +10132,7 @@ body {
       if (!peutSortir(this.partie)) return;
       const v2 = voitureActive(this.partie);
       if (!v2) return;
-      this.ville = new Ville({ planche: this.assets.urbain, voiture: v2, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille });
+      this.ville = new Ville({ planche: this.assets.urbain, tiny: this.assets.tiny, voiture: v2, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille });
       this.villeFinie = false;
       this.pause = false;
       this.accu = 0;

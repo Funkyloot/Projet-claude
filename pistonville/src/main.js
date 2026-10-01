@@ -379,7 +379,7 @@ class App {
     if (!P.peutSortir(this.partie)) return;
     const v = P.voitureActive(this.partie);
     if (!v) return;
-    this.ville = new Ville({ planche: this.assets.urbain, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille });
+    this.ville = new Ville({ planche: this.assets.urbain, tiny: this.assets.tiny, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille });
     this.villeFinie = false;
     this.pause = false;
     this.accu = 0;

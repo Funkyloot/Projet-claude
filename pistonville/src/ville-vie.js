@@ -8,19 +8,25 @@
  * trottoirs et sautent de côté si on leur fonce dessus.
  */
 
-import { PERSONNAGES, idPersonnage, DIRECTION, tuile, spriteVoiture, bulle, T } from './sprites.js';
+import { PERSONNAGES, DIRECTION, bulle, T } from './sprites.js';
+import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, tenue } from './tiny.js';
 import { hash2 } from './outils.js';
 
-export const PERIODE = 14;
-export const PAS_RUE = PERIODE * T;           // 224 px d'un carrefour au suivant
-export const LARGEUR_RUE = 4 * T;             // 64 px
+// À l'échelle des voitures (2 × 3 cases) : rue de 6 cases à deux voies, un
+// trottoir d'une case de chaque côté, des îlots de 10 cases.
+export const CASES_RUE = 6;
+export const CASES_ILOT = 10;
+export const PERIODE = CASES_RUE + 2 + CASES_ILOT;   // 18 cases
+export const PAS_RUE = PERIODE * T;           // 288 px d'un carrefour au suivant
+export const LARGEUR_RUE = CASES_RUE * T;     // 96 px
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];   // 0 est, 1 sud, 2 ouest, 3 nord
 const CYCLE = 9;
+const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 
 /** Coordonnée de la voie (circulation à droite) sur la rue d'indice k. */
 export function voie(dir, k) {
   const base = k * PAS_RUE;
-  return [base + 46, base + 18, base + 18, base + 46][dir];
+  return [base + 72, base + 24, base + 24, base + 72][dir];
 }
 
 export class Feux {
@@ -72,14 +78,14 @@ export class Trafic {
       // Feu rouge : on s'arrête à la ligne, avant d'entrer dans le carrefour.
       if (!dedans) {
         c.choix = null;
-        const avant = dx ? c.x + dx * 11 : c.y + dy * 11;
+        const avant = dx ? c.x + dx * 23 : c.y + dy * 23;
         const pos = dx ? c.x : c.y;
         const prochain = dx > 0 || dy > 0 ? (Math.floor(pos / PAS_RUE) + 1) * PAS_RUE : Math.floor(pos / PAS_RUE) * PAS_RUE + LARGEUR_RUE;
         const dist = (dx || dy) > 0 ? prochain - avant : avant - prochain;
         const kx = dx ? Math.round((prochain - (dx > 0 ? 0 : LARGEUR_RUE)) / PAS_RUE) : Math.floor(c.x / PAS_RUE);
         const ky = dy ? Math.round((prochain - (dy > 0 ? 0 : LARGEUR_RUE)) / PAS_RUE) : Math.floor(c.y / PAS_RUE);
-        if (dist < 10 && dist > -3 && this.feux.etat(kx, ky, !!dx, t) !== 'vert') cible = 0;
-        else if (dist < 40 && dist > 0 && this.feux.etat(kx, ky, !!dx, t) !== 'vert') cible = Math.min(cible, dist * 2);
+        if (dist < 22 && dist > -3 && this.feux.etat(kx, ky, !!dx, t) !== 'vert') cible = 0;
+        else if (dist < 60 && dist > 0 && this.feux.etat(kx, ky, !!dx, t) !== 'vert') cible = Math.min(cible, (dist - 18) * 2);
       } else if (!c.choix) {
         c.choix = this.choisir(c, dedans);
       }
@@ -88,7 +94,7 @@ export class Trafic {
       const devant = (ox, oy) => {
         const rx = ox - c.x, ry = oy - c.y;
         const a = rx * dx + ry * dy, l = Math.abs(-rx * dy + ry * dx);
-        return a > 0 && a < 30 && l < 10;
+        return a > 0 && a < 62 && l < 20;
       };
       let gene = false;
       if (!dedans) for (const o of this.voitures) if (o !== c && devant(o.x, o.y)) { cible = 0; break; }
@@ -132,17 +138,15 @@ export class Trafic {
 
   dessiner(ctx, camX, camY, W, H) {
     for (const c of this.voitures) {
-      if (c.x < camX - 20 || c.x > camX + W + 20 || c.y < camY - 20 || c.y > camY + H + 20) continue;
-      ctx.fillStyle = 'rgba(30,28,40,0.28)';
-      ctx.save(); ctx.translate(Math.round(c.x) + 2, Math.round(c.y) + 2); ctx.rotate(c.angle + Math.PI / 2);
-      ctx.fillRect(-7, -11, 14, 23); ctx.restore();
-      const s = spriteVoiture(c.couleur, '#f4f1e8');
-      ctx.save(); ctx.translate(Math.round(c.x), Math.round(c.y)); ctx.rotate(c.angle + Math.PI / 2);
-      ctx.drawImage(s, -Math.floor(s.width / 2), -Math.floor(s.height / 2));
+      if (c.x < camX - 40 || c.x > camX + W + 40 || c.y < camY - 40 || c.y > camY + H + 40) continue;
+      dessinerVoitureTiny(ctx, spriteVoitureTiny(c.couleur), c.x, c.y, c.angle);
       // Feux stop quand elle freine.
-      if (c.v < c.vmax * 0.5) { ctx.fillStyle = '#ff3b30'; ctx.fillRect(-5, 10, 2, 1); ctx.fillRect(3, 10, 2, 1); }
-      ctx.restore();
-      if (c.klaxon > 0.6) bulle(ctx, c.x, c.y - 14, 'Pouet !');
+      if (c.v < c.vmax * 0.5) {
+        const fx = Math.cos(c.angle), fy = Math.sin(c.angle);
+        ctx.fillStyle = '#ff3b30';
+        for (const k of [-8, 8]) ctx.fillRect(Math.round(c.x - fx * 21 - fy * k) - 1, Math.round(c.y - fy * 21 + fx * k) - 1, 3, 3);
+      }
+      if (c.klaxon > 0.6) bulle(ctx, c.x, c.y - 26, 'Pouet !');
     }
   }
 }
@@ -153,11 +157,11 @@ export class Pietons {
     this.liste = [];
     for (let i = 0; i < nombre; i++) {
       const bx = Math.floor(alea() * ilots), by = Math.floor(alea() * ilots);
-      const x0 = (bx * PERIODE + 5) * T - 8, y0 = (by * PERIODE + 5) * T - 8;
-      const cote = 8 * T + 16;
+      const x0 = (bx * PERIODE + CASES_RUE + 1) * T - 8, y0 = (by * PERIODE + CASES_RUE + 1) * T - 8;
+      const cote = CASES_ILOT * T + 16;
       this.liste.push({
         x0, y0, cote, s: alea() * cote * 4, sens: alea() < 0.5 ? 1 : -1, v: 14 + alea() * 10,
-        base: PERSONNAGES[Math.floor(alea() * PERSONNAGES.length)], saut: 0, ecart: 0, bulle: null, puni: 0,
+        base: PERSONNAGES[Math.floor(alea() * PERSONNAGES.length)], tenue: tenue(Math.floor(alea() * 60)), saut: 0, ecart: 0, bulle: null, puni: 0,
       });
     }
     this.placer();
@@ -187,7 +191,7 @@ export class Pietons {
       p.ecartY = (p.ecartY || 0) * Math.pow(0.2, dt);
       const dx = p.x - joueur.x, dy = p.y - joueur.y;
       const d = Math.hypot(dx, dy);
-      if (d < 16 && vitesse > 25) {
+      if (d < 28 && vitesse > 25) {
         // Il saute de côté.
         p.saut = 0.5;
         p.ecartX = (p.ecartX || 0) + (dx / (d || 1)) * 14;
@@ -206,9 +210,9 @@ export class Pietons {
   dessiner(ctx, planche, t, camX, camY, W, H) {
     for (const p of this.liste) {
       if (p.x < camX - 16 || p.x > camX + W + 16 || p.y < camY - 20 || p.y > camY + H + 20) continue;
-      const pas = p.saut > 0 ? 1 : Math.floor(t * 6 + p.s) % 3 === 0 ? 0 : (Math.floor(t * 6) % 2) + 1;
-      tuile(ctx, planche, idPersonnage(p.base, p.dir, pas), p.x - 8, p.y - 14 - (p.saut > 0 ? 3 : 0));
+      const pas = p.saut > 0 ? 1 : (Math.floor(t * 6 + p.s * 0.1) % 2) + 1;
+      dessinerPerso(ctx, p.tenue, p.x, p.y + 6 - (p.saut > 0 ? 3 : 0), NOMS_DIRECTION[p.dir] || 'face', pas);
     }
-    for (const p of this.liste) if (p.bulle) bulle(ctx, p.x, p.y - 16, p.bulle.texte);
+    for (const p of this.liste) if (p.bulle) bulle(ctx, p.x, p.y - 12, p.bulle.texte);
   }
 }
