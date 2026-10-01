@@ -93,6 +93,24 @@ export function sauver(partie) {
   try { localStorage.setItem(CLE, JSON.stringify(partie)); } catch { /* stockage indisponible : la partie continue en mémoire */ }
 }
 
+/** Code de sauvegarde à copier d'un appareil à l'autre (texte, sans serveur). */
+export function exporter(partie) {
+  const json = JSON.stringify(partie);
+  return `PV1:${btoa(unescape(encodeURIComponent(json)))}`;
+}
+
+export function importer(code) {
+  try {
+    const net = String(code).trim().replace(/\s+/g, '');
+    if (!net.startsWith('PV1:')) return null;
+    const p = JSON.parse(decodeURIComponent(escape(atob(net.slice(4)))));
+    if (!p || !Array.isArray(p.garage) || typeof p.jour !== 'number') return null;
+    return migrer(p);
+  } catch {
+    return null;
+  }
+}
+
 /** Met une ancienne sauvegarde au format courant. */
 function migrer(p) {
   const base = nouvellePartie();

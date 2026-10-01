@@ -9,7 +9,9 @@
     "monofichier": "node tools/build-monofichier.mjs",
     "servir": "cd web && python3 -m http.server 8777",
     "pistonville": "node tools/build-pistonville.mjs",
-    "pistonville:servir": "cd pistonville && python3 -m http.server 8778"
+    "pistonville:servir": "cd pistonville && python3 -m http.server 8778",
+    "pistonville:serveur": "node tools/build-pistonville.mjs && node tools/serveur-pistonville.mjs",
+    "pistonville:icones": "node tools/pistonville-icones.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

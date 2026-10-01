@@ -4,11 +4,16 @@
  * styles, images Kenney et police. On l'ouvre d'un double-clic, sans serveur
  * ni connexion. La version de `pistonville/` reste la référence.
  *
+ * Il prépare aussi pistonville/dist/web/, la version à servir sur un serveur
+ * pour jouer au téléphone : la même page, plus un manifeste et un service
+ * worker pour l'installer sur l'écran d'accueil (plein écran, hors ligne).
+ *
  * Usage : node tools/build-pistonville.mjs
  */
 
 import { build } from 'esbuild';
-import { readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, copyFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -49,3 +54,56 @@ mkdirSync(join(RACINE, 'dist'), { recursive: true });
 const sortie = join(RACINE, 'dist', 'pistonville.html');
 writeFileSync(sortie, page);
 console.log(`dist/pistonville.html : ${(page.length / 1024).toFixed(0)} ko`);
+
+// --- Version web installable (dist/web) -------------------------------------
+const WEB = join(RACINE, 'dist', 'web');
+mkdirSync(join(WEB, 'icones'), { recursive: true });
+for (const f of readdirSync(join(RACINE, 'assets', 'icones'))) copyFileSync(join(RACINE, 'assets', 'icones', f), join(WEB, 'icones', f));
+const version = createHash('sha1').update(page).digest('hex').slice(0, 10);
+const pageWeb = page
+  .replace('<meta name="theme-color" content="#141022">', `<meta name="theme-color" content="#141022">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pistonville">`)
+  .replace('</body>', `<script>
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>`);
+writeFileSync(join(WEB, 'index.html'), pageWeb);
+writeFileSync(join(WEB, 'manifest.webmanifest'), JSON.stringify({
+  name: 'Pistonville', short_name: 'Pistonville', lang: 'fr', start_url: './', scope: './',
+  display: 'fullscreen', orientation: 'portrait', background_color: '#141022', theme_color: '#141022',
+  description: "Gère ton écurie, construis tes voitures et cours les Grands Prix de Pistonville.",
+  icons: [
+    { src: 'icones/icone-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: 'icones/icone-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: 'icones/icone-512-masquable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ],
+}, null, 2));
+// Service worker : tout le jeu tient dans index.html ; on le met en cache.
+// La version change à chaque construction : le téléphone récupère la nouvelle.
+writeFileSync(join(WEB, 'sw.js'), `/* sw.js — Pistonville hors ligne. Version ${version}. */
+const VERSION = 'pistonville-${version}';
+const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icones/icone-192.png', './icones/icone-512.png'];
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(VERSION).then((c) => Promise.all(FICHIERS.map((f) => c.add(f).catch(() => null)))).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((cles) => Promise.all(cles.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+});
+// Réseau d'abord (pour voir tout de suite les mises à jour), cache si hors ligne.
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+  e.respondWith(fetch(e.request).then((r) => {
+    const copie = r.clone();
+    caches.open(VERSION).then((c) => c.put(e.request, copie)).catch(() => {});
+    return r;
+  }).catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html'))));
+});
+`);
+console.log(`dist/web/ : version ${version}`);

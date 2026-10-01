@@ -5,6 +5,12 @@ Jeu mobile de gestion d'écurie et de course en pixel art, inspiré de
 en touchant la gauche ou la droite de l'écran. Le cahier des charges complet
 est dans le document « Pistonville — Cahier des charges ».
 
+## Jouer sur téléphone (via ton PC, même hors de la maison)
+
+Voir **`JOUER-SUR-TELEPHONE.md`** : double-clic sur `Lancer-serveur.bat`, puis
+Tailscale (privé) ou Cloudflare (lien public) pour y accéder de partout. Le jeu
+s'installe sur l'écran d'accueil et marche hors ligne.
+
 ## Jouer sur PC
 
 Ouvrir **`dist/pistonville.html`** d'un double-clic (Chrome, Edge ou Firefox).

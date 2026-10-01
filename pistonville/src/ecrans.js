@@ -15,7 +15,7 @@ import {
   piece, montureDe, peutSortir, prixPiece, promoDuJour, PRIX_CAFE, ORDRE_PALIERS, PALIERS,
   objectifsActifs, objectifsFaits, totalObjectifs, estimerChances, rivalDe, sponsorActif, sponsorDispo,
   saisonDe, jourDeSaison, JOURS_SAISON, SAISONS_CARRIERE, pieceNiveau, coutNiveauPiece, NIVEAU_PIECE_MAX,
-  tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, INSTALLATIONS, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
+  tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, INSTALLATIONS, exporter, importer, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
 } from './partie.js';
 import { idPersonnage } from './sprites.js';
 import {
@@ -153,6 +153,7 @@ export function ecranTitre(app) {
         ${reprise ? `<button class="btn btn-principal reprise" data-action="continuer">Continuer la partie<small>${resumeReprise(app.partieSauvee)}</small></button>` : ''}
         <button class="btn ${reprise ? '' : 'btn-principal'}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
+        <button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>
       </div>
       <p class="credits">Version d'essai 0.3 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
     </div>`,
@@ -160,6 +161,47 @@ export function ecranTitre(app) {
       continuer: () => app.continuer(),
       nouvelle: () => app.nouvellePartie(),
       aide: () => app.montrer(ecranAide(app, 'titre')),
+      sauvegarde: () => app.montrer(ecranSauvegarde(app)),
+    },
+  };
+}
+
+/** Copier la partie d'un appareil à l'autre avec un code texte. */
+export function ecranSauvegarde(app, message = '') {
+  const code = app.partieSauvee ? exporter(app.partieSauvee) : '';
+  return {
+    classe: 'fond-sombre',
+    html: `<div class="ecran defile-ecran">
+      <section class="panneau">
+        <h2 class="titre-panneau">Transférer ma sauvegarde<small>La partie est rangée dans le navigateur : chaque appareil (et chaque adresse) a la sienne.</small></h2>
+        <div class="contenu texte">
+          <p><b>1. Sur l'appareil qui a la partie</b> : copie ce code.</p>
+          ${code ? `<textarea class="code-sauvegarde" readonly rows="4">${e(code)}</textarea>
+          <button class="btn btn-mini btn-principal" data-action="copier">Copier le code</button>` : '<p class="petit">Aucune partie sur cet appareil.</p>'}
+          <p><b>2. Sur l'autre appareil</b> : colle le code ici, puis « Charger ».</p>
+          <textarea class="code-sauvegarde" id="code-import" rows="4" placeholder="PV1:…"></textarea>
+          <button class="btn btn-mini btn-vert" data-action="charger">Charger cette partie</button>
+          ${message ? `<p class="${message.startsWith('Partie') ? 'ok' : 'ko'}">${e(message)}</p>` : ''}
+          <p class="petit">Le code contient toute ta partie : envoie-le-toi (message, mail), pas à n'importe qui.</p>
+        </div>
+      </section>
+      <button class="btn" data-action="retour">Retour</button>
+    </div>`,
+    actions: {
+      copier: () => {
+        const zone = app.ui.racine.querySelector('.code-sauvegarde');
+        const fini = () => app.toast('Code copié !');
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(code).then(fini, () => { zone.select(); document.execCommand?.('copy'); fini(); });
+        else { zone.select(); document.execCommand?.('copy'); fini(); }
+      },
+      charger: () => {
+        const p = importer(app.ui.racine.querySelector('#code-import').value);
+        if (!p) { app.montrer(ecranSauvegarde(app, 'Code illisible : vérifie qu\'il est complet (il commence par PV1:).')); return; }
+        app.partie = p;
+        app.sauver();
+        app.montrer(ecranSauvegarde(app, `Partie chargée : saison ${saisonDe(p)}, jour ${jourDeSaison(p)}.`));
+      },
+      retour: () => app.titre(),
     },
   };
 }

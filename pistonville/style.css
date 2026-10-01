@@ -570,3 +570,6 @@ body {
 .case-cadeau.aujourdhui { border-color: var(--rouge-vif); background: #ffe9a8; animation: pop 0.5s both; }
 .ecran > .panneau, .ecran > .pile, .ecran > .btn, .ecran > .bandeau, .ecran > .accroche { position: relative; z-index: 1; }
 .confettis { z-index: 0; }
+.code-sauvegarde { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: calc(var(--u) * 9); word-break: break-all; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 4); padding: calc(var(--u) * 4); background: #fff; color: var(--encre); -webkit-user-select: text; user-select: text; resize: none; }
+.titre-ecran .lien { color: var(--creme-2); }
+.defile, .defile-ecran { touch-action: pan-y; -webkit-overflow-scrolling: touch; }
