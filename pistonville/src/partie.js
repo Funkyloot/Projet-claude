@@ -44,7 +44,7 @@ export function nouvellePartie() {
     rang: 1,
     exp: 0,
     recherche: 0,            // points de recherche (PR)
-    labo: 0,                 // niveau de pièces débloqué (0 à 3)
+    labo: 0,                 // niveau de pièces débloqué (0 à 9)
     tickets: 1,              // tickets de tombola
     garage: [],              // { uid, modele, couleur, qualite, ameliorations, usure, pieces: {emplacement: uid} }
     voitureActive: null,
@@ -228,6 +228,8 @@ function ajouterVoiture(partie, idModele, extra = {}) {
 
 export function peutAcheter(partie, m) {
   if (m.licence && !licenceAuMoins(partie.licence, m.licence)) return `Licence ${m.licence} requise`;
+  if (m.rang && partie.rang < m.rang) return `Rang ${m.rang} requis`;
+  if (m.victoires && partie.victoires < m.victoires) return `${m.victoires} victoires requises`;
   return null;
 }
 
@@ -358,7 +360,7 @@ export function pieceNiveau(pc, niveau) {
 }
 export const coutNiveauPiece = (pc, niveau) => ({
   argent: Math.round((pc.prix * 0.5 * (niveau + 1) ** 1.3) / 10) * 10,
-  recherche: 2 * (niveau + 1) + { commune: 0, rare: 2, super: 5 }[pc.rarete],
+  recherche: 2 * (niveau + 1) + { commune: 0, rare: 2, super: 5, legendaire: 9 }[pc.rarete],
 });
 
 export function ameliorerPiece(partie, iuid) {
@@ -383,7 +385,9 @@ export function rechercher(partie) {
 
 /** Une pièce au hasard, selon la rareté visée. */
 function pieceAuHasard(alea, rarete, laboMax = 3) {
-  const choix = PIECES.filter((x) => x.rarete === rarete && x.recherche <= laboMax);
+  let choix = PIECES.filter((x) => x.rarete === rarete && x.recherche <= laboMax);
+  // Pas encore de légendaire à ce niveau de labo : une super rare à la place.
+  if (!choix.length) choix = PIECES.filter((x) => x.rarete === 'super' && x.recherche <= Math.max(3, laboMax));
   return choix[Math.floor(alea() * choix.length)];
 }
 
@@ -394,9 +398,11 @@ export function tirerTombola(partie) {
   const alea = creerAlea((Date.now() * 31 + partie.tickets) >>> 0);
   const r = alea();
   let lot;
-  if (r < 0.06) lot = { type: 'piece', piece: pieceAuHasard(alea, 'super') };
-  else if (r < 0.26) lot = { type: 'piece', piece: pieceAuHasard(alea, 'rare') };
-  else if (r < 0.5) lot = { type: 'piece', piece: pieceAuHasard(alea, 'commune') };
+  const max = Math.max(3, partie.labo);
+  if (r < 0.008 && partie.labo >= 7) lot = { type: 'piece', piece: pieceAuHasard(alea, 'legendaire', max) };
+  else if (r < 0.06) lot = { type: 'piece', piece: pieceAuHasard(alea, 'super', max) };
+  else if (r < 0.26) lot = { type: 'piece', piece: pieceAuHasard(alea, 'rare', max) };
+  else if (r < 0.5) lot = { type: 'piece', piece: pieceAuHasard(alea, 'commune', max) };
   else if (r < 0.75) lot = { type: 'recherche', valeur: 10 + Math.floor(alea() * 21) };
   else lot = { type: 'argent', valeur: 500 * (2 + Math.floor(alea() * 7)) };
   appliquerLot(partie, lot);
@@ -408,7 +414,7 @@ function appliquerLot(partie, lot) {
     partie.inventaire.push({ uid: uid('p'), piece: lot.piece.id, niveau: 0 });
     lot.nouvelle = !partie.collection[lot.piece.id];
     partie.collection[lot.piece.id] = true;
-    if (lot.piece.rarete === 'super') partie.stats.superRares += 1;
+    if (lot.piece.rarete === 'super' || lot.piece.rarete === 'legendaire') partie.stats.superRares += 1;
   }
   if (lot.type === 'recherche') partie.recherche += lot.valeur;
   if (lot.type === 'argent') partie.argent += lot.valeur;
@@ -524,7 +530,7 @@ function evenementDuJour(partie, alea) {
 // --- Grands Prix ------------------------------------------------------------------------
 
 /** Niveau des adversaires par palier : il faut des pièces pour gagner. */
-const BASE_NIVEAU = [0, 33, 53, 68, 80, 88];
+const BASE_NIVEAU = [0, 33, 53, 68, 80, 88, 93];
 /** Le rival est un peu plus fort, de plus en plus avec les paliers. */
 const bonusRival = (gp) => 0.03 + 0.01 * gp.niveau;
 
@@ -628,7 +634,9 @@ export function enregistrerManche(partie, resultats, course) {
   const chanceButin = [0.45, 0.3, 0.22][i] ?? 0.1;
   if (alea() < chanceButin) {
     const r = alea();
-    const pc = pieceAuHasard(alea, r < 0.08 * gp.niveau ? 'super' : r < 0.35 ? 'rare' : 'commune', 3);
+    // Les Grands Prix des Légendes peuvent donner une pièce légendaire ; le butin suit le labo (un niveau d'avance).
+    const rarete = gp.niveau >= 6 && r < 0.05 ? 'legendaire' : r < 0.08 * gp.niveau ? 'super' : r < 0.35 ? 'rare' : 'commune';
+    const pc = pieceAuHasard(alea, rarete, Math.min(9, Math.max(3, partie.labo + 1)));
     butin = { type: 'piece', piece: pc };
     appliquerLot(partie, butin);
   }

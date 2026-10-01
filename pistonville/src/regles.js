@@ -63,10 +63,11 @@ export const RARETES = {
   commune: { nom: 'Commune', couleur: '#8a94a6' },
   rare: { nom: 'Rare', couleur: '#2f6fdb' },
   super: { nom: 'Super rare', couleur: '#d69a12' },
+  legendaire: { nom: 'Légendaire', couleur: '#c2408a' },
 };
 
 /** Labo : points de recherche pour débloquer chaque niveau de pièces. */
-export const COUT_RECHERCHE = [0, 30, 90, 220];
+export const COUT_RECHERCHE = [0, 30, 90, 220, 380, 580, 850, 1200, 1650, 2200];
 
 /** Construction : tirage de la qualité, ajoutée à chaque qualité de la voiture. */
 export const QUALITES = [

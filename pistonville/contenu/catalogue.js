@@ -14,10 +14,18 @@ import objectifsBase from './base/objectifs.js';
 import sponsorsBase from './base/sponsors.js';
 import evenementsBase from './base/evenements.js';
 import batimentsBase from './base/batiments.js';
+import vehiculesGG from './grand-garage/vehicules.js';
+import grandsPrixGG from './grand-garage/grands-prix.js';
+import equipesGG from './grand-garage/equipes.js';
+import piecesGG from './grand-garage/pieces.js';
+import objectifsGG from './grand-garage/objectifs.js';
 
 const packs = [
   { id: 'base', vehicules: vehiculesBase, grandsPrix: grandsPrixBase, equipes: equipesBase, pieces: piecesBase,
     objectifs: objectifsBase, sponsors: sponsorsBase, evenements: evenementsBase, batiments: batimentsBase },
+  // v0.5 : beaucoup plus de pièces, de voitures, de Grands Prix et d'écuries.
+  { id: 'grand-garage', vehicules: vehiculesGG, grandsPrix: grandsPrixGG, equipes: equipesGG, pieces: piecesGG,
+    objectifs: objectifsGG },
 ];
 
 function fusionner(cle) {

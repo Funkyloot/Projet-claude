@@ -175,6 +175,9 @@ const PAR_EMPLACEMENT = {
   chassis: (p) => chassis(p, {}),
 };
 
+/** Les pièces des packs décrivent leur image (`icone: { famille, …options }`). */
+const FAMILLES = { moteur, pneu, boite: boiteVitesses, aileron, nitro, chassis, turbine: (p) => turbine(p) };
+
 const cache = new Map();
 
 /** URL de l'icône d'une pièce (objet pièce) ou d'un emplacement (chaîne). */
@@ -182,7 +185,8 @@ export function iconePiece(pc) {
   const cle = typeof pc === 'string' ? `@${pc}` : pc.id;
   if (cache.has(cle)) return cache.get(cle);
   const { c, px } = nouveau();
-  const plan = typeof pc === 'string' ? PAR_EMPLACEMENT[pc] : PLANS[pc.id] || PAR_EMPLACEMENT[pc.emplacement];
+  const decrite = typeof pc !== 'string' && pc.icone && FAMILLES[pc.icone.famille];
+  const plan = typeof pc === 'string' ? PAR_EMPLACEMENT[pc] : PLANS[pc.id] || (decrite && ((p) => decrite(p, pc.icone))) || PAR_EMPLACEMENT[pc.emplacement];
   plan(px);
   const url = c.toDataURL();
   cache.set(cle, url);

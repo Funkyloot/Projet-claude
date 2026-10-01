@@ -636,10 +636,10 @@ export function ecranTombola(app, retour) {
           app.son.caisse();
           const titre = lot.type === 'piece' ? lot.piece.nom : lot.type === 'recherche' ? `+${lot.valeur} PR` : `+${formatArgent(lot.valeur)}`;
           const rare = lot.type === 'piece' ? lot.piece.rarete : 'commune';
-          if (rare === 'super') app.son.niveau();
+          if (rare === 'super' || rare === 'legendaire') app.son.niveau();
           app.montrer({
             classe: 'fond-sombre',
-            html: `<div class="ecran"><section class="panneau revele rarete-${rare}"><h2 class="titre-panneau">${rare === 'super' ? 'SUPER LOT !' : 'Gagné !'}</h2>
+            html: `<div class="ecran"><section class="panneau revele rarete-${rare}"><h2 class="titre-panneau">${rare === 'legendaire' ? 'LÉGENDAIRE !' : rare === 'super' ? 'SUPER LOT !' : 'Gagné !'}</h2>
               <div class="contenu texte centre">${lot.type === 'piece' ? imgPiece(lot.piece, 'grande') : '<div class="caisse-ouverte"></div>'}<p class="gros">${e(titre)}</p>
               ${lot.type === 'piece' ? `<p class="rarete">${RARETES[rare].nom}</p><p class="petit">${texteBonus(lot.piece)}</p>` : ''}</div></section>
               <button class="btn btn-principal" data-action="encore">Continuer</button></div>`,
