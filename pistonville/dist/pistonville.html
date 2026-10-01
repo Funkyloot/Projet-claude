@@ -308,6 +308,157 @@ body {
   .btn { transition: none; }
 }
 
+/* --- v0.2 : rang, pièces, construction, fêtes --------------------------------- */
+
+.rang { display: flex; align-items: center; gap: calc(var(--u) * 4); font-size: calc(var(--u) * 13); color: var(--jaune); }
+.jauge-exp { width: calc(var(--u) * 54); height: calc(var(--u) * 6); background: #0f172a; border: calc(var(--u) * 1) solid #3a4a6b; display: inline-block; }
+.jauge-exp i { display: block; height: 100%; background: var(--jaune); }
+.pastille.violet { background: #7a5ac8; }
+.pastille.rose { background: #d14f8c; }
+.grille-actions .large { grid-column: 1 / -1; }
+.titre-panneau.bleu { background: var(--bleu); }
+.titre-panneau.sombre { background: var(--encre-2); }
+.titre-panneau.violet { background: #7a5ac8; }
+.titre-panneau.rose { background: #d14f8c; }
+.titre-panneau.marron { background: #8a5a3b; }
+.centre { align-items: center; text-align: center; }
+.gros { font-size: calc(var(--u) * 21); font-weight: 700; margin: 0; }
+.petit-clair { font-size: calc(var(--u) * 11.6); color: #cfd6e8; margin: 0; }
+.jauge.grande { height: calc(var(--u) * 10); }
+.jauge .remplir { width: 0; animation: remplir 1.2s 0.4s ease-out forwards; }
+@keyframes remplir { to { width: var(--w); } }
+.stat em { font-style: normal; font-size: calc(var(--u) * 10); margin-left: calc(var(--u) * 2); }
+.stat b { white-space: nowrap; }
+
+.etoiles { color: var(--jaune); font-size: calc(var(--u) * 13); letter-spacing: calc(var(--u) * 1); text-shadow: 0 calc(var(--u) * 1) 0 var(--encre); }
+.etoiles span { color: #c9bf9f; text-shadow: none; }
+.dessus { width: calc(var(--u) * 66); height: auto; image-rendering: pixelated; flex: none; }
+
+.emplacements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * 5); }
+.emplacement {
+  font-family: var(--police); text-align: left; cursor: pointer;
+  display: flex; flex-direction: column; gap: calc(var(--u) * 1);
+  border: calc(var(--u) * 2) solid var(--encre); border-left-width: calc(var(--u) * 6);
+  border-radius: calc(var(--u) * 4); background: #fff; color: var(--encre);
+  padding: calc(var(--u) * 3) calc(var(--u) * 6); font-size: calc(var(--u) * 12.3);
+}
+.emplacement small { font-size: calc(var(--u) * 10.2); color: #4a5068; }
+.emplacement.vide { background: #ece4cf; border-style: dashed; color: #7a8094; }
+.rarete-commune { --rarete: #8a94a6; }
+.rarete-rare { --rarete: #2f6fdb; }
+.rarete-super { --rarete: #d69a12; }
+.emplacement[class*='rarete-'] { border-left-color: var(--rarete); }
+.liste-pieces span[class*='rarete-'] { color: var(--rarete); }
+
+.piece {
+  background: var(--creme); color: var(--encre);
+  border: calc(var(--u) * 2) solid var(--encre); border-left: calc(var(--u) * 7) solid var(--rarete, var(--gris));
+  border-radius: calc(var(--u) * 6); padding: calc(var(--u) * 6) calc(var(--u) * 8);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 3);
+  box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
+}
+.piece.rarete-super { background: linear-gradient(100deg, #fff6e0 60%, #ffe9a8); }
+.piece.verrou { opacity: 0.6; }
+.piece-tete { display: flex; justify-content: space-between; align-items: center; gap: calc(var(--u) * 6); font-size: calc(var(--u) * 14.5); }
+.rarete { font-size: calc(var(--u) * 11.6); color: #fff; background: var(--rarete, var(--gris)); padding: calc(var(--u) * 1) calc(var(--u) * 5); border-radius: calc(var(--u) * 3); margin: 0; display: inline-block; }
+.effet { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 4); font-size: calc(var(--u) * 12.3); }
+.promo { background: var(--rouge-vif); color: #fff; font-size: calc(var(--u) * 11.6); padding: calc(var(--u) * 1) calc(var(--u) * 5); border-radius: calc(var(--u) * 3); animation: clignote 0.8s steps(2) infinite; }
+@keyframes clignote { 50% { opacity: 0.55; } }
+
+.onglets { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 4); }
+.onglet {
+  font-family: var(--police); font-size: calc(var(--u) * 13); cursor: pointer;
+  background: var(--encre-2); color: var(--clair); border: calc(var(--u) * 2) solid #0f172a;
+  border-radius: calc(var(--u) * 4); padding: calc(var(--u) * 2) calc(var(--u) * 7);
+}
+.onglet.actif { background: var(--jaune); color: var(--encre); }
+.pied-double { flex-direction: row; flex-wrap: wrap; gap: calc(var(--u) * 6); }
+.pied-double .btn { flex: 1 1 40%; }
+
+.nuancier { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 4); }
+.nuancier.grand { justify-content: center; }
+.teinte { width: calc(var(--u) * 18); height: calc(var(--u) * 18); border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 3); cursor: pointer; padding: 0; }
+.teinte.choisie { outline: calc(var(--u) * 2) solid var(--jaune); outline-offset: calc(var(--u) * 1); }
+.teinte:disabled { opacity: 0.4; }
+.teinte-voiture { background: #e6dcc4; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 4); cursor: pointer; }
+.teinte-voiture img { width: calc(var(--u) * 50); image-rendering: pixelated; display: block; }
+
+.niveau-labo { border-bottom: calc(var(--u) * 1) dashed #c9bf9f; padding-bottom: calc(var(--u) * 5); display: flex; flex-direction: column; gap: calc(var(--u) * 3); }
+.niveau-labo:last-child { border: 0; }
+.niveau-labo.acquis b { color: var(--ok); }
+.liste-pieces { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 3) calc(var(--u) * 8); font-size: calc(var(--u) * 11.6); }
+
+/* Construction : panneau en bas, le pont élévateur reste visible au-dessus. */
+#interface.transparent { background: linear-gradient(transparent 45%, rgba(20, 16, 34, 0.85) 60%); }
+.construction { justify-content: flex-end; }
+.etapes { list-style: none; margin: 0; padding: 0; display: flex; gap: calc(var(--u) * 4); }
+.etapes li { flex: 1; text-align: center; font-size: calc(var(--u) * 11.6); padding: calc(var(--u) * 3); border-radius: calc(var(--u) * 3); background: #e6dcc4; color: #7a8094; }
+.etapes li.active { background: var(--jaune); color: var(--encre); animation: clignote 0.4s steps(2) infinite; }
+.etapes li.faite { background: var(--vert); color: #fff; }
+.cri { min-height: calc(var(--u) * 26); text-align: center; font-size: calc(var(--u) * 23); color: var(--rouge-vif); font-weight: 700; }
+.cri.pop { animation: pop 0.45s ease-out; }
+@keyframes pop { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); } }
+.construction .jauge i { transition: width 1.2s ease-out; }
+.verdict { display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 4); }
+.grosses-etoiles { display: flex; gap: calc(var(--u) * 4); font-size: calc(var(--u) * 34); line-height: 1; }
+.grosses-etoiles i { font-style: normal; color: #c9bf9f; opacity: 0; animation: etoile 0.4s calc(var(--i) * 0.35s) ease-out forwards; }
+.grosses-etoiles i.pleine { color: var(--jaune); text-shadow: 0 calc(var(--u) * 2) 0 #7a5a12; }
+@keyframes etoile { 0% { transform: translateY(calc(var(--u) * -30)) scale(2); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.qualite { font-size: calc(var(--u) * 17.4); }
+.qualite.q4, .qualite.q5 { color: #b7791f; animation: pop 0.5s 2s both; }
+
+/* Fêtes : rang, recherche, trophées. */
+.celebration { align-items: center; text-align: center; position: relative; overflow: hidden; }
+.bandeau {
+  font-size: calc(var(--u) * 46); font-weight: 700; color: var(--jaune);
+  text-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 var(--rouge-vif), calc(var(--u) * 5) calc(var(--u) * 5) 0 #000;
+  animation: pop 0.6s ease-out;
+}
+.recompenses { display: flex; flex-wrap: wrap; justify-content: center; gap: calc(var(--u) * 6); }
+.recompenses span { background: var(--creme); color: var(--encre); border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 3) calc(var(--u) * 8); font-size: calc(var(--u) * 15.9); animation: pop 0.4s both; }
+.recompenses span:nth-child(2) { animation-delay: 0.2s; }
+.recompenses span:nth-child(3) { animation-delay: 0.4s; }
+.confettis { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confettis i {
+  position: absolute; top: -10%; left: calc(var(--i) * 4.2%);
+  width: calc(var(--u) * 5); height: calc(var(--u) * 8);
+  background: hsl(calc(var(--i) * 47), 85%, 60%);
+  animation: confetti calc(1.6s + (var(--i) * 0.07s)) calc(var(--i) * -0.13s) linear infinite;
+}
+@keyframes confetti { to { transform: translateY(calc(var(--u) * 640)) rotate(540deg); } }
+
+.revele { animation: pop 0.5s ease-out both; border-color: var(--rarete, var(--encre)); }
+.revele .titre-panneau { background: var(--rarete, var(--rouge-vif)); }
+.revele.rarete-super { box-shadow: 0 0 calc(var(--u) * 18) #f2c14e; }
+.retarde { animation-delay: 1.2s; }
+.caisse-ouverte {
+  width: calc(var(--u) * 40); height: calc(var(--u) * 28); margin: 0 auto;
+  background: linear-gradient(#8a5a3b 0 30%, #5a3a24 30% 36%, #b07a50 36%);
+  border: calc(var(--u) * 2) solid #3a2414; border-radius: calc(var(--u) * 3);
+  box-shadow: 0 calc(var(--u) * -10) calc(var(--u) * 14) var(--rarete, #f2c14e);
+}
+.tambour {
+  width: calc(var(--u) * 70); height: calc(var(--u) * 70); margin: 0 auto; border-radius: 50%;
+  border: calc(var(--u) * 4) solid var(--encre);
+  background: conic-gradient(#e4432d 0 60deg, #f2c14e 60deg 120deg, #2f6fdb 120deg 180deg, #3fa34d 180deg 240deg, #e86ca6 240deg 300deg, #f4f1e8 300deg);
+}
+.tambour.tourne { animation: tourne 1s cubic-bezier(.2, .6, .3, 1); }
+@keyframes tourne { to { transform: rotate(1440deg); } }
+.citation { font-size: calc(var(--u) * 15.9); font-style: italic; }
+
+.coupe { display: inline-block; width: calc(var(--u) * 9); height: calc(var(--u) * 11); margin-right: calc(var(--u) * 4); vertical-align: middle;
+  background: linear-gradient(var(--c) 0 55%, transparent 55% 70%, var(--c) 70%); clip-path: polygon(0 0, 100% 0, 80% 55%, 60% 55%, 60% 75%, 85% 100%, 15% 100%, 40% 75%, 40% 55%, 20% 55%); }
+.coupe.c1 { --c: #f2c14e; } .coupe.c2 { --c: #c9ccd4; } .coupe.c3 { --c: #c77b47; } .coupe.c4 { --c: #8a94a6; }
+.trophee-grand { width: calc(var(--u) * 48); height: calc(var(--u) * 58); margin: 0 auto; animation: pop 0.7s 0.3s both;
+  background: linear-gradient(var(--c) 0 55%, transparent 55% 70%, var(--c) 70%); clip-path: polygon(0 0, 100% 0, 80% 55%, 60% 55%, 60% 75%, 85% 100%, 15% 100%, 40% 75%, 40% 55%, 20% 55%); }
+.trophee-grand.c1 { --c: #f2c14e; } .trophee-grand.c2 { --c: #c9ccd4; } .trophee-grand.c3 { --c: #c77b47; }
+
+@media (prefers-reduced-motion: reduce) {
+  .confettis, .tambour.tourne { animation: none; display: none; }
+  .cri.pop, .bandeau, .revele, .grosses-etoiles i { animation-duration: 0.01s; }
+}
+
+
 </style>
 </head>
 <body>
@@ -336,14 +487,14 @@ body {
     const police2 = new FontFace("Jersey 10", `url(${urlAsset("assets/police/Jersey10.woff2")})`);
     const resultats = await Promise.all([
       chargerImage("assets/kenney/rpg-urban.png"),
-      ...PROFILS.map((p) => chargerImage(`assets/kenney/profil/${p}.png`)),
+      ...PROFILS.map((p2) => chargerImage(`assets/kenney/profil/${p2}.png`)),
       // Sans la police, le jeu reste jouable avec la police de secours.
       police2.load().then((f) => document.fonts.add(f)).catch(() => null)
     ]);
     const urbain = resultats[0];
     const profilsParNom = {};
-    PROFILS.forEach((p, i) => {
-      profilsParNom[p] = resultats[1 + i];
+    PROFILS.forEach((p2, i) => {
+      profilsParNom[p2] = resultats[1 + i];
     });
     return { urbain, profils: profilsParNom };
   }
@@ -463,11 +614,11 @@ body {
       brut[i] = d / (m * pas);
     }
     for (let i = 0; i < n; i++) {
-      const p = points[(i - 1 + n) % n], q = points[(i + 1) % n];
-      const len = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+      const p2 = points[(i - 1 + n) % n], q = points[(i + 1) % n];
+      const len = Math.hypot(q.x - p2.x, q.y - p2.y) || 1;
       const pt = points[i];
-      pt.tx = (q.x - p.x) / len;
-      pt.ty = (q.y - p.y) / len;
+      pt.tx = (q.x - p2.x) / len;
+      pt.ty = (q.y - p2.y) / len;
       pt.s = i * pas;
       let somme = 0;
       for (let j = -2; j <= 2; j++) somme += brut[(i + j + n) % n];
@@ -492,23 +643,23 @@ body {
   }
   function valider(points, pas, rayonMin) {
     const n = points.length;
-    for (const p of points) if (Math.abs(p.k) > 1 / rayonMin) return "rayon";
+    for (const p2 of points) if (Math.abs(p2.k) > 1 / rayonMin) return "rayon";
     const grille = /* @__PURE__ */ new Map();
     const cle = (x, y) => `${Math.floor(x / SEPARATION)},${Math.floor(y / SEPARATION)}`;
-    points.forEach((p, i) => {
-      const k = cle(p.x, p.y);
+    points.forEach((p2, i) => {
+      const k = cle(p2.x, p2.y);
       if (!grille.has(k)) grille.set(k, []);
       grille.get(k).push(i);
     });
     const ecartIndice = Math.ceil(SEPARATION * 1.7 / pas);
     for (let i = 0; i < n; i += 2) {
-      const p = points[i];
-      const cx = Math.floor(p.x / SEPARATION), cy = Math.floor(p.y / SEPARATION);
+      const p2 = points[i];
+      const cx = Math.floor(p2.x / SEPARATION), cy = Math.floor(p2.y / SEPARATION);
       for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
         for (const j of grille.get(`${cx + dx},${cy + dy}`) || []) {
           const di = Math.abs(i - j);
           if (Math.min(di, n - di) < ecartIndice) continue;
-          if (Math.hypot(points[j].x - p.x, points[j].y - p.y) < SEPARATION) return "proximite";
+          if (Math.hypot(points[j].x - p2.x, points[j].y - p2.y) < SEPARATION) return "proximite";
         }
       }
     }
@@ -516,15 +667,15 @@ body {
     return null;
   }
   function enveloppe(points) {
-    const p = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+    const p2 = points.slice().sort((a, b) => a.x - b.x || a.y - b.y);
     const croix = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
     const bas = [], haut = [];
-    for (const q of p) {
+    for (const q of p2) {
       while (bas.length >= 2 && croix(bas[bas.length - 2], bas[bas.length - 1], q) <= 0) bas.pop();
       bas.push(q);
     }
-    for (let i = p.length - 1; i >= 0; i--) {
-      const q = p[i];
+    for (let i = p2.length - 1; i >= 0; i--) {
+      const q = p2[i];
       while (haut.length >= 2 && croix(haut[haut.length - 2], haut[haut.length - 1], q) <= 0) haut.pop();
       haut.push(q);
     }
@@ -554,16 +705,16 @@ body {
     }
     const ecartMin = cote * 0.14;
     for (let passe = 0; passe < 4; passe++) {
-      ctrl = ctrl.filter((p, i) => {
+      ctrl = ctrl.filter((p2, i) => {
         const q = ctrl[(i + 1) % ctrl.length];
-        return Math.hypot(q.x - p.x, q.y - p.y) > ecartMin * 0.6;
+        return Math.hypot(q.x - p2.x, q.y - p2.y) > ecartMin * 0.6;
       });
     }
     if (ctrl.length < 5) return null;
     for (let reglage = 0; reglage < 14; reglage++) {
       let pts = reechantillonner(catmullRom(ctrl, 18), PAS);
       const f = def.longueur / longueurBoucle(pts);
-      ctrl = ctrl.map((p) => ({ x: p.x * f, y: p.y * f }));
+      ctrl = ctrl.map((p2) => ({ x: p2.x * f, y: p2.y * f }));
       pts = reechantillonner(catmullRom(ctrl, 18), PAS);
       const { pas } = analyser(pts);
       const probleme = valider(pts, pas, rayonMin);
@@ -571,15 +722,15 @@ body {
       if (probleme === "proximite" && reglage > 6) return null;
       const n = ctrl.length;
       const serres = /* @__PURE__ */ new Set();
-      ctrl.forEach((p, i) => {
-        if (probleme === "proximite" || rayonTrois(ctrl[(i - 1 + n) % n], p, ctrl[(i + 1) % n]) < rayonMin * 2.2) serres.add(i);
+      ctrl.forEach((p2, i) => {
+        if (probleme === "proximite" || rayonTrois(ctrl[(i - 1 + n) % n], p2, ctrl[(i + 1) % n]) < rayonMin * 2.2) serres.add(i);
       });
       if (probleme === "rayon") {
         let pire = pts[0];
         for (const q of pts) if (Math.abs(q.k) > Math.abs(pire.k)) pire = q;
         let proche = 0, dMin = Infinity;
-        ctrl.forEach((p, i) => {
-          const d = Math.hypot(p.x - pire.x, p.y - pire.y);
+        ctrl.forEach((p2, i) => {
+          const d = Math.hypot(p2.x - pire.x, p2.y - pire.y);
           if (d < dMin) {
             dMin = d;
             proche = i;
@@ -589,10 +740,10 @@ body {
         serres.add((proche + 1) % n);
         serres.add((proche - 1 + n) % n);
       }
-      ctrl = ctrl.map((p, i) => {
+      ctrl = ctrl.map((p2, i) => {
         const a = ctrl[(i - 1 + n) % n], b = ctrl[(i + 1) % n];
         const t = serres.has(i) ? 0.3 : 0;
-        return { x: p.x * (1 - t) + (a.x + b.x) * t / 2, y: p.y * (1 - t) + (a.y + b.y) * t / 2 };
+        return { x: p2.x * (1 - t) + (a.x + b.x) * t / 2, y: p2.y * (1 - t) + (a.y + b.y) * t / 2 };
       });
     }
     return null;
@@ -610,7 +761,7 @@ body {
       }
       points = reechantillonner(catmullRom(ctrl, 18), PAS);
       const f = def.longueur / longueurBoucle(points);
-      points = points.map((p) => ({ x: p.x * f, y: p.y * f }));
+      points = points.map((p2) => ({ x: p2.x * f, y: p2.y * f }));
     }
     const alea = creerAlea(def.graine);
     if (alea() < 0.5) points.reverse();
@@ -621,15 +772,15 @@ body {
     const { L } = analyser(points);
     pas = L / points.length;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const p of points) {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x);
-      maxY = Math.max(maxY, p.y);
+    for (const p2 of points) {
+      minX = Math.min(minX, p2.x);
+      minY = Math.min(minY, p2.y);
+      maxX = Math.max(maxX, p2.x);
+      maxY = Math.max(maxY, p2.y);
     }
-    for (const p of points) {
-      p.x += MARGE - minX;
-      p.y += MARGE - minY;
+    for (const p2 of points) {
+      p2.x += MARGE - minX;
+      p2.y += MARGE - minY;
     }
     const largeur = Math.ceil(maxX - minX + MARGE * 2);
     const hauteur = Math.ceil(maxY - minY + MARGE * 2);
@@ -649,8 +800,8 @@ body {
   function coteInterieur(points) {
     let vote = 0;
     for (let i = 0; i < points.length; i += Math.floor(points.length / 12)) {
-      const p = points[i];
-      vote += dansPolygone(points, p.x - p.ty * 20, p.y + p.tx * 20) ? 1 : -1;
+      const p2 = points[i];
+      vote += dansPolygone(points, p2.x - p2.ty * 20, p2.y + p2.tx * 20) ? 1 : -1;
     }
     return vote >= 0 ? 1 : -1;
   }
@@ -798,21 +949,22 @@ body {
     ".otbbbbbbto.",
     "..oooooooo.."
   ];
-  var VOITURE_L = MOTIF_VOITURE[0].length;
-  var VOITURE_H = MOTIF_VOITURE.length;
+  var VOITURE_L = MOTIF_VOITURE[0].length + 2;
+  var VOITURE_H = MOTIF_VOITURE.length + 2;
   var cacheVoitures = /* @__PURE__ */ new Map();
-  function spriteVoiture(couleur, bande = "#f4f1e8") {
-    const cle = couleur + bande;
+  function spriteVoiture(couleur, bande = "#f4f1e8", looks = []) {
+    const cle = couleur + bande + looks.join(",");
     if (cacheVoitures.has(cle)) return cacheVoitures.get(cle);
     const c2 = document.createElement("canvas");
     c2.width = VOITURE_L;
     c2.height = VOITURE_H;
     const ctx = c2.getContext("2d");
+    const sombre = melangerCouleur(couleur, "#000000", 0.3);
     const teintes = {
       o: "#2a2838",
       b: couleur,
       l: melangerCouleur(couleur, "#ffffff", 0.35),
-      d: melangerCouleur(couleur, "#000000", 0.3),
+      d: sombre,
       w: "#9fd3ff",
       W: "#5d7fa6",
       k: "#1c1b24",
@@ -820,14 +972,68 @@ body {
       t: "#e4432d",
       s: bande
     };
+    const px = (x, y, couleurPixel) => {
+      ctx.fillStyle = couleurPixel;
+      ctx.fillRect(x + 1, y + 1, 1, 1);
+    };
+    const a = new Set(looks);
+    if (a.has("larges")) {
+      for (const y of [3, 4, 5, 15, 16, 17]) {
+        px(-1, y, "#1c1b24");
+        px(12, y, "#1c1b24");
+      }
+    }
     MOTIF_VOITURE.forEach((ligne, y) => {
       for (let x = 0; x < ligne.length; x++) {
-        const t = teintes[ligne[x]];
-        if (!t) continue;
-        ctx.fillStyle = t;
-        ctx.fillRect(x, y, 1, 1);
+        const tt = teintes[ligne[x]];
+        if (tt) px(x, y, tt);
       }
     });
+    if (a.has("carbone")) {
+      for (let y = 2; y <= 4; y++) for (let x = 3; x <= 8; x++) px(x, y, (x + y) % 2 ? "#3a3a46" : "#24242e");
+      for (let y = 8; y <= 12; y++) for (let x = 3; x <= 8; x++) if (x !== 3 && x !== 8) px(x, y, (x + y) % 2 ? "#3a3a46" : "#24242e");
+    }
+    if (a.has("prise")) {
+      for (let x = 4; x <= 7; x++) {
+        px(x, 3, "#2a2838");
+        px(x, 4, "#5c6278");
+      }
+    }
+    if (a.has("turbine")) {
+      for (const [x, y] of [[4, 2], [5, 2], [6, 2], [7, 2], [4, 3], [7, 3], [4, 4], [5, 4], [6, 4], [7, 4]]) px(x, y, "#2a2838");
+      px(5, 3, "#f39c33");
+      px(6, 3, "#ffe066");
+    }
+    if (a.has("arceau")) {
+      for (let y = 8; y <= 12; y++) {
+        px(2, y, "#2a2838");
+        px(9, y, "#2a2838");
+      }
+    }
+    if (a.has("nitro1") || a.has("nitro2")) {
+      const colonnes = a.has("nitro2") ? [3, 7] : [5];
+      for (const x of colonnes) {
+        for (let y = 14; y <= 17; y++) {
+          px(x, y, "#2a7fd6");
+          px(x + 1, y, "#7fd0ff");
+        }
+        px(x, 13, "#2a2838");
+        px(x + 1, 13, "#2a2838");
+      }
+    }
+    if (a.has("becquet")) {
+      for (let x = 2; x <= 9; x++) px(x, 20, "#2a2838");
+    }
+    if (a.has("aileron") || a.has("aileronGT")) {
+      const gt = a.has("aileronGT");
+      for (let x = -1; x <= 12; x++) {
+        px(x, 20, "#2a2838");
+        px(x, 21, gt ? bande : sombre);
+      }
+      if (gt) for (let x = -1; x <= 12; x++) px(x, 22 - 1, bande);
+      px(3, 19, "#2a2838");
+      px(8, 19, "#2a2838");
+    }
     cacheVoitures.set(cle, c2);
     return c2;
   }
@@ -1080,19 +1286,19 @@ body {
     dessinerEnvironnement(ctx, planche, { GW, GH, at, cel, theme, graine, statiques, env });
     const paddock = [];
     for (let j = 0; j < 3; j++) {
-      const p = pointA(circuit, L - 120 - j * 46, -exterieur * (BARRIERE + 30));
-      paddock.push(p);
-      statiques.push({ y: p.y + 12, dessin: (c2) => tente(c2, p.x, p.y, SPONSORS[(j + 1) % SPONSORS.length]) });
-      statiques.push({ y: p.y + 20, dessin: (c2) => tuile(c2, planche, idPersonnage(PERSONNAGES[3], DIRECTION.face), p.x + 10, p.y + 4) });
+      const p2 = pointA(circuit, L - 120 - j * 46, -exterieur * (BARRIERE + 30));
+      paddock.push(p2);
+      statiques.push({ y: p2.y + 12, dessin: (c2) => tente(c2, p2.x, p2.y, SPONSORS[(j + 1) % SPONSORS.length]) });
+      statiques.push({ y: p2.y + 20, dessin: (c2) => tuile(c2, planche, idPersonnage(PERSONNAGES[3], DIRECTION.face), p2.x + 10, p2.y + 4) });
     }
     const { points } = circuit;
     let dernier = -1e9;
     for (let i = 0; i < points.length; i += 4) {
-      const p = points[i];
-      if (Math.abs(p.k) < 1 / 200 || p.s - dernier < 500) continue;
-      dernier = p.s;
-      const cote = -Math.sign(p.k);
-      const q = pointA(circuit, p.s, cote * (BARRIERE + 12));
+      const p2 = points[i];
+      if (Math.abs(p2.k) < 1 / 200 || p2.s - dernier < 500) continue;
+      dernier = p2.s;
+      const cote = -Math.sign(p2.k);
+      const q = pointA(circuit, p2.s, cote * (BARRIERE + 12));
       statiques.push({ y: q.y + 8, dessin: (c2) => commissaire(c2, planche, q.x, q.y) });
     }
     statiques.sort((a, b) => a.y - b.y);
@@ -1100,17 +1306,17 @@ body {
     const spectateurs = [];
     for (let i = 0; i < points.length; i++) {
       if (!ok[i] || i % 2) continue;
-      const p = points[i];
+      const p2 = points[i];
       for (let r = 0; r < rangs; r++) {
         if (hash2(i, r, graine) < 0.25) continue;
-        const q = pointA(circuit, p.s, exterieur * (PUBLIC_DEBUT + 10 + r * 12));
+        const q = pointA(circuit, p2.s, exterieur * (PUBLIC_DEBUT + 10 + r * 12));
         spectateurs.push({
           x: q.x + (hash2(i, r + 9, graine) - 0.5) * 3,
           y: q.y,
           base: PERSONNAGES[Math.floor(hash2(r, i, graine) * PERSONNAGES.length)],
-          dir: directionVers(p.x - q.x, p.y - q.y),
+          dir: directionVers(p2.x - q.x, p2.y - q.y),
           phase: hash2(i, r + 3, graine) * 6.28,
-          s: p.s
+          s: p2.s
         });
       }
     }
@@ -1421,11 +1627,11 @@ body {
   function miniCarte(circuit, largeurMax = 88, hauteurMax = 100) {
     const { points } = circuit;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const p of points) {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x);
-      maxY = Math.max(maxY, p.y);
+    for (const p2 of points) {
+      minX = Math.min(minX, p2.x);
+      minY = Math.min(minY, p2.y);
+      maxX = Math.max(maxX, p2.x);
+      maxY = Math.max(maxY, p2.y);
     }
     const echelle = Math.min((largeurMax - 12) / (maxX - minX), (hauteurMax - 12) / (maxY - minY));
     const w = Math.ceil((maxX - minX) * echelle + 12), h = Math.ceil((maxY - minY) * echelle + 12);
@@ -1435,8 +1641,8 @@ body {
     const ctx = c2.getContext("2d");
     const tracer = (largeur, couleur) => {
       ctx.beginPath();
-      points.forEach((p, i) => {
-        const x = (p.x - minX) * echelle + 6, y = (p.y - minY) * echelle + 6;
+      points.forEach((p2, i) => {
+        const x = (p2.x - minX) * echelle + 6, y = (p2.y - minY) * echelle + 6;
         if (i) ctx.lineTo(x, y);
         else ctx.moveTo(x, y);
       });
@@ -1492,6 +1698,41 @@ body {
     aura: { vitesse: 1.25, accel: 1.4, duree: 4 },
     aspiration: { vitesse: 1.08 }
   };
+  var EMPLACEMENTS = {
+    moteur: "Moteur",
+    pneus: "Pneus",
+    boite: "Bo\xEEte",
+    aileron: "Aileron",
+    nitro: "Nitro",
+    chassis: "Ch\xE2ssis"
+  };
+  var RARETES = {
+    commune: { nom: "Commune", couleur: "#8a94a6" },
+    rare: { nom: "Rare", couleur: "#2f6fdb" },
+    super: { nom: "Super rare", couleur: "#d69a12" }
+  };
+  var COUT_RECHERCHE = [0, 30, 90, 220];
+  var QUALITES = [
+    { nom: "Correcte", bonus: 0, etoiles: 1, chance: 0.34 },
+    { nom: "Bonne", bonus: 3, etoiles: 2, chance: 0.34 },
+    { nom: "Excellente", bonus: 6, etoiles: 3, chance: 0.2 },
+    { nom: "Remarquable", bonus: 10, etoiles: 4, chance: 0.09 },
+    { nom: "L\xE9gendaire", bonus: 15, etoiles: 5, chance: 0.03 }
+  ];
+  function tirerQualite(alea) {
+    let r = alea();
+    for (let i = 0; i < QUALITES.length; i++) {
+      if (r < QUALITES[i].chance) return i;
+      r -= QUALITES[i].chance;
+    }
+    return 0;
+  }
+  var expPourRang = (rang) => Math.round(90 * rang ** 1.35);
+  var recompenseRang = (rang) => ({ argent: 700 * rang, recherche: 6 + 2 * rang, tickets: 1 });
+  var EXP_PLACE = [60, 45, 36, 28, 22, 18, 15, 12, 10, 8];
+  var EXP_DEPASSEMENT = 4;
+  var COUT_PEINTURE = 600;
+  var PEINTURES = ["#f2c14e", "#e4432d", "#2f6fdb", "#3fa34d", "#f4f1e8", "#2a2838", "#e86ca6", "#8a6ad6", "#f39c33", "#4fc3d8"];
   var coutAmelioration = (niveau) => 1500 * (1 + niveau);
   var GAIN_AMELIORATION = 5;
   var COUT_REPARATION_POINT = 20;
@@ -1522,7 +1763,8 @@ body {
   }
 
   // pistonville/src/voiture.js
-  var RAYON_VOITURE = 8;
+  var DEMI_LONGUEUR = 10.5;
+  var DEMI_LARGEUR = 6;
   var Voiture = class {
     constructor({ physique: physique2, couleur, nom, joueur = false, equipe = null }) {
       this.p = physique2;
@@ -1546,6 +1788,7 @@ body {
       this.vitesseSol = 1;
       this.glisse = 0;
       this.tete = 0;
+      this.calage = 0;
       this.tour = -1;
       this.s = 0;
       this.progres = 0;
@@ -1582,12 +1825,13 @@ body {
         this.vy = 0;
         return;
       }
+      if (this.calage > 0) this.calage = Math.max(0, this.calage - dt);
       const vitesse = this.vitesse;
       if (this.tete > 0) {
         this.tete -= dt;
         this.angle += 7 * dt;
       } else {
-        const efficacite = clamp(vitesse / 60, 0, 1) * (1 - 0.18 * clamp(vitesse / this.p.vmax, 0, 1));
+        const efficacite = Math.max(this.braquageMin || 0, clamp(vitesse / 60, 0, 1)) * (1 - 0.18 * clamp(vitesse / this.p.vmax, 0, 1));
         this.angle += this.direction * this.p.rotation * efficacite * dt;
       }
       const fx = Math.cos(this.angle), fy = Math.sin(this.angle);
@@ -1602,7 +1846,8 @@ body {
         let accel = this.p.accel;
         if (this.nitro > 0) accel *= BOOSTS.nitro.accel;
         if (this.aura > 0) accel *= BOOSTS.aura.accel;
-        if (this.frein > 0) avant -= 280 * this.frein * dt;
+        if (this.calage > 0) avant += 0;
+        else if (this.frein > 0) avant -= 280 * this.frein * dt;
         else if (avant < vmax) avant = Math.min(vmax, avant + accel * (1 - 0.55 * clamp(avant / vmax, 0, 1)) * dt);
         else avant -= 160 * dt;
       }
@@ -1623,11 +1868,13 @@ body {
   var HAUTEUR_PANNEAU = 112;
   var COMPTE_A_REBOURS = 3.2;
   var TEXTES_PUBLIC = ["Bravo !", "Ouah !", "Allez !", "Ooh !", "Vas-y !"];
+  var RAYON_POTEAU = 4;
+  var ECART_POTEAU = DEMI + 9;
   var Course = class {
     /**
      * @param {object} o
      *   circuit, decor (rendreCircuit), planche, tours,
-     *   joueur: { physique, couleur, pilote, nitros },
+     *   joueur: { physique, couleur, looks, pilote, nitros, nitroDuree, surfaces },
      *   adversaires: [{ physique, couleur, nom, talent }],
      *   aide (aide au pilotage), son, niveau
      */
@@ -1649,28 +1896,40 @@ body {
         let v;
         if (i === placeJoueur) {
           v = new Voiture({ physique: o.joueur.physique, couleur: o.joueur.couleur, nom: o.joueur.pilote, joueur: true });
+          v.looks = o.joueur.looks || [];
           this.joueur = v;
         } else {
           const adv = o.adversaires[a++];
           v = new Voiture({ physique: adv.physique, couleur: adv.couleur, nom: adv.nom, equipe: adv.equipe });
           v.talent = adv.talent || 0;
           v.voie = (this.alea() - 0.5) * 24;
-          v.nitroIA = this.niveau >= 2 ? 1 : 0;
+          v.nitroIA = 1 + Math.floor(this.niveau / 2);
           v.prochaineVoie = this.alea() * 2;
         }
-        v.adherenceSol = surface.adherence;
-        v.vitesseSol = surface.vitesse;
+        const bonusSol = v.joueur ? o.joueur.surfaces?.[o.circuit.def.surface] || 0 : 0;
+        v.adherenceSol = surface.adherence + bonusSol;
+        v.vitesseSol = Math.min(1, surface.vitesse + bonusSol * 0.3);
         const s = this.circuit.longueur - 40 - i * 26;
         const lat = i % 2 ? -15 : 15;
-        const p = pointA(this.circuit, s, lat);
-        v.placer(p.x, p.y, p.angle);
+        const p2 = pointA(this.circuit, s, lat);
+        v.placer(p2.x, p2.y, p2.angle);
         v.s = (s % this.circuit.longueur + this.circuit.longueur) % this.circuit.longueur;
         v.tour = -1;
         v.progres = -40 - i * 26;
         v.dernierContact = -10;
         this.voitures.push(v);
       }
-      this.nitros = o.joueur.nitros ?? 2;
+      this.nitros = o.joueur.nitros ?? 1;
+      this.nitroDuree = o.joueur.nitroDuree ?? BOOSTS.nitro.duree;
+      this.poteaux = [pointA(this.circuit, 0, -ECART_POTEAU), pointA(this.circuit, 0, ECART_POTEAU)];
+      this.bonus = this.semerBonus();
+      this.ramasses = { argent: 0, recherche: 0 };
+      this.drift = 0;
+      this.driftEnCours = 0;
+      this.secousse = 0;
+      this.departJoue = false;
+      this.appuiAvant = false;
+      this.tourBonus = 0;
       this.jaugeAura = 0;
       this.temps = -COMPTE_A_REBOURS;
       this.etat = "compte";
@@ -1703,6 +1962,7 @@ body {
         }
       }
       const j = this.joueur;
+      this.departParfait(entrees);
       if (!j.fini) {
         j.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
         if (j.direction === 0 && this.aide && demarre) this.aider(j);
@@ -1719,9 +1979,15 @@ body {
         this.contraindre(v, dt);
         this.suivre(v);
       }
-      this.collisions();
+      for (let iter = 0; iter < 2; iter++) this.collisions();
+      for (const v of this.voitures) this.poteauxPortique(v);
       this.classer();
+      if (demarre) {
+        this.compterDrift(dt);
+        this.ramasser();
+      }
       this.effets(dt);
+      if (this.secousse > 0) this.secousse = Math.max(0, this.secousse - dt * 18);
       if (j.fini && this.etat === "course") {
         this.etat = "arrivee";
         this.son?.fanfare();
@@ -1758,9 +2024,9 @@ body {
       const prudence = 0.96 + (v.talent || 0);
       let cibleV = Math.sqrt(52 * R * v.p.adherence * v.adherenceSol) * prudence;
       const ecartJoueur = v.progres - this.joueur.progres;
-      if (!this.joueur.fini) cibleV *= ecartJoueur > 500 ? 0.94 : ecartJoueur < -500 ? 1.05 : 1;
+      if (!this.joueur.fini) cibleV *= ecartJoueur > 700 ? 0.97 : ecartJoueur < -400 ? 1.06 : 1;
       v.frein = v.vitesse > cibleV + 12 ? clamp((v.vitesse - cibleV) / 60, 0, 1) : 0;
-      if (v.nitroIA > 0 && this.etat === "course" && R > 1500 && this.alea() < dt * 0.15) {
+      if (v.nitroIA > 0 && this.etat === "course" && R > 1500 && this.alea() < dt * 0.2) {
         v.nitroIA--;
         v.nitro = BOOSTS.nitro.duree;
       }
@@ -1790,7 +2056,8 @@ body {
     declencherNitro() {
       if (this.nitros <= 0 || this.joueur.nitro > 0) return;
       this.nitros--;
-      this.joueur.nitro = BOOSTS.nitro.duree;
+      this.joueur.nitro = this.nitroDuree;
+      this.secousse = Math.max(this.secousse, 2);
       this.son?.souffle();
       this.message("NITRO !", 0.9, "#ffe066", this.joueur);
     }
@@ -1808,9 +2075,11 @@ body {
       if (!sit) return;
       v.situation = sit;
       v.horsPiste = clamp((sit.d - DEMI + 2) / 14, 0, 1);
-      const limite = BARRIERE - RAYON_VOITURE + 2;
+      const nx = sit.nx * sit.cote, ny = sit.ny * sit.cote;
+      const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+      const etendue2 = DEMI_LONGUEUR * Math.abs(fx * nx + fy * ny) + DEMI_LARGEUR * Math.abs(-fy * nx + fx * ny);
+      const limite = BARRIERE - 1 - etendue2;
       if (sit.d > limite) {
-        const nx = sit.nx * sit.cote, ny = sit.ny * sit.cote;
         v.x = sit.px + nx * limite;
         v.y = sit.py + ny * limite;
         const choc = v.vx * nx + v.vy * ny;
@@ -1822,7 +2091,10 @@ body {
           v.durabilite = Math.max(0, v.durabilite - choc / 9);
           if (choc > 40) {
             this.etincelles(v.x + nx * 8, v.y + ny * 8, choc);
-            if (v.joueur) this.son?.choc(choc);
+            if (v.joueur) {
+              this.son?.choc(choc);
+              this.secousse = Math.max(this.secousse, Math.min(5, choc / 40));
+            }
           }
           if (!v.joueur && choc > 85) {
             v.tete = 0.7;
@@ -1859,31 +2131,170 @@ body {
         v.tempsArrivee = this.temps;
       }
     }
+    /**
+     * Chocs entre voitures : deux rectangles orientés (12 × 21 px), séparés
+     * selon l'axe de moindre recouvrement (théorème des axes séparateurs).
+     * Le choc fait aussi pivoter un peu les voitures, selon le point d'impact.
+     */
     collisions() {
       const vs = this.voitures;
-      const r2 = RAYON_VOITURE * 2;
       for (let i = 0; i < vs.length; i++) for (let k = i + 1; k < vs.length; k++) {
         const a = vs[i], b = vs[k];
         const dx = b.x - a.x, dy = b.y - a.y;
-        const d = Math.hypot(dx, dy);
-        if (d >= r2 || d === 0) continue;
-        const nx = dx / d, ny = dy / d;
-        const recouvrement = (r2 - d) / 2;
-        a.x -= nx * recouvrement;
-        a.y -= ny * recouvrement;
-        b.x += nx * recouvrement;
-        b.y += ny * recouvrement;
+        if (dx * dx + dy * dy > 26 * 26) continue;
+        const c2 = recouvrement(a, b);
+        if (!c2) continue;
+        const { nx, ny, prof } = c2;
+        a.x -= nx * prof / 2;
+        a.y -= ny * prof / 2;
+        b.x += nx * prof / 2;
+        b.y += ny * prof / 2;
         const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
-        if (rel < 0) {
-          const imp = -rel * 0.65;
-          a.vx -= nx * imp;
-          a.vy -= ny * imp;
-          b.vx += nx * imp;
-          b.vy += ny * imp;
-          if (a.joueur) b.dernierContact = this.temps;
-          if (b.joueur) a.dernierContact = this.temps;
-          if ((a.joueur || b.joueur) && imp > 25) this.son?.choc(imp);
+        if (rel >= 0) continue;
+        const imp = -rel * 0.6;
+        a.vx -= nx * imp;
+        a.vy -= ny * imp;
+        b.vx += nx * imp;
+        b.vy += ny * imp;
+        const pa = coinVers(a, nx, ny), pb = coinVers(b, -nx, -ny);
+        const cx = (pa.x + pb.x) / 2, cy = (pa.y + pb.y) / 2;
+        a.angle += clamp(((cx - a.x) * -ny - (cy - a.y) * -nx) * imp * 6e-4, -0.12, 0.12);
+        b.angle += clamp(((cx - b.x) * ny - (cy - b.y) * nx) * imp * 6e-4, -0.12, 0.12);
+        a.durabilite = Math.max(0, a.durabilite - imp / 30);
+        b.durabilite = Math.max(0, b.durabilite - imp / 30);
+        if (a.joueur) b.dernierContact = this.temps;
+        if (b.joueur) a.dernierContact = this.temps;
+        if (a.joueur || b.joueur) {
+          if (imp > 25) this.son?.choc(imp);
+          if (imp > 40) {
+            this.secousse = Math.max(this.secousse, Math.min(4, imp / 35));
+            this.etincelles(cx, cy, imp);
+          }
+          const autre = a.joueur ? b : a;
+          if (imp > 90 && !autre.joueur && autre.tete <= 0) {
+            autre.tete = 0.5;
+            this.fans += 5;
+            this.message("BAM ! +5 fans", 1, "#ffe066", autre);
+          }
         }
+      }
+    }
+    /** Les deux poteaux du portique de départ sont solides. */
+    poteauxPortique(v) {
+      for (const p2 of this.poteaux) {
+        const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+        const rx = p2.x - v.x, ry = p2.y - v.y;
+        const u = clamp(rx * fx + ry * fy, -DEMI_LONGUEUR, DEMI_LONGUEUR);
+        const w = clamp(-rx * fy + ry * fx, -DEMI_LARGEUR, DEMI_LARGEUR);
+        const qx = v.x + fx * u - fy * w, qy = v.y + fy * u + fx * w;
+        let nx = qx - p2.x, ny = qy - p2.y;
+        let d = Math.hypot(nx, ny);
+        if (d >= RAYON_POTEAU) continue;
+        if (d < 1e-3) {
+          nx = v.x - p2.x;
+          ny = v.y - p2.y;
+          d = Math.hypot(nx, ny) || 1;
+          nx /= d;
+          ny /= d;
+          d = 0;
+        } else {
+          nx /= d;
+          ny /= d;
+        }
+        const prof = RAYON_POTEAU - d;
+        v.x += nx * prof;
+        v.y += ny * prof;
+        const choc = -(v.vx * nx + v.vy * ny);
+        if (choc > 0) {
+          v.vx += nx * choc * 1.4;
+          v.vy += ny * choc * 1.4;
+          v.vx *= 0.6;
+          v.vy *= 0.6;
+          v.durabilite = Math.max(0, v.durabilite - choc / 8);
+          this.etincelles(p2.x, p2.y, choc);
+          if (v.joueur) {
+            this.son?.choc(choc);
+            this.secousse = Math.max(this.secousse, 4);
+          }
+        }
+      }
+    }
+    // --- Bonus sur la piste, drift, départ parfait -------------------------------
+    /** Pièces d'or (argent) et disquettes (points de recherche), en lignes de 3. */
+    semerBonus() {
+      const L = this.circuit.longueur;
+      const alea = creerAlea(this.circuit.def.graine * 13 + 5);
+      const bonus = [];
+      for (let s = 260; s < L - 160; s += 200 + alea() * 120) {
+        const voie = [-18, 0, 18][Math.floor(alea() * 3)];
+        if (alea() < 0.16) {
+          const p2 = pointA(this.circuit, s, voie);
+          bonus.push({ type: "disque", x: p2.x, y: p2.y, pris: false });
+        } else {
+          for (let k = 0; k < 3; k++) {
+            const p2 = pointA(this.circuit, s + k * 16, voie);
+            bonus.push({ type: "piece", x: p2.x, y: p2.y, pris: false });
+          }
+        }
+      }
+      return bonus;
+    }
+    ramasser() {
+      const j = this.joueur;
+      if (j.fini) return;
+      if (j.tour !== this.tourBonus) {
+        this.tourBonus = j.tour;
+        for (const b of this.bonus) b.pris = false;
+      }
+      for (const b of this.bonus) {
+        if (b.pris) continue;
+        const dx = b.x - j.x, dy = b.y - j.y;
+        if (dx * dx + dy * dy > 13 * 13) continue;
+        b.pris = true;
+        if (b.type === "piece") {
+          const valeur = 10 * this.niveau;
+          this.ramasses.argent += valeur;
+          this.message(`+${valeur} G`, 0.7, "#ffe066", b);
+          this.son?.piece();
+        } else {
+          this.ramasses.recherche += 1;
+          this.message("+1 PR", 0.9, "#7dd3fc", b);
+          this.son?.disque();
+        }
+      }
+    }
+    /** Un drift tenu longtemps rapporte de l'EXP, affichée à la sortie du virage. */
+    compterDrift(dt) {
+      const j = this.joueur;
+      if (j.drift && !j.fini && j.vitesse > 70) {
+        this.driftEnCours += dt;
+        return;
+      }
+      if (this.driftEnCours > 0.5) {
+        const gain = Math.round(this.driftEnCours * 6);
+        this.drift += gain;
+        this.message(`DRIFT ! +${gain} EXP`, 1, "#c4b5fd", j);
+        this.applaudir(j, 160);
+      }
+      this.driftEnCours = 0;
+    }
+    /** Appuyer pile au feu vert (ni trop tôt, ni trop tard) lance la voiture. */
+    departParfait(entrees) {
+      const appui = entrees.gauche || entrees.droite || entrees.nitro;
+      const nouveau = appui && !this.appuiAvant;
+      this.appuiAvant = appui;
+      if (this.departJoue || !nouveau) return;
+      if (this.temps < -0.5) return;
+      this.departJoue = true;
+      if (this.temps < -0.12) {
+        this.message("Trop t\xF4t !", 1, "#fca5a5", this.joueur);
+        this.joueur.calage = 0.6;
+      } else if (this.temps < 0.3) {
+        this.joueur.nitro = Math.max(this.joueur.nitro, 1.2);
+        this.message("D\xC9PART PARFAIT !", 1.4, "#9fe870");
+        this.drift += 10;
+        this.son?.aura();
+        this.secousse = 3;
       }
     }
     classer() {
@@ -1901,7 +2312,7 @@ body {
         this.fans += 2;
         this.jaugeAura = Math.min(1, this.jaugeAura + 0.22);
         this.applaudir(this.joueur, 200);
-        this.message(`${ordinal(this.positionJoueur)} !`, 0.9, "#9fe870", this.joueur);
+        this.message(`${ordinal(this.positionJoueur)} ! +4 EXP`, 0.9, "#9fe870", this.joueur);
       } else if (this.positionJoueur > avant) {
         this.jaugeAura = Math.min(1, this.jaugeAura + 0.08);
       }
@@ -1930,12 +2341,12 @@ body {
           this.particules.push({ x: v.x, y: v.y, vx: (Math.random() - 0.5) * 30, vy: -10 - Math.random() * 20, vie: 0.7, max: 0.7, couleur: "#9aa0b5", taille: 4 });
         }
       }
-      for (const p of this.particules) {
-        p.x += p.vx * dt;
-        p.y += p.vy * dt;
-        p.vie -= dt;
+      for (const p2 of this.particules) {
+        p2.x += p2.vx * dt;
+        p2.y += p2.vy * dt;
+        p2.vie -= dt;
       }
-      this.particules = this.particules.filter((p) => p.vie > 0);
+      this.particules = this.particules.filter((p2) => p2.vie > 0);
       for (const m of this.messages) m.vie -= dt;
       this.messages = this.messages.filter((m) => m.vie > 0);
       for (const s of this.decor.spectateurs) if (s.bulle) {
@@ -1971,6 +2382,16 @@ body {
       this.messages.push({ texte: texte2, vie: duree, max: duree, couleur, ancre: ancre ? { x: ancre.x, y: ancre.y } : null });
     }
     // --- Fin de course -----------------------------------------------------------
+    /** Ce que la manche rapporte en plus de la place (pour partie.enregistrerManche). */
+    bilan() {
+      return {
+        fans: this.fans,
+        depassements: this.depassements,
+        drift: this.drift,
+        ramasses: { ...this.ramasses },
+        usure: 1 - this.joueur.durabilite / this.joueur.p.durabiliteMax
+      };
+    }
     /** Classement final : les voitures pas encore arrivées sont estimées. */
     resultats() {
       const L = this.circuit.longueur;
@@ -2005,8 +2426,10 @@ body {
       this.camera.x = lerp(this.camera.x, cibleX, 0.12);
       this.camera.y = lerp(this.camera.y, cibleY, 0.12);
       const cw = this.decor.canvas.width, ch = this.decor.canvas.height;
-      const camX = Math.round(clamp(this.camera.x - W2 / 2, 0, cw - W2));
-      const camY = Math.round(clamp(this.camera.y - hVue / 2, 0, ch - hVue));
+      const sx = this.secousse > 0 ? (Math.random() - 0.5) * this.secousse : 0;
+      const sy = this.secousse > 0 ? (Math.random() - 0.5) * this.secousse : 0;
+      const camX = Math.round(clamp(this.camera.x - W2 / 2 + sx, 0, cw - W2));
+      const camY = Math.round(clamp(this.camera.y - hVue / 2 + sy, 0, ch - hVue));
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(this.decor.canvas, camX, camY, W2, hVue, 0, 0, W2, hVue);
       ctx.save();
@@ -2021,16 +2444,20 @@ body {
         const pas = saute ? 1 : 0;
         tuile(ctx, this.planche, idPersonnage(s.base, s.dir, pas), s.x - 8, s.y - 12 - (saute ? 2 : 0));
       }
+      for (const b of this.bonus) {
+        if (b.pris || b.x < camX - 8 || b.x > camX + W2 + 8 || b.y < camY - 8 || b.y > camY + hVue + 8) continue;
+        dessinerBonus(ctx, b, t);
+      }
       for (const v of this.voitures) {
         ctx.fillStyle = "rgba(30,28,40,0.28)";
         ctx.save();
         ctx.translate(Math.round(v.x) + 2, Math.round(v.y) + 2);
         ctx.rotate(v.angle + Math.PI / 2);
-        ctx.fillRect(-6, -10, 12, 21);
+        ctx.fillRect(-7, -11, 14, 23);
         ctx.restore();
       }
       for (const v of this.voitures) {
-        const sprite = spriteVoiture(v.couleur, v.joueur ? "#f2c14e" : "#f4f1e8");
+        const sprite = spriteVoiture(v.couleur, v.joueur ? "#f2c14e" : "#f4f1e8", v.looks || []);
         ctx.save();
         ctx.translate(Math.round(v.x), Math.round(v.y));
         ctx.rotate(v.angle + Math.PI / 2);
@@ -2047,10 +2474,10 @@ body {
       ctx.fillStyle = "#f2c14e";
       for (let i = 0; i < 5; i++) ctx.fillRect(bx - 4 + i, by + i, 9 - i * 2, 1);
       this.dessinerPortique(ctx);
-      for (const p of this.particules) {
-        ctx.globalAlpha = clamp(p.vie / p.max, 0, 1);
-        ctx.fillStyle = p.couleur;
-        ctx.fillRect(Math.round(p.x), Math.round(p.y), p.taille, p.taille);
+      for (const p2 of this.particules) {
+        ctx.globalAlpha = clamp(p2.vie / p2.max, 0, 1);
+        ctx.fillStyle = p2.couleur;
+        ctx.fillRect(Math.round(p2.x), Math.round(p2.y), p2.taille, p2.taille);
       }
       ctx.globalAlpha = 1;
       for (const s of visibles) if (s.bulle) bulle(ctx, s.x, s.y - 14, s.bulle.texte);
@@ -2095,6 +2522,8 @@ body {
       pastille(ctx, 6, 6, `TOUR ${tourAffiche}/${this.tours}`, "#1f2a44");
       pastille(ctx, 6, 26, `${ordinal(this.positionJoueur)} / ${this.voitures.length}`, "#c2504d");
       pastille(ctx, 6, 46, formatTemps(Math.max(0, this.temps)), "#1f2a44");
+      pastille(ctx, 6, 66, `${this.ramasses.argent} G \xB7 ${this.ramasses.recherche} PR`, "#7a5a12");
+      if (this.driftEnCours > 0.5) texte(ctx, `DRIFT ${(this.driftEnCours * 6).toFixed(0)}`, W2 / 2, 44, 14, "#c4b5fd", "center");
       const z = this.zones(W2, H2);
       ctx.fillStyle = "rgba(31,42,68,0.85)";
       ctx.fillRect(z.pause.x, z.pause.y, z.pause.w, z.pause.h);
@@ -2206,6 +2635,58 @@ body {
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillText(chaine, x + 6, y + 8.5);
+  }
+  function coinVers(v, nx, ny) {
+    const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+    const sf = Math.sign(fx * nx + fy * ny) || 1, sl = Math.sign(-fy * nx + fx * ny) || 1;
+    return { x: v.x + fx * DEMI_LONGUEUR * sf - fy * DEMI_LARGEUR * sl, y: v.y + fy * DEMI_LONGUEUR * sf + fx * DEMI_LARGEUR * sl };
+  }
+  function recouvrement(a, b) {
+    const axes = [];
+    for (const v of [a, b]) {
+      const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+      axes.push([fx, fy], [-fy, fx]);
+    }
+    const dx = b.x - a.x, dy = b.y - a.y;
+    let meilleur = null;
+    for (const [nx, ny] of axes) {
+      const ra = etendue(a, nx, ny), rb = etendue(b, nx, ny);
+      const d = dx * nx + dy * ny;
+      const prof = ra + rb - Math.abs(d);
+      if (prof <= 0) return null;
+      if (!meilleur || prof < meilleur.prof) meilleur = { nx: d < 0 ? -nx : nx, ny: d < 0 ? -ny : ny, prof };
+    }
+    return meilleur;
+  }
+  function etendue(v, nx, ny) {
+    const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+    return DEMI_LONGUEUR * Math.abs(fx * nx + fy * ny) + DEMI_LARGEUR * Math.abs(-fy * nx + fx * ny);
+  }
+  function dessinerBonus(ctx, b, t) {
+    const x = Math.round(b.x), y = Math.round(b.y);
+    if (b.type === "piece") {
+      const w = Math.max(1, Math.round(Math.abs(Math.cos(t * 5 + b.x * 0.05)) * 3));
+      ctx.fillStyle = "rgba(30,28,40,0.3)";
+      ctx.fillRect(x - w, y + 4, w * 2 + 1, 2);
+      ctx.fillStyle = "#7a5a12";
+      ctx.fillRect(x - w - 1, y - 4, w * 2 + 3, 9);
+      ctx.fillStyle = "#f2c14e";
+      ctx.fillRect(x - w, y - 3, w * 2 + 1, 7);
+      ctx.fillStyle = "#fff3b0";
+      ctx.fillRect(x - w, y - 3, 1, 3);
+    } else {
+      const f = Math.sin(t * 4 + b.y) > 0 ? 1 : 0;
+      ctx.fillStyle = "rgba(30,28,40,0.3)";
+      ctx.fillRect(x - 4, y + 5, 9, 2);
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(x - 5, y - 6 - f, 11, 11);
+      ctx.fillStyle = "#2f6fdb";
+      ctx.fillRect(x - 4, y - 5 - f, 9, 9);
+      ctx.fillStyle = "#c9ccd4";
+      ctx.fillRect(x - 2, y - 5 - f, 5, 3);
+      ctx.fillStyle = "#f4f1e8";
+      ctx.fillRect(x - 3, y + 0 - f, 7, 3);
+    }
   }
 
   // pistonville/contenu/base/vehicules.js
@@ -2436,9 +2917,43 @@ body {
     { id: "citron", nom: "Team Citron", pilote: "Axel", couleur: "#e8e04f", talent: -0.03 }
   ];
 
+  // pistonville/contenu/base/pieces.js
+  var p = (id, nom, emplacement, rarete, prix, recherche, bonus, extra = {}) => ({ id, nom, emplacement, rarete, prix, recherche, bonus, ...extra });
+  var pieces_default = [
+    // Moteurs
+    p("moteur-4cyl", "Moteur 4 cylindres", "moteur", "commune", 2500, 0, { vitesse: 6, acceleration: 6 }),
+    p("moteur-v6", "Moteur V6", "moteur", "commune", 6500, 1, { vitesse: 12, acceleration: 9 }, { look: "prise" }),
+    p("moteur-rotatif", "Moteur rotatif", "moteur", "rare", 15e3, 2, { vitesse: 22, acceleration: 10 }, { look: "prise" }),
+    p("moteur-hybride", "Moteur hybride", "moteur", "rare", 16e3, 2, { vitesse: 10, acceleration: 24 }, { look: "prise" }),
+    p("turbine", "Turbine", "moteur", "super", 42e3, 3, { vitesse: 34, acceleration: 8 }, { look: "turbine" }),
+    // Pneus
+    p("pneus-route", "Pneus route", "pneus", "commune", 1800, 0, { maniabilite: 6 }, { surfaces: { asphalte: 0.04 } }),
+    p("pneus-tt", "Pneus tout-terrain", "pneus", "commune", 2600, 1, { maniabilite: 4 }, { surfaces: { terre: 0.12, sable: 0.12 }, look: "larges" }),
+    p("pneus-pluie", "Pneus pluie", "pneus", "rare", 7e3, 1, { maniabilite: 6 }, { surfaces: { mouille: 0.16, paves: 0.06 } }),
+    p("pneus-neige", "Pneus neige", "pneus", "rare", 8e3, 2, { maniabilite: 6 }, { surfaces: { glace: 0.22 } }),
+    p("pneus-slicks", "Pneus slicks", "pneus", "super", 3e4, 3, { maniabilite: 16, vitesse: 4 }, { surfaces: { asphalte: 0.1 }, look: "larges" }),
+    // Boîtes de vitesses
+    p("boite-5", "Bo\xEEte 5 vitesses", "boite", "commune", 2200, 0, { acceleration: 7 }),
+    p("boite-courte", "Bo\xEEte courte", "boite", "rare", 9e3, 1, { acceleration: 16, vitesse: -3 }),
+    p("boite-longue", "Bo\xEEte longue", "boite", "rare", 9e3, 1, { vitesse: 15, acceleration: -3 }),
+    p("boite-seq", "Bo\xEEte s\xE9quentielle", "boite", "super", 32e3, 3, { vitesse: 12, acceleration: 12 }),
+    // Ailerons
+    p("becquet", "Becquet", "aileron", "commune", 2e3, 0, { maniabilite: 5 }, { look: "becquet" }),
+    p("aileron-sport", "Aileron sport", "aileron", "rare", 8500, 1, { maniabilite: 12, vitesse: 2 }, { look: "aileron" }),
+    p("aileron-gt", "Aileron GT", "aileron", "super", 28e3, 3, { maniabilite: 20, vitesse: 3 }, { look: "aileronGT" }),
+    // Nitro
+    p("nitro-simple", "Bouteille de nitro", "nitro", "commune", 3e3, 0, {}, { charges: 2, look: "nitro1" }),
+    p("nitro-double", "Double bouteille", "nitro", "rare", 11e3, 2, {}, { charges: 3, look: "nitro2" }),
+    p("nitro-course", "Kit nitro de course", "nitro", "super", 26e3, 3, { acceleration: 4 }, { charges: 3, duree: 2.6, look: "nitro2" }),
+    // Châssis
+    p("renforts", "Renforts", "chassis", "commune", 2400, 0, { solidite: 10 }),
+    p("arceau", "Arceau de s\xE9curit\xE9", "chassis", "rare", 9500, 1, { solidite: 20, maniabilite: 2 }, { look: "arceau" }),
+    p("coque-carbone", "Coque carbone", "chassis", "super", 36e3, 3, { solidite: 14, vitesse: 6, acceleration: 6 }, { look: "carbone" })
+  ];
+
   // pistonville/contenu/catalogue.js
   var packs = [
-    { id: "base", vehicules: vehicules_default, grandsPrix: grands_prix_default, equipes: equipes_default }
+    { id: "base", vehicules: vehicules_default, grandsPrix: grands_prix_default, equipes: equipes_default, pieces: pieces_default }
   ];
   function fusionner(cle) {
     const parId = /* @__PURE__ */ new Map();
@@ -2450,10 +2965,11 @@ body {
   var VEHICULES = fusionner("vehicules");
   var GRANDS_PRIX = fusionner("grandsPrix");
   var EQUIPES = fusionner("equipes");
+  var PIECES = fusionner("pieces");
 
   // pistonville/src/partie.js
   var CLE = "pistonville.partie.v1";
-  var VERSION = 1;
+  var VERSION = 2;
   function nouvellePartie() {
     return {
       version: VERSION,
@@ -2465,11 +2981,21 @@ body {
       victoires: 0,
       victoiresParPalier: {},
       licence: null,
+      rang: 1,
+      exp: 0,
+      recherche: 0,
+      // points de recherche (PR)
+      labo: 0,
+      // niveau de pièces débloqué (0 à 3)
+      tickets: 1,
+      // tickets de tombola
       garage: [],
-      // { uid, modele, ameliorations: {…}, usure }
+      // { uid, modele, couleur, qualite, ameliorations, usure, pieces: {emplacement: uid} }
       voitureActive: null,
+      inventaire: [],
+      // { uid, piece }
       constructions: [],
-      // { modele, pret }
+      // héritage de la version 1
       inscriptions: {},
       // gpId → true (Grands Prix ouverts)
       candidatures: {},
@@ -2478,6 +3004,10 @@ body {
       // gpId → meilleure place finale
       gp: null,
       // Grand Prix en cours
+      villeJour: 0,
+      // dernier jour de balade en ville
+      cafeJour: 0,
+      // dernier café des pilotes
       pilote: "L\xE9a",
       aide: true,
       son: true,
@@ -2488,8 +3018,7 @@ body {
     try {
       const brut = localStorage.getItem(CLE);
       if (!brut) return null;
-      const p = JSON.parse(brut);
-      return migrer(p);
+      return migrer(JSON.parse(brut));
     } catch {
       return null;
     }
@@ -2500,28 +3029,79 @@ body {
     } catch {
     }
   }
-  function migrer(p) {
+  function migrer(p2) {
     const base = nouvellePartie();
-    for (const cle of Object.keys(base)) if (p[cle] === void 0) p[cle] = base[cle];
-    for (const v of p.garage) if (!modele(v.modele)) v.modele = VEHICULES[0].id;
-    p.version = VERSION;
-    return p;
+    for (const cle of Object.keys(base)) if (p2[cle] === void 0) p2[cle] = base[cle];
+    for (const v of p2.garage) {
+      if (!modele(v.modele)) v.modele = VEHICULES[0].id;
+      if (!v.couleur) v.couleur = modele(v.modele).couleur;
+      if (v.qualite === void 0) v.qualite = 0;
+      if (!v.pieces) v.pieces = {};
+    }
+    p2.inventaire = p2.inventaire.filter((i) => piece(i.piece));
+    p2.version = VERSION;
+    return p2;
   }
   var modele = (id) => VEHICULES.find((v) => v.id === id);
   var grandPrix = (id) => GRANDS_PRIX.find((g) => g.id === id);
+  var piece = (id) => PIECES.find((x) => x.id === id);
+  var uid = (prefixe) => `${prefixe}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
   function voitureActive(partie) {
     const v = partie.garage.find((g) => g.uid === partie.voitureActive) || partie.garage[0];
-    if (!v) return null;
-    const m = modele(v.modele);
-    const stats = {};
-    for (const [cle, val] of Object.entries(m.stats)) stats[cle] = Math.min(99, val + (v.ameliorations[cle] || 0) * GAIN_AMELIORATION);
-    return { ...m, uid: v.uid, stats, ameliorations: v.ameliorations, usure: v.usure, physique: physique(stats) };
+    return v ? decrireVoiture(partie, v) : null;
   }
-  function ajouterVoiture(partie, idModele) {
-    const uid = `${idModele}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e4)}`;
-    partie.garage.push({ uid, modele: idModele, ameliorations: { vitesse: 0, acceleration: 0, maniabilite: 0, solidite: 0 }, usure: 0 });
-    if (!partie.voitureActive) partie.voitureActive = uid;
-    return uid;
+  function decrireVoiture(partie, v) {
+    const m = modele(v.modele);
+    const q = QUALITES[v.qualite || 0];
+    const montees = Object.entries(v.pieces || {}).map(([emplacement, iuid]) => {
+      const inv = partie.inventaire.find((i) => i.uid === iuid);
+      return inv ? { emplacement, uid: iuid, ...piece(inv.piece) } : null;
+    }).filter(Boolean);
+    const stats = {};
+    for (const [cle, val] of Object.entries(m.stats)) {
+      let s = val + q.bonus + (v.ameliorations[cle] || 0) * GAIN_AMELIORATION;
+      for (const pc of montees) s += pc.bonus[cle] || 0;
+      stats[cle] = Math.max(1, Math.min(99, s));
+    }
+    const surfaces = {};
+    let nitros = 1, nitroDuree = BOOSTS.nitro.duree;
+    const looks = /* @__PURE__ */ new Set();
+    for (const pc of montees) {
+      for (const [s, b] of Object.entries(pc.surfaces || {})) surfaces[s] = (surfaces[s] || 0) + b;
+      if (pc.charges) nitros = Math.max(nitros, pc.charges);
+      if (pc.duree) nitroDuree = pc.duree;
+      if (pc.look) looks.add(pc.look);
+    }
+    return {
+      ...m,
+      uid: v.uid,
+      couleur: v.couleur || m.couleur,
+      qualite: v.qualite || 0,
+      stats,
+      ameliorations: v.ameliorations,
+      usure: v.usure,
+      pieces: montees,
+      physique: physique(stats),
+      surfaces,
+      nitros,
+      nitroDuree,
+      looks: [...looks]
+    };
+  }
+  function ajouterVoiture(partie, idModele, extra = {}) {
+    const id = uid(idModele);
+    partie.garage.push({
+      uid: id,
+      modele: idModele,
+      couleur: modele(idModele).couleur,
+      qualite: 0,
+      ameliorations: { vitesse: 0, acceleration: 0, maniabilite: 0, solidite: 0 },
+      usure: 0,
+      pieces: {},
+      ...extra
+    });
+    partie.voitureActive = id;
+    return id;
   }
   function peutAcheter(partie, m) {
     if (m.licence && !licenceAuMoins(partie.licence, m.licence)) return `Licence ${m.licence} requise`;
@@ -2531,15 +3111,17 @@ body {
     const m = modele(idModele);
     if (peutAcheter(partie, m) || partie.argent < m.prix) return false;
     partie.argent -= m.prix;
-    partie.voitureActive = ajouterVoiture(partie, idModele);
+    ajouterVoiture(partie, idModele);
     return true;
   }
-  function construire(partie, idModele) {
+  function construire(partie, idModele, couleur) {
     const m = modele(idModele);
-    if (peutAcheter(partie, m) || partie.argent < m.construction.prix) return false;
+    if (peutAcheter(partie, m) || partie.argent < m.construction.prix) return null;
     partie.argent -= m.construction.prix;
-    partie.constructions.push({ modele: idModele, pret: partie.jour + m.construction.jours });
-    return true;
+    const alea = creerAlea((Date.now() ^ partie.jour * 7919) >>> 0);
+    const qualite = tirerQualite(alea);
+    const id = ajouterVoiture(partie, idModele, { couleur: couleur || m.couleur, qualite });
+    return { uid: id, qualite };
   }
   function ameliorer(partie, stat) {
     const v = partie.garage.find((g) => g.uid === partie.voitureActive);
@@ -2549,6 +3131,13 @@ body {
     if (partie.argent < cout) return false;
     partie.argent -= cout;
     v.ameliorations[stat] = niveau + 1;
+    return true;
+  }
+  function peindre(partie, couleur) {
+    const v = partie.garage.find((g) => g.uid === partie.voitureActive);
+    if (!v || partie.argent < COUT_PEINTURE) return false;
+    partie.argent -= COUT_PEINTURE;
+    v.couleur = couleur;
     return true;
   }
   function coutReparation(partie) {
@@ -2563,6 +3152,93 @@ body {
     partie.garage.find((g) => g.uid === partie.voitureActive).usure = 0;
     return true;
   }
+  var prixPiece = (pc, remise = 0) => Math.round(pc.prix * (1 - remise) / 10) * 10;
+  function promoDuJour(partie) {
+    const dispo = PIECES.filter((x) => x.recherche <= partie.labo);
+    return dispo[(partie.jour * 7 + 3) % dispo.length]?.id;
+  }
+  function acheterPiece(partie, id, remise = 0) {
+    const pc = piece(id);
+    const prix = pc && prixPiece(pc, remise);
+    if (!pc || pc.recherche > partie.labo || partie.argent < prix) return null;
+    partie.argent -= prix;
+    const inv = { uid: uid("p"), piece: id };
+    partie.inventaire.push(inv);
+    return inv;
+  }
+  function montureDe(partie, iuid) {
+    for (const v of partie.garage) for (const [e2, u] of Object.entries(v.pieces || {})) if (u === iuid) return { voiture: v, emplacement: e2 };
+    return null;
+  }
+  function monter(partie, iuid) {
+    const v = partie.garage.find((g) => g.uid === partie.voitureActive);
+    const inv = partie.inventaire.find((i) => i.uid === iuid);
+    if (!v || !inv) return false;
+    const ailleurs = montureDe(partie, iuid);
+    if (ailleurs) delete ailleurs.voiture.pieces[ailleurs.emplacement];
+    v.pieces[piece(inv.piece).emplacement] = iuid;
+    return true;
+  }
+  function demonter(partie, emplacement) {
+    const v = partie.garage.find((g) => g.uid === partie.voitureActive);
+    if (!v) return false;
+    delete v.pieces[emplacement];
+    return true;
+  }
+  function vendrePiece(partie, iuid) {
+    const inv = partie.inventaire.find((i) => i.uid === iuid);
+    if (!inv) return 0;
+    const ailleurs = montureDe(partie, iuid);
+    if (ailleurs) delete ailleurs.voiture.pieces[ailleurs.emplacement];
+    partie.inventaire = partie.inventaire.filter((i) => i !== inv);
+    const prix = Math.round(piece(inv.piece).prix * 0.4);
+    partie.argent += prix;
+    return prix;
+  }
+  function rechercher(partie) {
+    const suivant = partie.labo + 1;
+    if (suivant >= COUT_RECHERCHE.length || partie.recherche < COUT_RECHERCHE[suivant]) return false;
+    partie.recherche -= COUT_RECHERCHE[suivant];
+    partie.labo = suivant;
+    return true;
+  }
+  function pieceAuHasard(alea, rarete, laboMax = 3) {
+    const choix = PIECES.filter((x) => x.rarete === rarete && x.recherche <= laboMax);
+    return choix[Math.floor(alea() * choix.length)];
+  }
+  function tirerTombola(partie) {
+    if (partie.tickets <= 0) return null;
+    partie.tickets -= 1;
+    const alea = creerAlea(Date.now() * 31 + partie.tickets >>> 0);
+    const r = alea();
+    let lot;
+    if (r < 0.06) lot = { type: "piece", piece: pieceAuHasard(alea, "super") };
+    else if (r < 0.26) lot = { type: "piece", piece: pieceAuHasard(alea, "rare") };
+    else if (r < 0.5) lot = { type: "piece", piece: pieceAuHasard(alea, "commune") };
+    else if (r < 0.75) lot = { type: "recherche", valeur: 10 + Math.floor(alea() * 21) };
+    else lot = { type: "argent", valeur: 500 * (2 + Math.floor(alea() * 7)) };
+    appliquerLot(partie, lot);
+    return lot;
+  }
+  function appliquerLot(partie, lot) {
+    if (lot.type === "piece") partie.inventaire.push({ uid: uid("p"), piece: lot.piece.id });
+    if (lot.type === "recherche") partie.recherche += lot.valeur;
+    if (lot.type === "argent") partie.argent += lot.valeur;
+  }
+  function gagnerExp(partie, n) {
+    partie.exp += Math.round(n);
+    const montees = [];
+    while (partie.exp >= expPourRang(partie.rang)) {
+      partie.exp -= expPourRang(partie.rang);
+      partie.rang += 1;
+      const r = recompenseRang(partie.rang);
+      partie.argent += r.argent;
+      partie.recherche += r.recherche;
+      partie.tickets += r.tickets;
+      montees.push({ rang: partie.rang, ...r });
+    }
+    return montees;
+  }
   var ORDRE_LICENCES = [null, "C", "B", "A", "S"];
   var licenceAuMoins = (licence, min) => ORDRE_LICENCES.indexOf(licence) >= ORDRE_LICENCES.indexOf(min);
   function statutGP(partie, gp) {
@@ -2575,6 +3251,7 @@ body {
     partie.inscriptions[gpId] = true;
     return true;
   }
+  var fraisDossier = (gp) => Math.round(gp.prix * 0.1);
   function deposerCandidature(partie, gpId) {
     const frais = fraisDossier(grandPrix(gpId));
     if (partie.argent < frais) return false;
@@ -2582,11 +3259,10 @@ body {
     partie.candidatures[gpId] = { etat: "attente", jour: partie.jour };
     return true;
   }
-  var fraisDossier = (gp) => Math.round(gp.prix * 0.1);
   function jourSuivant(partie) {
     partie.jour += 1;
     const nouvelles = [];
-    partie.constructions = partie.constructions.filter((c2) => {
+    partie.constructions = (partie.constructions || []).filter((c2) => {
       if (c2.pret > partie.jour) return true;
       ajouterVoiture(partie, c2.modele);
       nouvelles.push({ titre: "Voiture termin\xE9e", texte: `${modele(c2.modele).nom} sort de l'atelier.` });
@@ -2601,42 +3277,44 @@ body {
         c2.etat = "acceptee";
         const lic = PALIERS[gp.palier].licence;
         if (lic && !licenceAuMoins(partie.licence, lic)) partie.licence = lic;
-        nouvelles.push({ titre: `Candidature accept\xE9e`, texte: `${gp.nom} : vous \xEAtes sur la grille ! Licence ${PALIERS[gp.palier].licence}.` });
+        nouvelles.push({ titre: "Candidature accept\xE9e", texte: `${gp.nom} : vous \xEAtes sur la grille ! Licence ${lic}.` });
       } else if (verdict.presque && c2.etat === "attente") {
         c2.etat = "liste";
         c2.manques = verdict.manques;
-        nouvelles.push({ titre: `Liste d'attente`, texte: `${gp.nom} : il manque presque rien (${verdict.manques.join(", ")}). Une place peut se lib\xE9rer.` });
+        nouvelles.push({ titre: "Liste d'attente", texte: `${gp.nom} : il ne manque presque rien (${verdict.manques.join(", ")}). Une place peut se lib\xE9rer.` });
       } else {
         c2.etat = "refusee";
         c2.manques = verdict.manques;
-        nouvelles.push({ titre: `Candidature refus\xE9e`, texte: `${gp.nom} : il manque ${verdict.manques.join(", ")}.` });
+        nouvelles.push({ titre: "Candidature refus\xE9e", texte: `${gp.nom} : il manque ${verdict.manques.join(", ")}.` });
       }
     }
     partie.nouvelles = nouvelles;
     return nouvelles;
   }
-  var BASE_NIVEAU = [0, 28, 46, 62, 77, 90];
+  var BASE_NIVEAU = [0, 36, 55, 71, 84, 94];
   function adversaires(gp) {
     const alea = creerAlea([...gp.id].reduce((h, c2) => h * 31 + c2.charCodeAt(0), 7) >>> 0);
     const equipes = EQUIPES.slice().sort(() => alea() - 0.5).slice(0, gp.adversaires);
-    const base = BASE_NIVEAU[gp.niveau] || 30;
+    const base = BASE_NIVEAU[gp.niveau] || 36;
     return equipes.map((e2) => {
-      const b = base + e2.talent * 60;
-      const stats = { vitesse: b, acceleration: b + 6, maniabilite: b + 4, solidite: 50 };
+      const b = Math.min(99, base + e2.talent * 70);
+      const stats = { vitesse: b, acceleration: b + 4, maniabilite: b + 2, solidite: 50 };
       return { equipe: e2.id, nom: e2.pilote, ecurie: e2.nom, couleur: e2.couleur, talent: e2.talent * 0.5, physique: physique(stats) };
     });
   }
   function commencerGP(partie, gpId) {
     partie.gp = { id: gpId, manche: 0, points: {}, gains: 0, fans: 0 };
   }
-  function enregistrerManche(partie, resultats, fansCourse, usure) {
+  function enregistrerManche(partie, resultats, course) {
     const gp = grandPrix(partie.gp.id);
     const moi = resultats.find((r) => r.id === "joueur");
     const i = moi.place - 1;
     const prime = Math.round(gp.prix * (PART_PRIX[i] ?? 0.1));
     const licence = POINTS_LICENCE[i] ?? 1;
-    const fans = Math.round((FANS_PLACE[i] ?? 2) * gp.niveau + fansCourse);
-    partie.argent += prime;
+    const fans = Math.round((FANS_PLACE[i] ?? 2) * gp.niveau + course.fans);
+    const exp = Math.round((EXP_PLACE[i] ?? 8) * gp.niveau + course.depassements * EXP_DEPASSEMENT + course.drift);
+    partie.argent += prime + course.ramasses.argent;
+    partie.recherche += course.ramasses.recherche + Math.max(0, 4 - i);
     partie.pointsLicence += licence;
     partie.fans += fans;
     if (moi.place <= 3) partie.podiums += 1;
@@ -2645,12 +3323,33 @@ body {
       partie.victoiresParPalier[gp.palier] = (partie.victoiresParPalier[gp.palier] || 0) + 1;
     }
     for (const r of resultats) partie.gp.points[r.id] = (partie.gp.points[r.id] || 0) + (POINTS_GP[r.place - 1] ?? 0);
-    partie.gp.gains += prime;
+    partie.gp.gains += prime + course.ramasses.argent;
     partie.gp.fans += fans;
     const v = partie.garage.find((g) => g.uid === partie.voitureActive);
-    if (v) v.usure = Math.min(0.9, Math.max(v.usure, usure));
+    if (v) v.usure = Math.min(0.9, Math.max(v.usure, course.usure));
+    const alea = creerAlea((Date.now() ^ partie.jour * 131 + i) >>> 0);
+    let butin = null;
+    const chanceButin = [0.45, 0.3, 0.22][i] ?? 0.1;
+    if (alea() < chanceButin) {
+      const r = alea();
+      const pc = pieceAuHasard(alea, r < 0.08 * gp.niveau ? "super" : r < 0.35 ? "rare" : "commune", 3);
+      butin = { type: "piece", piece: pc };
+      appliquerLot(partie, butin);
+    }
+    const rangs = gagnerExp(partie, exp);
     partie.gp.manche += 1;
-    return { prime, licence, fans, place: moi.place, fini: partie.gp.manche >= gp.manches.length };
+    return {
+      prime,
+      licence,
+      fans,
+      exp,
+      rangs,
+      butin,
+      place: moi.place,
+      ramasses: course.ramasses,
+      recherche: course.ramasses.recherche + Math.max(0, 4 - i),
+      fini: partie.gp.manche >= gp.manches.length
+    };
   }
   function classementGP(partie, noms) {
     return Object.entries(partie.gp.points).map(([id, points]) => ({ id, points, ...noms[id] })).sort((a, b) => b.points - a.points);
@@ -2659,54 +3358,108 @@ body {
     const id = partie.gp.id;
     const avant = partie.trophees[id];
     if (!avant || placeFinale < avant) partie.trophees[id] = placeFinale;
+    if (placeFinale <= 3) partie.tickets += 1;
     partie.gp = null;
     return jourSuivant(partie);
+  }
+  var peutSortir = (partie) => partie.villeJour !== partie.jour;
+  function finBalade(partie, gains) {
+    partie.villeJour = partie.jour;
+    partie.argent += gains.argent;
+    partie.recherche += gains.recherche;
+    partie.fans += gains.fans;
+    return gagnerExp(partie, gains.exp);
+  }
+  var PRIX_CAFE = 300;
+  function boireCafe(partie) {
+    if (partie.cafeJour === partie.jour || partie.argent < PRIX_CAFE) return null;
+    partie.cafeJour = partie.jour;
+    partie.argent -= PRIX_CAFE;
+    partie.fans += 3;
+    return gagnerExp(partie, 15);
   }
 
   // pistonville/src/scene-garage.js
   var DY = 26;
-  var ETAPES = [
-    { x: 92, y: 200 + DY },
-    { x: 160, y: 150 + DY },
-    { x: 236, y: 196 + DY },
-    { x: 160, y: 236 + DY },
-    { x: 70, y: 120 + DY }
-  ];
+  var COULOIR = 222;
+  var ETAPES = [{ x: 52, y: 222 }, { x: 160, y: 176 }, { x: 160, y: 222 }, { x: 270, y: 222 }, { x: 160, y: 280 }];
+  var PONTS = [{ x: 70, y: 84 + DY }, { x: 196, y: 84 + DY }];
+  var POSTES = [{ x: 184, y: 160 }, { x: 264, y: 160 }];
   var PAROLES = ["!", "Hop !", "\xC7a roule", "Huile ?", "Vroum", "..."];
   var SceneGarage = class {
     constructor(planche) {
       this.planche = planche;
       this.meca = [
-        { base: PERSONNAGES[3], x: 92, y: 200 + DY, cible: 1, attente: 0, bulle: null },
-        { base: PERSONNAGES[1], x: 236, y: 196 + DY, cible: 3, attente: 1.2, bulle: null }
+        { base: PERSONNAGES[3], x: 52, y: 222, cible: 1, attente: 0, bulle: null },
+        { base: PERSONNAGES[1], x: 270, y: 222, cible: 2, attente: 1.2, bulle: null }
       ];
       this.passant = -40;
+      this.construction = null;
+      this.etincelles = [];
+    }
+    /** Lance l'animation de construction d'une voiture (durée en secondes). */
+    construire(voiture, duree) {
+      this.construction = { voiture, duree, t: 0 };
+      this.meca.forEach((m, i) => {
+        m.poste = POSTES[i];
+        m.attente = 0;
+      });
+    }
+    finConstruction() {
+      this.construction = null;
+      this.meca.forEach((m) => {
+        m.poste = null;
+      });
     }
     maj(dt) {
-      for (const m of this.meca) {
-        if (m.attente > 0) {
+      for (const [i, m] of this.meca.entries()) {
+        if (m.attente > 0 && !m.poste) {
           m.attente -= dt;
           continue;
         }
-        const c2 = ETAPES[m.cible];
+        const c2 = m.poste || ETAPES[m.cible];
         const dx = c2.x - m.x, dy = c2.y - m.y;
-        const d = Math.hypot(dx, dy);
-        if (d < 1) {
-          m.cible = (m.cible + 1 + Math.floor(Math.random() * 2)) % ETAPES.length;
+        const v = 30 * dt;
+        if (Math.abs(dx) > 0.5) {
+          if (Math.abs(m.y - COULOIR) > 0.5) this.pas(m, 0, Math.sign(COULOIR - m.y) * Math.min(v, Math.abs(COULOIR - m.y)));
+          else this.pas(m, Math.sign(dx) * Math.min(v, Math.abs(dx)), 0);
+        } else if (Math.abs(dy) > 0.5) {
+          this.pas(m, 0, Math.sign(dy) * Math.min(v, Math.abs(dy)));
+        } else if (m.poste) {
+          m.dir = i === 0 ? DIRECTION.droite : DIRECTION.gauche;
+        } else {
+          m.cible = (m.cible + 1 + Math.floor(Math.random() * 3)) % ETAPES.length;
           m.attente = 1 + Math.random() * 2;
           if (Math.random() < 0.5) m.bulle = { texte: PAROLES[Math.floor(Math.random() * PAROLES.length)], vie: 1.6 };
-        } else {
-          m.x += dx / d * 28 * dt;
-          m.y += dy / d * 28 * dt;
-          m.dir = Math.abs(dx) > Math.abs(dy) ? dx > 0 ? DIRECTION.droite : DIRECTION.gauche : dy > 0 ? DIRECTION.face : DIRECTION.dos;
         }
         if (m.bulle && (m.bulle.vie -= dt) <= 0) m.bulle = null;
       }
+      const pont = PONTS[1];
+      if (this.construction) {
+        this.construction.t += dt;
+        if (Math.random() < 0.6) {
+          this.etincelles.push({ x: pont.x + 28 + (Math.random() - 0.5) * 26, y: pont.y + 30 + Math.random() * 40, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, vie: 0.4 });
+        }
+      }
+      for (const e2 of this.etincelles) {
+        e2.x += e2.vx * dt;
+        e2.y += e2.vy * dt;
+        e2.vy += 120 * dt;
+        e2.vie -= dt;
+      }
+      this.etincelles = this.etincelles.filter((e2) => e2.vie > 0);
       this.passant += dt * 60;
       if (this.passant > 380) this.passant = -60;
     }
-    dessiner(ctx, W2, H2, t, partie, voiture) {
-      const p = this.planche;
+    pas(m, x, y) {
+      m.x += x;
+      m.y += y;
+      if (x) m.dir = x > 0 ? DIRECTION.droite : DIRECTION.gauche;
+      else if (y) m.dir = y > 0 ? DIRECTION.face : DIRECTION.dos;
+      m.marche = true;
+    }
+    dessiner(ctx, W2, H2, t, partie) {
+      const p2 = this.planche;
       ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = "#38cbab";
       ctx.fillRect(0, 0, W2, H2);
@@ -2718,13 +3471,13 @@ body {
       }
       ctx.save();
       ctx.translate(0, DY);
-      for (const [x, y, n] of [[14, 72, "arbre"], [306, 96, "arbreRond"], [10, 250, "arbreBoule"], [310, 240, "arbre"], [300, 40, "sapin"]]) objet(ctx, p, n, x, y);
+      for (const [x, y, n] of [[14, 72, "arbre"], [306, 96, "arbreRond"], [10, 250, "arbreBoule"], [310, 240, "arbre"], [300, 40, "sapin"]]) objet(ctx, p2, n, x, y);
       const yt = 296, yr = 312;
       for (let x = 0; x < W2; x += T) {
-        tuile(ctx, p, 36, x, yt);
-        tuile(ctx, p, 441, x, yr);
-        tuile(ctx, p, 441, x, yr + T);
-        tuile(ctx, p, 441, x, yr + 2 * T);
+        tuile(ctx, p2, 36, x, yt);
+        tuile(ctx, p2, 441, x, yr);
+        tuile(ctx, p2, 441, x, yr + T);
+        tuile(ctx, p2, 441, x, yr + 2 * T);
       }
       ctx.fillStyle = "#9896ab";
       ctx.fillRect(0, yr - 1, W2, 1);
@@ -2732,19 +3485,19 @@ body {
       for (let x = 4; x < W2; x += 24) ctx.fillRect(x, yr + 23, 12, 2);
       ctx.fillStyle = "#9b9ca3";
       ctx.fillRect(130, 276, 60, 36);
-      objet(ctx, p, "boiteAuxLettres", 112, yt + 15);
-      objet(ctx, p, "lampadaire", 214, yt + 15);
-      objet(ctx, p, "poubelle", 236, yt + 15);
+      objet(ctx, p2, "boiteAuxLettres", 112, yt + 15);
+      objet(ctx, p2, "lampadaire", 214, yt + 15);
+      objet(ctx, p2, "poubelle", 236, yt + 15);
       const passante = spriteVoiture("#4f7ddb");
       ctx.save();
       ctx.translate(Math.round(this.passant), yr + 34);
       ctx.rotate(Math.PI / 2);
-      ctx.drawImage(passante, -6, -10);
+      ctx.drawImage(passante, -Math.floor(passante.width / 2), -Math.floor(passante.height / 2));
       ctx.restore();
       const gx = 22, gy = 56, gw = 276, gh = 224;
       ctx.fillStyle = "rgba(42,40,56,0.3)";
       ctx.fillRect(gx + 4, gy + 4, gw, gh);
-      for (let y = gy; y < gy + gh; y += T) for (let x = gx; x < gx + gw; x += T) tuile(ctx, p, 36, x, y);
+      for (let y = gy; y < gy + gh; y += T) for (let x = gx; x < gx + gw; x += T) tuile(ctx, p2, 36, x, y);
       ctx.fillStyle = "#9896ab";
       for (let y = gy + 32; y < gy + gh; y += 32) ctx.fillRect(gx, y, gw, 1);
       ctx.fillStyle = "#3a3550";
@@ -2760,8 +3513,20 @@ body {
       ctx.fillStyle = "#f2c14e";
       ctx.fillRect(W2 / 2 - 60, gy - 16, 120, 16);
       texte(ctx, "GARAGE PISTON", W2 / 2, gy - 8, 11, "#1f2a44", "center");
-      const ponts = [{ x: 70, y: 84 }, { x: 196, y: 84 }];
-      for (const pt of ponts) {
+      const trophees = Object.values(partie.trophees || {});
+      ctx.fillStyle = "#8a5a3b";
+      ctx.fillRect(gx + 8, gy + 4, 56, 5);
+      trophees.slice(0, 9).forEach((place, i) => {
+        const couleur = place === 1 ? "#f2c14e" : place === 2 ? "#c9ccd4" : place === 3 ? "#c77b47" : "#8a94a6";
+        const x = gx + 10 + i * 6;
+        ctx.fillStyle = "#2a2838";
+        ctx.fillRect(x, gy - 2, 5, 7);
+        ctx.fillStyle = couleur;
+        ctx.fillRect(x + 1, gy - 1, 3, 3);
+        ctx.fillRect(x + 2, gy + 2, 1, 2);
+      });
+      ctx.restore();
+      for (const pt of PONTS) {
         ctx.fillStyle = "#7e7c93";
         ctx.fillRect(pt.x, pt.y, 56, 92);
         ctx.fillStyle = "#9896ab";
@@ -2769,59 +3534,652 @@ body {
         ctx.fillStyle = "#f2c14e";
         for (const [a, b] of [[0, 0], [48, 0], [0, 86], [48, 86]]) ctx.fillRect(pt.x + a, pt.y + b, 8, 6);
       }
-      const voitures = partie.garage.slice(0, 2);
-      voitures.forEach((v, i) => {
-        const pt = ponts[i];
-        const actif = v.uid === (voiture && voiture.uid);
-        const s = spriteVoiture(modele(v.modele).couleur, actif ? "#f2c14e" : "#f4f1e8");
+      const enChantier = this.construction?.voiture?.uid;
+      const visibles = partie.garage.filter((v) => v.uid !== enChantier);
+      const active = visibles.find((v) => v.uid === partie.voitureActive);
+      const autre = visibles.filter((v) => v !== active).slice(-1)[0];
+      [[active, PONTS[0]], [autre, PONTS[1]]].forEach(([v, pt]) => {
+        if (!v || this.construction && pt === PONTS[1]) return;
+        const d = decrireVoiture(partie, v);
+        const s = spriteVoiture(d.couleur, v === active ? "#f2c14e" : "#f4f1e8", d.looks);
         ctx.save();
         ctx.translate(pt.x + 28, pt.y + 46);
         ctx.scale(2, 2);
-        ctx.drawImage(s, -6, -10);
+        ctx.drawImage(s, -Math.floor(s.width / 2), -Math.floor(s.height / 2));
         ctx.restore();
       });
-      if (partie.garage.length < 2 && partie.constructions.length) {
-        const pt = ponts[1];
-        ctx.strokeStyle = "#1f2a44";
-        ctx.setLineDash([4, 3]);
-        ctx.lineWidth = 2;
-        ctx.strokeRect(pt.x + 16, pt.y + 24, 24, 42);
-        ctx.setLineDash([]);
-        ctx.fillStyle = "#5c6278";
-        ctx.fillRect(pt.x + 20, pt.y + 38, 16, 10);
-        texte(ctx, "En construction", pt.x + 28, pt.y + 102, 8, "#1f2a44", "center");
-      }
+      if (this.construction) this.dessinerChantier(ctx, t);
+      const y0 = DY;
       ctx.fillStyle = "#5a3a24";
-      ctx.fillRect(40, 214, 86, 20);
+      ctx.fillRect(40, 214 + y0, 86, 20);
       ctx.fillStyle = "#8a5a3b";
-      ctx.fillRect(42, 216, 82, 16);
+      ctx.fillRect(42, 216 + y0, 82, 16);
       ctx.fillStyle = "#c9ccd4";
-      ctx.fillRect(50, 220, 14, 4);
-      ctx.fillRect(72, 218, 4, 10);
-      ctx.fillRect(86, 222, 18, 4);
+      ctx.fillRect(50, 220 + y0, 14, 4);
+      ctx.fillRect(72, 218 + y0, 4, 10);
+      ctx.fillRect(86, 222 + y0, 18, 4);
       for (const [x, y] of [[262, 238], [276, 246], [258, 254]]) {
         ctx.fillStyle = "#1c1b24";
-        ctx.fillRect(x - 6, y - 6, 12, 12);
+        ctx.fillRect(x - 6, y - 6 + y0, 12, 12);
         ctx.fillStyle = "#5c6278";
-        ctx.fillRect(x - 2, y - 2, 4, 4);
+        ctx.fillRect(x - 2, y - 2 + y0, 4, 4);
       }
       ctx.fillStyle = "#3a3550";
-      ctx.fillRect(196, 214, 46, 26);
+      ctx.fillRect(196, 214 + y0, 46, 26);
       ctx.fillStyle = "#f4f1e8";
-      ctx.fillRect(198, 216, 42, 22);
+      ctx.fillRect(198, 216 + y0, 42, 22);
       ctx.fillStyle = "#2f6fdb";
-      ctx.fillRect(206, 219, 18, 12);
-      objet(ctx, p, "jardiniere", 286, 92);
-      ctx.restore();
+      ctx.fillRect(206, 219 + y0, 18, 12);
+      objet(ctx, p2, "jardiniere", 286, 92 + y0);
+      for (const e2 of this.etincelles) {
+        ctx.fillStyle = e2.vie > 0.2 ? "#ffe066" : "#f39c33";
+        ctx.fillRect(Math.round(e2.x), Math.round(e2.y), 2, 2);
+      }
       const tri = this.meca.slice().sort((a, b) => a.y - b.y);
       for (const m of tri) {
-        const marche = m.attente <= 0;
-        const pas = marche ? Math.floor(t * 6) % 2 + 1 : 0;
-        tuile(ctx, p, idPersonnage(m.base, m.dir ?? DIRECTION.face, pas), m.x - 8, m.y - 14);
+        const travaille = m.poste && Math.abs(m.x - m.poste.x) < 1 && Math.abs(m.y - m.poste.y) < 1;
+        const pas = travaille ? Math.floor(t * 8) % 2 + 1 : m.marche ? Math.floor(t * 6) % 2 + 1 : 0;
+        m.marche = false;
+        tuile(ctx, p2, idPersonnage(m.base, m.dir ?? DIRECTION.face, pas), m.x - 8, m.y - 14);
       }
       for (const m of tri) if (m.bulle) bulle(ctx, m.x, m.y - 16, m.bulle.texte);
     }
+    /** La voiture se monte de l'avant vers l'arrière, puis reçoit sa peinture. */
+    dessinerChantier(ctx, t) {
+      const c2 = this.construction;
+      const pt = PONTS[1];
+      const avance = Math.min(1, c2.t / c2.duree);
+      const brute = spriteVoiture("#9ea3ac", "#c9ccd4", []);
+      const finie = spriteVoiture(c2.voiture.couleur, "#f2c14e", c2.voiture.looks || []);
+      const s = avance > 0.85 ? finie : brute;
+      const h = Math.ceil(s.height * Math.min(1, avance / 0.8));
+      ctx.save();
+      ctx.translate(pt.x + 28, pt.y + 46);
+      ctx.scale(2, 2);
+      const ox = -Math.floor(s.width / 2), oy = -Math.floor(s.height / 2);
+      ctx.fillStyle = "rgba(31,42,68,0.35)";
+      for (let y = 0; y < s.height; y += 2) ctx.fillRect(ox + 1, oy + y, s.width - 2, 1);
+      ctx.drawImage(s, 0, 0, s.width, h, ox, oy, s.width, h);
+      if (avance < 0.85) {
+        ctx.fillStyle = Math.sin(t * 30) > 0 ? "#ffe066" : "#ffffff";
+        ctx.fillRect(ox, oy + h - 1, s.width, 1);
+      }
+      ctx.restore();
+    }
   };
+
+  // pistonville/src/ville.js
+  var PERIODE = 14;
+  var ILOTS = 4;
+  var CASES = ILOTS * PERIODE + 4;
+  var TAILLE_VILLE = CASES * T;
+  var DUREE_BALADE = 80;
+  var HAUT_HUD = 52;
+  var BATIMENTS = [
+    { id: "garage", nom: "Garage Piston", ilot: [1, 1], toit: "#f2c14e" },
+    { id: "bureau", nom: "Bureau des courses", ilot: [2, 1], toit: "#c2504d" },
+    { id: "concession", nom: "Concession", ilot: [0, 2], toit: "#2f6fdb" },
+    { id: "pieces", nom: "Pi\xE8ces Auto", ilot: [2, 2], toit: "#3fa34d" },
+    { id: "tombola", nom: "Tombola", ilot: [3, 0], toit: "#e86ca6" },
+    { id: "cafe", nom: "Caf\xE9 des pilotes", ilot: [1, 3], toit: "#8a5a3b" }
+  ];
+  var PARCS = [[0, 0], [3, 2]];
+  var PARKING = [3, 3];
+  var origineIlot = (bx, by) => ({ x: (bx * PERIODE + 5) * T, y: (by * PERIODE + 5) * T });
+  var TAILLE_ILOT = 8 * T;
+  var Ville = class {
+    /**
+     * @param {object} o planche, voiture (decrireVoiture), son, graine
+     */
+    constructor(o) {
+      this.planche = o.planche;
+      this.son = o.son;
+      this.alea = creerAlea(o.graine || 1);
+      this.obstacles = [];
+      this.grille = /* @__PURE__ */ new Map();
+      this.portes = [];
+      this.bonus = [];
+      this.fans = [];
+      this.statiques = [];
+      this.construire();
+      this.canvas = this.peindre();
+      this.minicarte = this.peindreMiniCarte();
+      const p2 = o.voiture.physique;
+      const physique2 = { ...p2, vmax: Math.min(150, p2.vmax * 0.6), accel: p2.accel * 0.8 };
+      this.voiture = new Voiture({ physique: physique2, couleur: o.voiture.couleur, nom: "moi", joueur: true });
+      this.voiture.looks = o.voiture.looks || [];
+      this.voiture.braquageMin = 0.6;
+      const garage = this.portes.find((g) => g.id === "garage");
+      this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h + 26, Math.PI / 2);
+      this.ignorer = "garage";
+      this.camera = { x: this.voiture.x, y: this.voiture.y };
+      this.temps = 0;
+      this.gains = { argent: 0, recherche: 0, fans: 0, exp: 0 };
+      this.messages = [];
+      this.particules = [];
+      this.secousse = 0;
+      this.entree = null;
+      this.fini = false;
+    }
+    // --- Plan de la ville ----------------------------------------------------------
+    construire() {
+      const a = this.alea;
+      for (let by = 0; by < ILOTS; by++) for (let bx = 0; bx < ILOTS; bx++) {
+        const o = origineIlot(bx, by);
+        const bat = BATIMENTS.find((b) => b.ilot[0] === bx && b.ilot[1] === by);
+        if (bat) this.ilotBatiment(o, bat);
+        else if (PARCS.some(([x, y]) => x === bx && y === by)) this.ilotParc(o);
+        else if (PARKING[0] === bx && PARKING[1] === by) this.ilotParking(o);
+        else this.ilotMaisons(o, bx, by);
+        this.trottoirs(o, bat);
+      }
+      for (let k = 0; k <= ILOTS; k++) {
+        const route = k * PERIODE * T;
+        for (let s = 5 * T; s < TAILLE_VILLE - 5 * T; s += 48) {
+          if (a() < 0.12) this.voitureGaree(s + 8, route + 12, true);
+          if (a() < 0.12) this.voitureGaree(route + 12, s + 8, false);
+        }
+      }
+      for (let k = 0; k <= ILOTS; k++) {
+        const milieu = k * PERIODE * T + 2 * T;
+        for (let s = 3 * T; s < TAILLE_VILLE - 3 * T; s += 150 + a() * 140) {
+          const horizontal = a() < 0.5;
+          if (a() < 0.18) {
+            this.bonus.push({ type: "disque", x: horizontal ? s : milieu, y: horizontal ? milieu : s, pris: false });
+            continue;
+          }
+          for (let i = 0; i < 3; i++) {
+            const d = s + i * 16;
+            this.bonus.push({ type: "piece", x: horizontal ? d : milieu, y: horizontal ? milieu : d, pris: false });
+          }
+        }
+      }
+      this.bonus = this.bonus.filter((b) => !this.obstacles.some((ob) => toucheCercle(ob, b.x, b.y, 8)));
+      this.indexer();
+    }
+    ajouter(ob) {
+      this.obstacles.push(ob);
+    }
+    ilotBatiment(o, bat) {
+      const b = { type: "rect", x: o.x + 8, y: o.y + 8, w: TAILLE_ILOT - 16, h: 88, bat };
+      this.ajouter(b);
+      this.statiques.push({ y: b.y + b.h, dessin: (c2) => batimentSpecial(c2, b, bat) });
+      const porte = { id: bat.id, nom: bat.nom, x: o.x + 40, y: b.y + b.h + 4, w: 48, h: 22, couleur: bat.toit };
+      this.portes.push(porte);
+      for (const dx of [16, TAILLE_ILOT - 16]) {
+        this.ajouter({ type: "cercle", x: o.x + dx, y: b.y + b.h + 14, r: 5 });
+        this.statiques.push({ y: b.y + b.h + 20, dessin: (c2) => objet(c2, this.planche, "jardiniere", o.x + dx, b.y + b.h + 20) });
+      }
+    }
+    ilotMaisons(o, bx, by) {
+      const a = this.alea;
+      for (let i = 0; i < 4; i++) {
+        const lx = o.x + i % 2 * 64, ly = o.y + Math.floor(i / 2) * 64;
+        const r = hash2(bx * 2 + i % 2, by * 2 + Math.floor(i / 2), 77);
+        const toit = ["#c2504d", "#4f7ddb", "#7a5a9e", "#3fa34d", "#d08a3e"][Math.floor(r * 5)];
+        if (r < 0.45) {
+          const m = { type: "rect", x: lx + 8, y: ly + 6, w: 48, h: 40 };
+          this.ajouter(m);
+          this.statiques.push({ y: m.y + m.h, dessin: (c2) => maison(c2, m.x, m.y, m.w, m.h, toit) });
+          if (a() < 0.7) {
+            const ax = lx + (a() < 0.5 ? 6 : 58), ay = ly + 58;
+            this.ajouter({ type: "cercle", x: ax, y: ay - 4, r: 5 });
+            this.statiques.push({ y: ay, dessin: (c2) => objet(c2, this.planche, a() < 0.5 ? "arbreRond" : "buisson", ax, ay) });
+          }
+        } else {
+          const m = { type: "rect", x: lx + 4, y: ly + 4, w: 56, h: 52 };
+          this.ajouter(m);
+          this.statiques.push({ y: m.y + m.h, dessin: (c2) => immeuble(c2, m.x, m.y, m.w, m.h, toit, r) });
+        }
+      }
+    }
+    ilotParc(o) {
+      const a = this.alea;
+      const bassin = { type: "rect", x: o.x + 32, y: o.y + 40, w: 64, h: 40, eau: true };
+      this.ajouter(bassin);
+      this.statiques.push({ y: 0, dessin: (c2) => {
+        c2.fillStyle = "#7e7c93";
+        c2.fillRect(bassin.x - 2, bassin.y - 2, bassin.w + 4, bassin.h + 4);
+        c2.fillStyle = "#59b6d8";
+        c2.fillRect(bassin.x, bassin.y, bassin.w, bassin.h);
+        c2.fillStyle = "#9fdcef";
+        c2.fillRect(bassin.x + 8, bassin.y + 10, 10, 1);
+        c2.fillRect(bassin.x + 36, bassin.y + 26, 12, 1);
+      } });
+      for (let i = 0; i < 9; i++) {
+        const x = o.x + 10 + a() * (TAILLE_ILOT - 20), y = o.y + 14 + a() * (TAILLE_ILOT - 24);
+        if (x > bassin.x - 12 && x < bassin.x + bassin.w + 12 && y > bassin.y - 8 && y < bassin.y + bassin.h + 16) continue;
+        this.ajouter({ type: "cercle", x, y: y - 4, r: 5 });
+        const nom = ["arbre", "arbreRond", "arbreBoule", "sapin"][Math.floor(a() * 4)];
+        this.statiques.push({ y, dessin: (c2) => objet(c2, this.planche, nom, x, y) });
+      }
+      this.statiques.push({ y: o.y + 100, dessin: (c2) => objet(c2, this.planche, "banc", o.x + 64, o.y + 100) });
+      this.ajouter({ type: "rect", x: o.x + 57, y: o.y + 92, w: 14, h: 8 });
+      this.fans.push(this.creerFan(o.x + 20, o.y + 110));
+    }
+    ilotParking(o) {
+      this.statiques.push({ y: 0, dessin: (c2) => {
+        c2.fillStyle = "#62697f";
+        c2.fillRect(o.x, o.y, TAILLE_ILOT, TAILLE_ILOT);
+        c2.fillStyle = "#d9d6e6";
+        for (let x = o.x + 8; x <= o.x + TAILLE_ILOT - 8; x += 20) {
+          c2.fillRect(x, o.y + 6, 1, 28);
+          c2.fillRect(x, o.y + TAILLE_ILOT - 34, 1, 28);
+        }
+      } });
+      for (let x = o.x + 18; x < o.x + TAILLE_ILOT - 8; x += 20) {
+        if (this.alea() < 0.6) this.voitureGaree(x, o.y + 20, false);
+        if (this.alea() < 0.6) this.voitureGaree(x, o.y + TAILLE_ILOT - 20, false);
+      }
+      this.fans.push(this.creerFan(o.x + 64, o.y + 64));
+    }
+    voitureGaree(x, y, horizontale) {
+      const couleur = ["#c2504d", "#4f7ddb", "#f4f1e8", "#3fa34d", "#8a6ad6", "#2a2838"][Math.floor(this.alea() * 6)];
+      const ob = horizontale ? { type: "rect", x: x - 11, y: y - 7, w: 22, h: 14 } : { type: "rect", x: x - 7, y: y - 11, w: 14, h: 22 };
+      if (this.obstacles.some((o) => o.type === "rect" && chevauche(o, ob, 4))) return;
+      ob.voiture = { couleur, horizontale };
+      this.ajouter(ob);
+      this.statiques.push({ y: y + 10, dessin: (c2) => {
+        const s = spriteVoiture(couleur);
+        c2.save();
+        c2.translate(x, y);
+        if (horizontale) c2.rotate(Math.PI / 2);
+        c2.drawImage(s, -Math.floor(s.width / 2), -Math.floor(s.height / 2));
+        c2.restore();
+      } });
+    }
+    /** Mobilier du trottoir : lampadaires, boîtes aux lettres, bornes, poubelles. */
+    trottoirs(o, bat) {
+      const a = this.alea;
+      const bord = 6;
+      const cotes = [
+        (s) => ({ x: o.x + s, y: o.y - T + bord + 9 }),
+        // nord
+        (s) => ({ x: o.x + s, y: o.y + TAILLE_ILOT + T - bord }),
+        // sud
+        (s) => ({ x: o.x - T + bord, y: o.y + s + 8 }),
+        // ouest
+        (s) => ({ x: o.x + TAILLE_ILOT + T - bord, y: o.y + s + 8 })
+        // est
+      ];
+      cotes.forEach((pos, ci) => {
+        for (let s = 16; s < TAILLE_ILOT; s += 32) {
+          if (bat && ci === 1 && s > 24 && s < 104) continue;
+          const p2 = pos(s);
+          const r = a();
+          let nom = null;
+          if (s % 64 === 16) nom = "lampadaire";
+          else if (r < 0.12) nom = "boiteAuxLettres";
+          else if (r < 0.2) nom = "borneIncendie";
+          else if (r < 0.28) nom = "poubelle";
+          if (!nom) continue;
+          this.ajouter({ type: "cercle", x: p2.x, y: p2.y - 3, r: nom === "lampadaire" ? 3 : 4 });
+          this.statiques.push({ y: p2.y, dessin: (c2) => objet(c2, this.planche, nom, p2.x, p2.y) });
+        }
+      });
+      if (!bat && a() < 0.5) this.fans.push(this.creerFan(o.x + 30 + a() * 60, o.y + TAILLE_ILOT + 10));
+    }
+    creerFan(x, y) {
+      return { x, y, base: PERSONNAGES[Math.floor(this.alea() * PERSONNAGES.length)], content: 0, vu: false };
+    }
+    /** Grille d'accès rapide aux obstacles (cases de 64 px). */
+    indexer() {
+      for (const ob of this.obstacles) {
+        const bb = boite(ob);
+        for (let gx = Math.floor(bb.x0 / 64); gx <= Math.floor(bb.x1 / 64); gx++) {
+          for (let gy = Math.floor(bb.y0 / 64); gy <= Math.floor(bb.y1 / 64); gy++) {
+            const k = gx * 1e3 + gy;
+            if (!this.grille.has(k)) this.grille.set(k, []);
+            this.grille.get(k).push(ob);
+          }
+        }
+      }
+    }
+    proches(x, y) {
+      const res = /* @__PURE__ */ new Set();
+      for (let gx = Math.floor(x / 64) - 1; gx <= Math.floor(x / 64) + 1; gx++) {
+        for (let gy = Math.floor(y / 64) - 1; gy <= Math.floor(y / 64) + 1; gy++) {
+          for (const ob of this.grille.get(gx * 1e3 + gy) || []) res.add(ob);
+        }
+      }
+      return res;
+    }
+    // --- Mise à jour ---------------------------------------------------------------
+    maj(dt, entrees) {
+      if (this.fini || this.entree) return;
+      this.temps += dt;
+      const v = this.voiture;
+      v.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
+      v.frein = entrees.gauche && entrees.droite ? 1 : 0;
+      if (v.frein) v.direction = 0;
+      v.maj(dt, true);
+      this.chocs(v);
+      this.ramasser(v);
+      this.portesDevant(v);
+      for (const m of this.messages) m.vie -= dt;
+      this.messages = this.messages.filter((m) => m.vie > 0);
+      for (const p2 of this.particules) {
+        p2.x += p2.vx * dt;
+        p2.y += p2.vy * dt;
+        p2.vie -= dt;
+      }
+      this.particules = this.particules.filter((p2) => p2.vie > 0);
+      for (const f of this.fans) if (f.content > 0) f.content -= dt;
+      if (this.secousse > 0) this.secousse = Math.max(0, this.secousse - dt * 18);
+      if (this.temps >= DUREE_BALADE) this.fini = true;
+    }
+    chocs(v) {
+      const m = 12;
+      if (v.x < m || v.x > TAILLE_VILLE - m) {
+        v.x = clamp(v.x, m, TAILLE_VILLE - m);
+        v.vx *= -0.5;
+      }
+      if (v.y < m || v.y > TAILLE_VILLE - m) {
+        v.y = clamp(v.y, m, TAILLE_VILLE - m);
+        v.vy *= -0.5;
+      }
+      for (let iter = 0; iter < 2; iter++) {
+        for (const ob of this.proches(v.x, v.y)) {
+          const c2 = ob.type === "rect" ? contreRect(v, ob) : contreCercle(v, ob);
+          if (!c2) continue;
+          v.x += c2.nx * c2.prof;
+          v.y += c2.ny * c2.prof;
+          const choc = -(v.vx * c2.nx + v.vy * c2.ny);
+          if (choc <= 0) continue;
+          v.vx += c2.nx * choc * 1.3;
+          v.vy += c2.ny * choc * 1.3;
+          v.vx *= 0.75;
+          v.vy *= 0.75;
+          if (choc > 35) {
+            this.son?.choc(choc);
+            this.secousse = Math.min(4, choc / 30);
+            for (let i = 0; i < 6; i++) this.particules.push({ x: v.x - c2.nx * 10, y: v.y - c2.ny * 10, vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, vie: 0.25 });
+          }
+        }
+      }
+    }
+    ramasser(v) {
+      for (const b of this.bonus) {
+        if (b.pris || (b.x - v.x) ** 2 + (b.y - v.y) ** 2 > 14 * 14) continue;
+        b.pris = true;
+        if (b.type === "piece") {
+          this.gains.argent += 20;
+          this.message("+20 G", "#ffe066", b);
+          this.son?.piece();
+        } else {
+          this.gains.recherche += 1;
+          this.message("+1 PR", "#7dd3fc", b);
+          this.son?.disque();
+        }
+      }
+      for (const f of this.fans) {
+        if (f.vu || (f.x - v.x) ** 2 + (f.y - v.y) ** 2 > 30 * 30) continue;
+        f.vu = true;
+        f.content = 2;
+        this.gains.fans += 5;
+        this.gains.exp += 5;
+        this.message("Un autographe ! +5 fans", "#f9a8d4", f);
+        this.son?.caisse();
+      }
+    }
+    portesDevant(v) {
+      let dans = null;
+      for (const p2 of this.portes) {
+        if (v.x > p2.x && v.x < p2.x + p2.w && v.y > p2.y && v.y < p2.y + p2.h) dans = p2;
+      }
+      if (!dans) {
+        this.ignorer = null;
+        return;
+      }
+      if (dans.id === this.ignorer) return;
+      this.entree = dans;
+      this.ignorer = dans.id;
+      v.vx = 0;
+      v.vy = 0;
+      this.son?.bip(660, 0.12);
+    }
+    /** Ressortir d'un bâtiment : la voiture repart face à la rue. */
+    sortir() {
+      const p2 = this.entree;
+      this.entree = null;
+      if (!p2) return;
+      const v = this.voiture;
+      v.placer(p2.x + p2.w / 2, p2.y + p2.h / 2, Math.PI / 2);
+    }
+    message(texteMsg, couleur, ancre) {
+      this.messages.push({ texte: texteMsg, couleur, x: ancre.x, y: ancre.y, vie: 1, max: 1 });
+    }
+    /** Heure affichée : de 18 h 00 à 19 h 00. */
+    heure() {
+      const min = Math.min(59, Math.floor(this.temps / DUREE_BALADE * 60));
+      return `18:${String(min).padStart(2, "0")}`;
+    }
+    // --- Dessin --------------------------------------------------------------------
+    peindre() {
+      const canvas = document.createElement("canvas");
+      canvas.width = TAILLE_VILLE;
+      canvas.height = TAILLE_VILLE;
+      const c2 = canvas.getContext("2d");
+      c2.imageSmoothingEnabled = false;
+      c2.fillStyle = "#38cbab";
+      c2.fillRect(0, 0, TAILLE_VILLE, TAILLE_VILLE);
+      for (let gy = 0; gy < CASES; gy++) for (let gx = 0; gx < CASES; gx++) {
+        const mx = gx % PERIODE, my = gy % PERIODE;
+        const rue = mx < 4 || my < 4;
+        const trottoir = !rue && (mx === 4 || mx === 13 || my === 4 || my === 13);
+        const x = gx * T, y = gy * T;
+        if (rue) tuile(c2, this.planche, 441, x, y);
+        else if (trottoir) tuile(c2, this.planche, 36, x, y);
+        else if (hash2(gx, gy, 5) < 0.05) {
+          c2.fillStyle = "#33bdae";
+          c2.fillRect(x + 4, y + 6, 2, 2);
+        }
+      }
+      c2.fillStyle = "#d9d6e6";
+      for (let k = 0; k <= ILOTS; k++) {
+        const m = k * PERIODE * T + 2 * T;
+        for (let s = 0; s < TAILLE_VILLE; s += 24) {
+          const dansCarrefour = s % (PERIODE * T) < 4 * T;
+          if (dansCarrefour) continue;
+          c2.fillRect(s, m - 1, 12, 2);
+          c2.fillRect(m - 1, s, 2, 12);
+        }
+      }
+      for (let kx = 0; kx <= ILOTS; kx++) for (let ky = 0; ky <= ILOTS; ky++) {
+        const x0 = kx * PERIODE * T, y0 = ky * PERIODE * T;
+        for (let i = 2; i < 4 * T; i += 6) {
+          c2.fillRect(x0 + i, y0 + 4 * T + 1, 3, 10);
+          c2.fillRect(x0 + 4 * T + 1, y0 + i, 10, 3);
+        }
+      }
+      for (const p2 of this.portes) {
+        c2.fillStyle = "rgba(242,193,78,0.35)";
+        c2.fillRect(p2.x, p2.y, p2.w, p2.h);
+        c2.fillStyle = "#f2c14e";
+        for (let i = 0; i < p2.w; i += 6) {
+          c2.fillRect(p2.x + i, p2.y, 3, 2);
+          c2.fillRect(p2.x + i, p2.y + p2.h - 2, 3, 2);
+        }
+        for (let i = 0; i < p2.h; i += 6) {
+          c2.fillRect(p2.x, p2.y + i, 2, 3);
+          c2.fillRect(p2.x + p2.w - 2, p2.y + i, 2, 3);
+        }
+      }
+      this.statiques.sort((a, b) => a.y - b.y);
+      for (const s of this.statiques) s.dessin(c2);
+      return canvas;
+    }
+    peindreMiniCarte() {
+      const n = 72;
+      const canvas = document.createElement("canvas");
+      canvas.width = n;
+      canvas.height = n;
+      const c2 = canvas.getContext("2d");
+      const e2 = n / TAILLE_VILLE;
+      c2.fillStyle = "#38cbab";
+      c2.fillRect(0, 0, n, n);
+      c2.fillStyle = "#5c6278";
+      for (let k = 0; k <= ILOTS; k++) {
+        const m = k * PERIODE * T * e2;
+        c2.fillRect(m, 0, 4 * T * e2, n);
+        c2.fillRect(0, m, n, 4 * T * e2);
+      }
+      for (const ob of this.obstacles) if (ob.type === "rect" && !ob.voiture) {
+        c2.fillStyle = ob.bat ? ob.bat.toit : ob.eau ? "#59b6d8" : "#9896ab";
+        c2.fillRect(ob.x * e2, ob.y * e2, Math.max(1, ob.w * e2), Math.max(1, ob.h * e2));
+      }
+      return canvas;
+    }
+    dessiner(ctx, W2, H2, t) {
+      const v = this.voiture;
+      this.camera.x = lerp(this.camera.x, v.x + v.vx * 0.4, 0.12);
+      this.camera.y = lerp(this.camera.y, v.y + v.vy * 0.4, 0.12);
+      const sx = this.secousse ? (Math.random() - 0.5) * this.secousse : 0;
+      const camX = Math.round(clamp(this.camera.x - W2 / 2 + sx, 0, TAILLE_VILLE - W2));
+      const camY = Math.round(clamp(this.camera.y - H2 / 2 + sx, 0, TAILLE_VILLE - H2));
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(this.canvas, camX, camY, W2, H2, 0, 0, W2, H2);
+      ctx.save();
+      ctx.translate(-camX, -camY);
+      for (const p2 of this.portes) {
+        if (p2.x + p2.w < camX - 60 || p2.x > camX + W2 + 60 || p2.y < camY - 20 || p2.y > camY + H2 + 40) continue;
+        const fl = Math.sin(t * 5) > 0 ? 1 : 0;
+        texte(ctx, p2.id === "garage" ? "RENTRER" : "ENTRER", p2.x + p2.w / 2, p2.y + p2.h / 2 - fl, 9, "#ffe066", "center");
+      }
+      for (const b of this.bonus) if (!b.pris) dessinerBonusVille(ctx, b, t);
+      for (const f of this.fans) {
+        const saute = f.content > 0 && Math.sin(t * 14) > 0;
+        tuile(ctx, this.planche, idPersonnage(f.base, DIRECTION.face, saute ? 1 : 0), f.x - 8, f.y - 14 - (saute ? 2 : 0));
+        if (!f.vu && Math.sin(t * 3 + f.x) > -0.3) bulle(ctx, f.x, f.y - 16, "Fan !");
+      }
+      ctx.fillStyle = "rgba(30,28,40,0.28)";
+      ctx.save();
+      ctx.translate(Math.round(v.x) + 2, Math.round(v.y) + 2);
+      ctx.rotate(v.angle + Math.PI / 2);
+      ctx.fillRect(-7, -11, 14, 23);
+      ctx.restore();
+      const s = spriteVoiture(v.couleur, "#f2c14e", v.looks);
+      ctx.save();
+      ctx.translate(Math.round(v.x), Math.round(v.y));
+      ctx.rotate(v.angle + Math.PI / 2);
+      ctx.drawImage(s, -Math.floor(s.width / 2), -Math.floor(s.height / 2));
+      ctx.restore();
+      ctx.fillStyle = "#ffe066";
+      for (const p2 of this.particules) ctx.fillRect(Math.round(p2.x), Math.round(p2.y), 2, 2);
+      for (const m of this.messages) {
+        const a = 1 - m.vie / m.max;
+        texte(ctx, m.texte, m.x, m.y - 20 - a * 16, 10, m.couleur, "center");
+      }
+      ctx.restore();
+      this.dessinerInterface(ctx, W2, H2, t);
+    }
+    dessinerInterface(ctx, W2, H2) {
+      ctx.fillStyle = "rgba(31,42,68,0.92)";
+      ctx.fillRect(0, 0, W2, HAUT_HUD);
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(0, HAUT_HUD, W2, 2);
+      texte(ctx, "BALADE EN VILLE", 8, 12, 10, "#9fb3d9", "left");
+      texte(ctx, this.heure(), 8, 32, 18, "#ffe066", "left");
+      const reste = 1 - this.temps / DUREE_BALADE;
+      ctx.fillStyle = "#3a4a6b";
+      ctx.fillRect(8, 44, 140, 4);
+      ctx.fillStyle = reste > 0.25 ? "#5ad16a" : "#e4432d";
+      ctx.fillRect(8, 44, Math.round(140 * reste), 4);
+      texte(ctx, `${this.gains.argent} G`, 156, 18, 11, "#ffe066", "left");
+      texte(ctx, `${this.gains.recherche} PR \xB7 ${this.gains.fans} fans`, 156, 36, 10, "#cfe0ff", "left");
+      const mc = this.minicarte;
+      const mx = W2 - mc.width - 6, my = HAUT_HUD + 8;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(mx - 3, my - 3, mc.width + 6, mc.height + 6);
+      ctx.drawImage(mc, mx, my);
+      const e2 = mc.width / TAILLE_VILLE;
+      for (const p2 of this.portes) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(Math.round(mx + (p2.x + p2.w / 2) * e2) - 1, Math.round(my + p2.y * e2) - 1, 3, 3);
+      }
+      ctx.fillStyle = "#1a1626";
+      ctx.fillRect(Math.round(mx + this.voiture.x * e2) - 3, Math.round(my + this.voiture.y * e2) - 3, 6, 6);
+      ctx.fillStyle = "#ffe066";
+      ctx.fillRect(Math.round(mx + this.voiture.x * e2) - 2, Math.round(my + this.voiture.y * e2) - 2, 4, 4);
+      ctx.fillStyle = "rgba(31,42,68,0.55)";
+      ctx.fillRect(0, H2 - 26, W2, 26);
+      texte(ctx, "\u25C0 gauche", 10, H2 - 13, 10, "#f4f1e8", "left");
+      texte(ctx, "les deux : freiner", W2 / 2, H2 - 13, 9, "#cfe0ff", "center");
+      texte(ctx, "droite \u25B6", W2 - 10, H2 - 13, 10, "#f4f1e8", "right");
+    }
+    bilan() {
+      return { ...this.gains, exp: this.gains.exp + Math.round(this.gains.argent / 40) };
+    }
+  };
+  function boite(ob) {
+    if (ob.type === "rect") return { x0: ob.x, y0: ob.y, x1: ob.x + ob.w, y1: ob.y + ob.h };
+    return { x0: ob.x - ob.r, y0: ob.y - ob.r, x1: ob.x + ob.r, y1: ob.y + ob.r };
+  }
+  function chevauche(a, b, marge = 0) {
+    return a.x < b.x + b.w + marge && b.x < a.x + a.w + marge && a.y < b.y + b.h + marge && b.y < a.y + a.h + marge;
+  }
+  function toucheCercle(ob, x, y, r) {
+    if (ob.type === "rect") return x > ob.x - r && x < ob.x + ob.w + r && y > ob.y - r && y < ob.y + ob.h + r;
+    return (ob.x - x) ** 2 + (ob.y - y) ** 2 < (ob.r + r) ** 2;
+  }
+  function contreRect(v, ob) {
+    const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+    const cx = ob.x + ob.w / 2, cy = ob.y + ob.h / 2;
+    const dx = v.x - cx, dy = v.y - cy;
+    let best = null;
+    for (const [nx, ny] of [[1, 0], [0, 1], [fx, fy], [-fy, fx]]) {
+      const rv = DEMI_LONGUEUR * Math.abs(fx * nx + fy * ny) + DEMI_LARGEUR * Math.abs(-fy * nx + fx * ny);
+      const rb = ob.w / 2 * Math.abs(nx) + ob.h / 2 * Math.abs(ny);
+      const d = dx * nx + dy * ny;
+      const prof = rv + rb - Math.abs(d);
+      if (prof <= 0) return null;
+      if (!best || prof < best.prof) best = { nx: d < 0 ? -nx : nx, ny: d < 0 ? -ny : ny, prof };
+    }
+    return best;
+  }
+  function contreCercle(v, ob) {
+    const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+    const rx = ob.x - v.x, ry = ob.y - v.y;
+    const u = clamp(rx * fx + ry * fy, -DEMI_LONGUEUR, DEMI_LONGUEUR);
+    const w = clamp(-rx * fy + ry * fx, -DEMI_LARGEUR, DEMI_LARGEUR);
+    const qx = v.x + fx * u - fy * w, qy = v.y + fy * u + fx * w;
+    let nx = qx - ob.x, ny = qy - ob.y;
+    const d = Math.hypot(nx, ny);
+    if (d >= ob.r) return null;
+    if (d < 1e-3) {
+      nx = v.x - ob.x;
+      ny = v.y - ob.y;
+      const l = Math.hypot(nx, ny) || 1;
+      return { nx: nx / l, ny: ny / l, prof: ob.r + DEMI_LARGEUR };
+    }
+    return { nx: nx / d, ny: ny / d, prof: ob.r - d };
+  }
+  function batimentSpecial(c2, b, bat) {
+    immeuble(c2, b.x, b.y, b.w, b.h, bat.toit, 0.3);
+    c2.fillStyle = "#1f2a44";
+    c2.fillRect(b.x + 6, b.y + 18, b.w - 12, 22);
+    c2.fillStyle = "#fff6e0";
+    c2.fillRect(b.x + 8, b.y + 20, b.w - 16, 18);
+    texte(c2, bat.nom, b.x + b.w / 2, b.y + 29, 9, "#1f2a44", "center");
+  }
+  function dessinerBonusVille(ctx, b, t) {
+    const x = Math.round(b.x), y = Math.round(b.y);
+    if (b.type === "piece") {
+      const w = Math.max(1, Math.round(Math.abs(Math.cos(t * 5 + b.x * 0.05)) * 3));
+      ctx.fillStyle = "#7a5a12";
+      ctx.fillRect(x - w - 1, y - 4, w * 2 + 3, 9);
+      ctx.fillStyle = "#f2c14e";
+      ctx.fillRect(x - w, y - 3, w * 2 + 1, 7);
+    } else {
+      const f = Math.sin(t * 4 + b.y) > 0 ? 1 : 0;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(x - 5, y - 6 - f, 11, 11);
+      ctx.fillStyle = "#2f6fdb";
+      ctx.fillRect(x - 4, y - 5 - f, 9, 9);
+      ctx.fillStyle = "#f4f1e8";
+      ctx.fillRect(x - 3, y - f, 7, 3);
+    }
+  }
 
   // pistonville/src/son.js
   var Son = class {
@@ -2887,6 +4245,19 @@ body {
     fanfare() {
       [523, 659, 784, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.note(f, 0.2, "square", 0.045), i * 110));
     }
+    piece() {
+      this.note(988, 0.06, "square", 0.035);
+      setTimeout(() => this.note(1319, 0.1, "square", 0.035), 50);
+    }
+    disque() {
+      [660, 880, 1175].forEach((f, i) => setTimeout(() => this.note(f, 0.08, "triangle", 0.05), i * 45));
+    }
+    niveau() {
+      [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => this.note(f, 0.16, "square", 0.045), i * 90));
+    }
+    roulement() {
+      this.note(180 + Math.random() * 60, 0.05, "square", 0.025);
+    }
     caisse() {
       [880, 1320].forEach((f, i) => setTimeout(() => this.note(f, 0.12, "square", 0.04), i * 80));
     }
@@ -2908,11 +4279,13 @@ body {
         }
       });
     }
-    montrer({ html, actions = {}, classe = "" }) {
+    montrer({ html, actions = {}, classe = "", apres = null }) {
       this.racine.className = classe;
       this.racine.innerHTML = html;
       this.actions = actions;
       this.racine.hidden = !html;
+      clearTimeout(this.minuteurs);
+      if (apres) apres(this.racine);
     }
     vider() {
       this.montrer({ html: "" });
@@ -2920,33 +4293,76 @@ body {
   };
   function barre(partie) {
     const lic = partie.licence ? `Licence ${partie.licence}` : "Sans licence";
+    const besoin = expPourRang(partie.rang);
     return `<header class="barre">
     <div class="barre-ligne">
       <span class="jour">JOUR ${partie.jour}</span>
+      <span class="rang" title="Rang de l'\xE9quipe">RANG ${partie.rang}
+        <span class="jauge-exp"><i style="width:${Math.round(partie.exp / besoin * 100)}%"></i></span></span>
       <span class="argent">${formatArgent(partie.argent)}</span>
     </div>
     <div class="barre-ligne pastilles">
       <span class="pastille bleu">${lic}</span>
       <span class="pastille rouge">${partie.fans} fans</span>
-      <span class="pastille sombre">${partie.pointsLicence} pts \xB7 ${partie.podiums} podium${partie.podiums > 1 ? "s" : ""}</span>
+      <span class="pastille violet">${partie.recherche} PR</span>
+      <span class="pastille rose">${partie.tickets} ticket${partie.tickets > 1 ? "s" : ""}</span>
     </div>
   </header>`;
   }
-  function barreStat(nom, valeur, couleur) {
-    return `<div class="stat"><span>${nom}</span><div class="jauge"><i style="width:${valeur}%;background:${couleur}"></i></div><b>${valeur}</b></div>`;
+  function barreStat(nom, valeur, couleur, avant = null) {
+    const gain = avant !== null && valeur !== avant ? `<em class="${valeur > avant ? "ok" : "ko"}">${valeur > avant ? "+" : ""}${valeur - avant}</em>` : "";
+    return `<div class="stat"><span>${nom}</span><div class="jauge"><i style="width:${valeur}%;background:${couleur}"></i></div><b>${valeur}${gain}</b></div>`;
   }
   var COULEURS_STATS = { vitesse: "#e4432d", acceleration: "#f39c33", maniabilite: "#3fa34d", solidite: "#2f6fdb" };
   var NOMS_STATS = { vitesse: "Vitesse", acceleration: "Acc\xE9l.", maniabilite: "Maniab.", solidite: "Solidit\xE9" };
-  function carteVoiture(v, avecPrix = false) {
+  var COURTS = { vitesse: "Vit", acceleration: "Acc", maniabilite: "Man", solidite: "Sol" };
+  var etoiles = (n, max = 5) => `<span class="etoiles">${"\u2605".repeat(n)}<span>${"\u2605".repeat(max - n)}</span></span>`;
+  var cacheApercus = /* @__PURE__ */ new Map();
+  function apercuVoiture(couleur, looks = [], echelle = 3) {
+    const cle = `${couleur}|${looks.join(",")}|${echelle}`;
+    if (cacheApercus.has(cle)) return cacheApercus.get(cle);
+    const s = spriteVoiture(couleur, "#f2c14e", looks);
+    const c2 = document.createElement("canvas");
+    c2.width = s.height * echelle;
+    c2.height = s.width * echelle;
+    const ctx = c2.getContext("2d");
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(c2.width / 2, c2.height / 2);
+    ctx.rotate(Math.PI / 2);
+    ctx.scale(echelle, echelle);
+    ctx.drawImage(s, -s.width / 2, -s.height / 2);
+    const url = c2.toDataURL();
+    cacheApercus.set(cle, url);
+    return url;
+  }
+  function texteBonus(pc) {
+    const morceaux = Object.entries(pc.bonus || {}).map(([k, v]) => `${COURTS[k]} ${v > 0 ? "+" : ""}${v}`);
+    for (const [s, b] of Object.entries(pc.surfaces || {})) morceaux.push(`${SURFACES[s].nom} +${Math.round(b * 100)} %`);
+    if (pc.charges) morceaux.push(`${pc.charges} nitros`);
+    if (pc.duree) morceaux.push(`nitro ${pc.duree} s`);
+    return morceaux.join(" \xB7 ");
+  }
+  function carteVoiture(v, { compacte = false } = {}) {
     const stats = Object.entries(v.stats).map(([k, val]) => barreStat(NOMS_STATS[k], val, COULEURS_STATS[k])).join("");
+    const image = v.uid ? `<img class="dessus" src="${apercuVoiture(v.couleur, v.looks)}" alt="">` : `<img class="profil" src="${urlAsset(`assets/kenney/profil/${v.profil}.png`)}" alt="">`;
     return `<div class="voiture-carte">
-    <div class="voiture-entete"><b>${e(v.nom)}</b><span class="classe classe-${v.classe}">CLASSE ${v.classe}</span></div>
-    <div class="voiture-corps">
-      <img class="profil" src="${urlAsset(`assets/kenney/profil/${v.profil}.png`)}" alt="">
-      <div class="stats">${stats}</div>
-    </div>
-    ${avecPrix ? "" : `<div class="petit">Pointe ${kmh(v.physique.vmax)} km/h \xB7 \xE9tat ${Math.round((1 - v.usure) * 100)} %</div>`}
+    <div class="voiture-entete"><b>${e(v.nom)}</b>${v.uid ? etoiles(QUALITES[v.qualite].etoiles) : ""}<span class="classe classe-${v.classe}">CLASSE ${v.classe}</span></div>
+    <div class="voiture-corps">${image}<div class="stats">${stats}</div></div>
+    ${v.uid && !compacte ? `<div class="petit">Pointe ${kmh(v.physique.vmax)} km/h \xB7 \xE9tat ${Math.round((1 - v.usure) * 100)} % \xB7 ${v.nitros} nitro${v.nitros > 1 ? "s" : ""}</div>` : ""}
   </div>`;
+  }
+  function animerCompteurs(racine, duree = 900) {
+    const els = [...racine.querySelectorAll("[data-compte]")];
+    const t0 = performance.now();
+    const pas = (t) => {
+      const a = Math.min(1, (t - t0) / duree);
+      for (const el of els) {
+        const v = Math.round(Number(el.dataset.compte) * (1 - (1 - a) ** 3));
+        el.textContent = `${el.dataset.avant || ""}${v.toLocaleString("fr-FR").replace(/ | /g, " ")}${el.dataset.apres || ""}`;
+      }
+      if (a < 1 && racine.isConnected) requestAnimationFrame(pas);
+    };
+    requestAnimationFrame(pas);
   }
   function ecranTitre(app2) {
     const reprise = !!app2.partieSauvee;
@@ -2960,7 +4376,7 @@ body {
         <button class="btn ${reprise ? "" : "btn-principal"}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
       </div>
-      <p class="credits">Version d'essai 0.1 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
+      <p class="credits">Version d'essai 0.2 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
     </div>`,
       actions: {
         continuer: () => app2.continuer(),
@@ -2972,20 +4388,21 @@ body {
   function ecranAide(app2, retour) {
     return {
       classe: "fond-sombre",
-      html: `<div class="ecran">
+      html: `<div class="ecran defile-ecran">
       <section class="panneau">
         <h2 class="titre-panneau">Comment jouer</h2>
         <div class="contenu texte">
-          <p><b>Le jour</b>, au garage : ach\xE8te ou construis une voiture, am\xE9liore-la \xE0 l'atelier, inscris-toi aux Grands Prix.</p>
+          <p><b>Le jour</b>, au garage : construis ou ach\xE8te une voiture, monte des pi\xE8ces, fais des recherches au labo, inscris-toi aux Grands Prix. Une balade en ville par jour : pi\xE8ces d'or, disquettes de recherche, fans, et des boutiques.</p>
           <p><b>Le soir</b>, la course : la voiture acc\xE9l\xE8re toute seule, tu ne fais que tourner.</p>
           <table class="touches">
-            <tr><th>Tourner</th><td>Toucher la moiti\xE9 gauche ou droite de l'\xE9cran \xB7 fl\xE8ches \u2190 \u2192 \xB7 Q / D</td></tr>
+            <tr><th>Tourner</th><td>Toucher la moiti\xE9 gauche ou droite \xB7 fl\xE8ches \u2190 \u2192 \xB7 Q / D</td></tr>
+            <tr><th>D\xE9part</th><td>Toucher l'\xE9cran pile au feu vert : d\xE9part parfait</td></tr>
             <tr><th>Nitro</th><td>Bouton NITRO \xB7 Espace</td></tr>
             <tr><th>Aura</th><td>Toucher le portrait quand la jauge est pleine \xB7 E</td></tr>
-            <tr><th>Pause</th><td>Bouton pause \xB7 \xC9chap</td></tr>
+            <tr><th>Freiner</th><td>En ville : toucher les deux c\xF4t\xE9s</td></tr>
           </table>
-          <p>Garder la direction dans un virage fait drifter : un long drift et chaque d\xE9passement remplissent la jauge d'aura. Pousser un rival dans les barri\xE8res rapporte des fans.</p>
-          <p>Les 3 Grands Prix ouverts sont accessibles d\xE8s que tu as une voiture. Les autres demandent une <b>candidature</b> : points de licence, podiums et classe de voiture. La r\xE9ponse arrive le lendemain.</p>
+          <p>Drifter longtemps, doubler, ramasser des pi\xE8ces : tout rapporte de l'EXP. \xC0 chaque rang, l'\xE9quipe re\xE7oit de l'argent, des points de recherche et un ticket de tombola.</p>
+          <p>Les adversaires progressent avec les paliers : sans bonnes pi\xE8ces, impossible de gagner les grands Grands Prix.</p>
         </div>
       </section>
       <button class="btn btn-principal" data-action="retour">Retour</button>
@@ -2994,22 +4411,26 @@ body {
     };
   }
   function ecranGarage(app2) {
-    const p = app2.partie;
-    const v = voitureActive(p);
-    const nouvelles = (p.nouvelles || []).map((n) => `<div class="nouvelle"><b>${e(n.titre)}</b><span>${e(n.texte)}</span></div>`).join("");
+    const p2 = app2.partie;
+    const v = voitureActive(p2);
+    const nouvelles = (p2.nouvelles || []).map((n) => `<div class="nouvelle"><b>${e(n.titre)}</b><span>${e(n.texte)}</span></div>`).join("");
     const sansVoiture = !v;
+    const sortie = peutSortir(p2);
     return {
       classe: "garage",
-      html: `${barre(p)}
+      html: `${barre(p2)}
     ${nouvelles ? `<div class="nouvelles" data-action="lu">${nouvelles}<small>Toucher pour fermer</small></div>` : ""}
     <div class="bas">
       ${sansVoiture ? `<section class="panneau"><h2 class="titre-panneau">Bienvenue au Garage Piston</h2>
-            <div class="contenu texte"><p>Ton garage est vide. Pour courir les Grands Prix ouverts, il te faut une voiture : ach\xE8te-la toute pr\xEAte, ou construis-la ici (moins cher, pr\xEAte demain).</p></div></section>` : `<section class="panneau">${carteVoiture(v)}</section>`}
+            <div class="contenu texte"><p>Le garage est vide. <b>Construis</b> ta premi\xE8re voiture (moins ch\xE8re, qualit\xE9 tir\xE9e au sort) ou ach\xE8te-la \xE0 la concession.</p></div></section>` : `<section class="panneau">${carteVoiture(v, { compacte: true })}</section>`}
       <nav class="grille-actions" aria-label="Menu du garage">
         <button class="btn" data-action="atelier" ${sansVoiture ? "disabled" : ""}>Atelier</button>
-        <button class="btn ${sansVoiture ? "btn-principal" : ""}" data-action="boutique">Boutique</button>
+        <button class="btn ${sansVoiture ? "btn-principal" : ""}" data-action="boutique">Voitures</button>
+        <button class="btn" data-action="pieces">Pi\xE8ces</button>
+        <button class="btn" data-action="labo">Labo</button>
         <button class="btn btn-rouge" data-action="bureau">Courses</button>
-        <button class="btn btn-sombre" data-action="jour">Jour suivant</button>
+        <button class="btn btn-vert" data-action="ville" ${sansVoiture || !sortie ? "disabled" : ""}>${sortie ? "Sortir en ville" : "Ville : demain"}</button>
+        <button class="btn btn-sombre large" data-action="jour">Jour suivant</button>
       </nav>
       <div class="petits-liens">
         <button class="lien" data-action="aide">Comment jouer</button>
@@ -3018,12 +4439,15 @@ body {
     </div>`,
       actions: {
         lu: () => {
-          p.nouvelles = [];
+          p2.nouvelles = [];
           app2.garage();
         },
         atelier: () => app2.montrer(ecranAtelier(app2)),
         boutique: () => app2.montrer(ecranBoutique(app2)),
+        pieces: () => app2.montrer(ecranPieces(app2)),
+        labo: () => app2.montrer(ecranLabo(app2)),
         bureau: () => app2.montrer(ecranBureau(app2)),
+        ville: () => app2.sortirEnVille(),
         jour: () => app2.jourSuivant(),
         aide: () => app2.montrer(ecranAide(app2, "garage")),
         titre: () => app2.titre()
@@ -3031,161 +4455,557 @@ body {
     };
   }
   function ecranAtelier(app2) {
-    const p = app2.partie;
-    const v = voitureActive(p);
+    const p2 = app2.partie;
+    const v = voitureActive(p2);
     const lignes = Object.keys(v.stats).map((k) => {
       const niveau = v.ameliorations[k] || 0;
       const cout = coutAmelioration(niveau);
       const max = v.stats[k] >= 99;
       return `<div class="ligne">
       ${barreStat(NOMS_STATS[k], v.stats[k], COULEURS_STATS[k])}
-      <button class="btn btn-mini" data-action="ameliorer" data-stat="${k}" ${max || p.argent < cout ? "disabled" : ""}>+5 \xB7 ${formatArgent(cout)}</button>
+      <button class="btn btn-mini" data-action="ameliorer" data-stat="${k}" ${max || p2.argent < cout ? "disabled" : ""}>+5 \xB7 ${formatArgent(cout)}</button>
     </div>`;
     }).join("");
-    const rep = coutReparation(p);
-    const autres = p.garage.filter((g) => g.uid !== v.uid);
+    const emplacements = Object.entries(EMPLACEMENTS).map(([cle, nom]) => {
+      const monte = v.pieces.find((x) => x.emplacement === cle);
+      return `<button class="emplacement ${monte ? `rarete-${monte.rarete}` : "vide"}" data-action="monter" data-emplacement="${cle}">
+      <small>${nom}</small><b>${monte ? e(monte.nom) : "\u2014 vide \u2014"}</b></button>`;
+    }).join("");
+    const rep = coutReparation(p2);
+    const autres = p2.garage.filter((g) => g.uid !== v.uid);
     return {
-      classe: "garage",
-      html: `${barre(p)}<div class="bas">
+      classe: "garage plein",
+      html: `${barre(p2)}<div class="defile">
       <section class="panneau">
-        <h2 class="titre-panneau">Atelier \xB7 ${e(v.nom)}</h2>
+        <h2 class="titre-panneau">Atelier<small>${e(v.nom)} \xB7 ${QUALITES[v.qualite].nom}</small></h2>
+        ${carteVoiture(v)}
+      </section>
+      <section class="panneau">
+        <h2 class="titre-panneau bleu">Pi\xE8ces mont\xE9es<small>Toucher un emplacement pour changer la pi\xE8ce</small></h2>
+        <div class="contenu emplacements">${emplacements}</div>
+      </section>
+      <section class="panneau">
+        <h2 class="titre-panneau sombre">R\xE9glages</h2>
         <div class="contenu">${lignes}
-          <div class="ligne"><span>\xC9tat de la voiture : ${Math.round((1 - v.usure) * 100)} %</span>
-            <button class="btn btn-mini" data-action="reparer" ${!rep || p.argent < rep ? "disabled" : ""}>R\xE9parer \xB7 ${formatArgent(rep)}</button></div>
+          <div class="ligne"><span>\xC9tat : ${Math.round((1 - v.usure) * 100)} %</span>
+            <button class="btn btn-mini" data-action="reparer" ${!rep || p2.argent < rep ? "disabled" : ""}>R\xE9parer \xB7 ${formatArgent(rep)}</button></div>
+          <div class="ligne"><span>Peinture \xB7 ${formatArgent(COUT_PEINTURE)}</span>
+            <div class="nuancier">${PEINTURES.map((c2) => `<button class="teinte ${c2 === v.couleur ? "choisie" : ""}" style="background:${c2}" data-action="peindre" data-couleur="${c2}" aria-label="Peindre en ${c2}" ${p2.argent < COUT_PEINTURE ? "disabled" : ""}></button>`).join("")}</div></div>
           ${autres.length ? `<div class="ligne"><span>Autres voitures</span>${autres.map((a) => `<button class="btn btn-mini" data-action="choisir" data-uid="${a.uid}">${e(modele(a.modele).nom)}</button>`).join("")}</div>` : ""}
         </div>
       </section>
-      <button class="btn" data-action="retour">Retour au garage</button>
-    </div>`,
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour au garage</button></div>`,
       actions: {
         ameliorer: (d) => {
-          if (app2.action("ameliorer", d.stat)) app2.son.caisse();
+          if (app2.action("ameliorer", d.stat)) {
+            app2.son.caisse();
+            app2.toast("+5 ! La voiture progresse.");
+          }
           app2.montrer(ecranAtelier(app2));
         },
         reparer: () => {
-          app2.action("reparer");
+          if (app2.action("reparer")) app2.son.caisse();
+          app2.montrer(ecranAtelier(app2));
+        },
+        peindre: (d) => {
+          if (app2.action("peindre", d.couleur)) app2.son.caisse();
           app2.montrer(ecranAtelier(app2));
         },
         choisir: (d) => {
-          p.voitureActive = d.uid;
+          p2.voitureActive = d.uid;
           app2.sauver();
           app2.montrer(ecranAtelier(app2));
         },
+        monter: (d) => app2.montrer(ecranMontage(app2, d.emplacement)),
         retour: () => app2.garage()
       }
     };
   }
-  function ecranBoutique(app2) {
-    const p = app2.partie;
+  function ecranMontage(app2, emplacement) {
+    const p2 = app2.partie;
+    const v = voitureActive(p2);
+    const brute = p2.garage.find((g) => g.uid === v.uid);
+    const actuelle = brute.pieces[emplacement];
+    const stock = p2.inventaire.filter((i) => piece(i.piece).emplacement === emplacement);
+    const essai = (iuid) => {
+      const copie = { ...brute, pieces: { ...brute.pieces } };
+      if (iuid) copie.pieces[emplacement] = iuid;
+      else delete copie.pieces[emplacement];
+      return decrireVoiture(p2, copie);
+    };
+    const ligne = (inv) => {
+      const pc = piece(inv.piece);
+      const apres = essai(inv.uid);
+      const ailleurs = montureDe(p2, inv.uid);
+      const ici = inv.uid === actuelle;
+      const effet = Object.keys(v.stats).map((k) => {
+        const d = apres.stats[k] - v.stats[k];
+        return d ? `<span class="${d > 0 ? "ok" : "ko"}">${COURTS[k]} ${d > 0 ? "+" : ""}${d}</span>` : "";
+      }).join("");
+      return `<div class="piece rarete-${pc.rarete}">
+      <div class="piece-tete"><b>${e(pc.nom)}</b><span class="rarete">${RARETES[pc.rarete].nom}</span></div>
+      <div class="petit">${texteBonus(pc)}</div>
+      <div class="ligne"><span class="effet">${ici ? '<span class="etat">Mont\xE9e</span>' : effet || '<span class="petit">aucun changement</span>'}${ailleurs && !ici ? ' <span class="petit">(sur une autre voiture)</span>' : ""}</span>
+        <span>${ici ? "" : `<button class="btn btn-mini btn-vert" data-action="poser" data-uid="${inv.uid}">Monter</button>`}
+        <button class="btn btn-mini" data-action="vendre" data-uid="${inv.uid}">Vendre ${formatArgent(Math.round(pc.prix * 0.4))}</button></span></div>
+    </div>`;
+    };
+    return {
+      classe: "garage plein",
+      html: `${barre(p2)}<div class="defile">
+      <h2 class="titre-section">${EMPLACEMENTS[emplacement]}</h2>
+      ${stock.length ? stock.map(ligne).join("") : `<section class="panneau"><div class="contenu texte"><p>Aucune pi\xE8ce de ce type en stock. Ach\xE8te-en chez Pi\xE8ces Auto, gagne-les en course ou \xE0 la tombola.</p></div></section>`}
+    </div>
+    <div class="pied pied-double">
+      ${actuelle ? '<button class="btn" data-action="enlever">D\xE9monter</button>' : ""}
+      <button class="btn btn-principal" data-action="pieces">Acheter des pi\xE8ces</button>
+      <button class="btn" data-action="retour">Retour \xE0 l'atelier</button>
+    </div>`,
+      actions: {
+        poser: (d) => {
+          if (app2.action("monter", d.uid)) {
+            app2.son.disque();
+            app2.toast("Pi\xE8ce mont\xE9e !");
+          }
+          app2.montrer(ecranAtelier(app2));
+        },
+        vendre: (d) => {
+          const g = app2.action("vendrePiece", d.uid);
+          if (g) app2.toast(`Vendue : +${formatArgent(g)}`);
+          app2.montrer(ecranMontage(app2, emplacement));
+        },
+        enlever: () => {
+          app2.action("demonter", emplacement);
+          app2.montrer(ecranAtelier(app2));
+        },
+        pieces: () => app2.montrer(ecranPieces(app2, { onglet: emplacement, retour: () => app2.montrer(ecranMontage(app2, emplacement)) })),
+        retour: () => app2.montrer(ecranAtelier(app2))
+      }
+    };
+  }
+  function ecranPieces(app2, o = {}) {
+    const p2 = app2.partie;
+    const onglet = o.onglet || "moteur";
+    const promo = o.enVille ? promoDuJour(p2) : null;
+    const retour = o.retour || (() => app2.garage());
+    const liste = PIECES.filter((x) => x.emplacement === onglet).map((pc) => {
+      const verrou = pc.recherche > p2.labo;
+      const remise = pc.id === promo ? 0.3 : 0;
+      const prix = prixPiece(pc, remise);
+      const possede = p2.inventaire.filter((i) => i.piece === pc.id).length;
+      return `<div class="piece rarete-${pc.rarete} ${verrou ? "verrou" : ""}">
+      <div class="piece-tete"><b>${e(pc.nom)}</b><span class="rarete">${RARETES[pc.rarete].nom}</span></div>
+      <div class="petit">${texteBonus(pc)}${possede ? ` \xB7 en stock : ${possede}` : ""}</div>
+      <div class="ligne">${remise ? '<span class="promo">PROMO \u221230 %</span>' : "<span></span>"}
+        ${verrou ? `<span class="petit ko">Labo niveau ${pc.recherche} requis</span>` : `<button class="btn btn-mini btn-vert" data-action="acheter" data-id="${pc.id}" data-remise="${remise}" ${p2.argent < prix ? "disabled" : ""}>Acheter \xB7 ${formatArgent(prix)}</button>`}</div>
+    </div>`;
+    }).join("");
+    const onglets = Object.entries(EMPLACEMENTS).map(([k, nom]) => `<button class="onglet ${k === onglet ? "actif" : ""}" data-action="onglet" data-id="${k}">${nom}</button>`).join("");
+    return {
+      classe: "garage plein",
+      html: `${barre(p2)}<div class="defile">
+      <h2 class="titre-section">Pi\xE8ces Auto</h2>
+      ${promo ? `<p class="petit clair">Promo du jour en magasin : ${e(piece(promo).nom)} \xE0 \u221230 %.</p>` : ""}
+      <div class="onglets">${onglets}</div>
+      ${liste}
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
+      actions: {
+        onglet: (d) => app2.montrer(ecranPieces(app2, { ...o, onglet: d.id })),
+        acheter: (d) => {
+          const inv = app2.action("acheterPiece", [d.id, Number(d.remise)]);
+          if (inv) {
+            app2.son.caisse();
+            app2.montrer(ecranAchatPiece(app2, inv, () => app2.montrer(ecranPieces(app2, o))));
+            return;
+          }
+          app2.montrer(ecranPieces(app2, o));
+        },
+        retour
+      }
+    };
+  }
+  function ecranAchatPiece(app2, inv, retour) {
+    const pc = piece(inv.piece);
+    const v = voitureActive(app2.partie);
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau revele rarete-${pc.rarete}">
+        <h2 class="titre-panneau">Nouvelle pi\xE8ce !</h2>
+        <div class="contenu texte centre">
+          <div class="caisse-ouverte"></div>
+          <p class="gros">${e(pc.nom)}</p>
+          <p class="rarete">${RARETES[pc.rarete].nom}</p>
+          <p class="petit">${texteBonus(pc)}</p>
+        </div>
+      </section>
+      <div class="pile">
+        ${v ? '<button class="btn btn-principal" data-action="monter">Monter sur ma voiture</button>' : ""}
+        <button class="btn" data-action="retour">Plus tard</button>
+      </div>
+    </div>`,
+      actions: {
+        monter: () => {
+          app2.action("monter", inv.uid);
+          app2.son.disque();
+          app2.toast("Pi\xE8ce mont\xE9e !");
+          retour();
+        },
+        retour
+      }
+    };
+  }
+  function ecranLabo(app2, retour = () => app2.garage()) {
+    const p2 = app2.partie;
+    const suivant = p2.labo + 1;
+    const max = suivant >= COUT_RECHERCHE.length;
+    const cout = COUT_RECHERCHE[suivant];
+    const niveaux = COUT_RECHERCHE.map((c2, n) => {
+      const pieces = PIECES.filter((x) => x.recherche === n).map((x) => `<span class="rarete-${x.rarete}">${e(x.nom)}</span>`).join("");
+      return `<div class="niveau-labo ${n <= p2.labo ? "acquis" : ""}"><b>Niveau ${n}${n <= p2.labo ? " \u2713" : ` \xB7 ${c2} PR`}</b><div class="liste-pieces">${pieces}</div></div>`;
+    }).join("");
+    return {
+      classe: "garage plein",
+      html: `${barre(p2)}<div class="defile">
+      <h2 class="titre-section">Labo de recherche</h2>
+      <section class="panneau">
+        <h2 class="titre-panneau violet">Niveau ${p2.labo}<small>Les points de recherche (PR) se gagnent en course, en ville et en montant de rang.</small></h2>
+        <div class="contenu">
+          <div class="jauge grande"><i style="width:${max ? 100 : Math.min(100, Math.round(p2.recherche / cout * 100))}%;background:#8a6ad6"></i></div>
+          <div class="ligne"><span>${max ? "Tout est d\xE9bloqu\xE9 !" : `${p2.recherche} / ${cout} PR`}</span>
+            ${max ? "" : `<button class="btn btn-mini btn-principal" data-action="chercher" ${p2.recherche < cout ? "disabled" : ""}>Rechercher</button>`}</div>
+        </div>
+      </section>
+      <section class="panneau"><div class="contenu">${niveaux}</div></section>
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
+      actions: {
+        chercher: () => {
+          if (app2.action("rechercher")) {
+            app2.son.niveau();
+            app2.montrer(ecranCelebration(app2, "Eur\xEAka !", `Labo niveau ${p2.labo} : de nouvelles pi\xE8ces sont en vente.`, () => app2.montrer(ecranLabo(app2, retour))));
+            return;
+          }
+          app2.montrer(ecranLabo(app2, retour));
+        },
+        retour
+      }
+    };
+  }
+  function ecranCelebration(app2, titre, sousTitre, suite, details = "") {
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran celebration">
+      <div class="confettis">${Array.from({ length: 24 }, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>
+      <div class="bandeau">${e(titre)}</div>
+      <p class="accroche">${e(sousTitre)}</p>
+      ${details}
+      <button class="btn btn-principal" data-action="suite">Super !</button>
+    </div>`,
+      actions: { suite }
+    };
+  }
+  function ecranBoutique(app2, retour = () => app2.garage(), enVille = false) {
+    const p2 = app2.partie;
     const cartes = VEHICULES.map((m) => {
-      const blocage = peutAcheter(p, m);
-      const enConstruction = p.constructions.some((c2) => c2.modele === m.id);
+      const blocage = peutAcheter(p2, m);
       return `<section class="panneau ${blocage ? "verrouille" : ""}">
-      ${carteVoiture(m, true)}
+      ${carteVoiture(m)}
       <div class="contenu actions-ligne">
         ${blocage ? `<span class="petit">${e(blocage)}</span>` : `
-        <button class="btn btn-mini btn-vert" data-action="acheter" data-id="${m.id}" ${p.argent < m.prix ? "disabled" : ""}>Acheter \xB7 ${formatArgent(m.prix)}</button>
-        <button class="btn btn-mini" data-action="construire" data-id="${m.id}" ${p.argent < m.construction.prix || enConstruction ? "disabled" : ""}>${enConstruction ? "En construction" : `Construire \xB7 ${formatArgent(m.construction.prix)} \xB7 ${m.construction.jours} j`}</button>`}
+        <button class="btn btn-mini btn-vert" data-action="acheter" data-id="${m.id}" ${p2.argent < m.prix ? "disabled" : ""}>Acheter \xB7 ${formatArgent(m.prix)}</button>
+        <button class="btn btn-mini btn-principal" data-action="construire" data-id="${m.id}" ${p2.argent < m.construction.prix ? "disabled" : ""}>Construire \xB7 ${formatArgent(m.construction.prix)}</button>`}
       </div>
     </section>`;
     }).join("");
     return {
       classe: "garage plein",
-      html: `${barre(p)}<div class="defile">
-      <h2 class="titre-section">Boutique</h2>
-      <p class="petit clair">Acheter : la voiture est pr\xEAte tout de suite. Construire : moins cher, pr\xEAte apr\xE8s quelques jours.</p>
+      html: `${barre(p2)}<div class="defile">
+      <h2 class="titre-section">${enVille ? "Concession" : "Voitures"}</h2>
+      <p class="petit clair">Acheter : pr\xEAte tout de suite, qualit\xE9 standard. Construire au garage : moins cher, une journ\xE9e de travail, et la qualit\xE9 (1 \xE0 5 \xE9toiles) se joue \xE0 l'atelier !</p>
       ${cartes}
     </div>
-    <div class="pied"><button class="btn" data-action="retour">Retour au garage</button></div>`,
+    <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
       actions: {
         acheter: (d) => {
           if (app2.action("acheter", d.id)) {
             app2.son.caisse();
-            app2.toast("Voiture achet\xE9e !");
+            app2.toast("Voiture achet\xE9e ! Elle t'attend au garage.");
           }
-          app2.montrer(ecranBoutique(app2));
+          app2.montrer(ecranBoutique(app2, retour, enVille));
         },
-        construire: (d) => {
-          if (app2.action("construire", d.id)) {
-            app2.son.caisse();
-            app2.toast("Construction lanc\xE9e : pr\xEAte demain ou plus tard.");
-          }
-          app2.montrer(ecranBoutique(app2));
-        },
-        retour: () => app2.garage()
+        construire: (d) => app2.montrer(ecranCouleur(app2, d.id, retour, enVille)),
+        retour
       }
     };
   }
+  function ecranCouleur(app2, idModele, retour, enVille) {
+    const m = modele(idModele);
+    const choix = [m.couleur, ...PEINTURES.filter((c2) => c2 !== m.couleur)];
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau">
+        <h2 class="titre-panneau">${e(m.nom)}<small>Choisis la couleur de la carrosserie</small></h2>
+        <div class="contenu nuancier grand">${choix.map((c2) => `<button class="teinte-voiture" data-action="go" data-couleur="${c2}"><img src="${apercuVoiture(c2, [], 2)}" alt="${c2}"></button>`).join("")}</div>
+      </section>
+      <button class="btn" data-action="retour">Retour</button>
+    </div>`,
+      actions: {
+        go: (d) => app2.construireVoiture(idModele, d.couleur, enVille),
+        retour: () => app2.montrer(ecranBoutique(app2, retour, enVille))
+      }
+    };
+  }
+  var ETAPES_CONSTRUCTION = [
+    { nom: "Conception", cri: "Eur\xEAka !" },
+    { nom: "Soufflerie", cri: "Quel appui !" },
+    { nom: "Essais sur piste", cri: "Plein gaz !" }
+  ];
+  function ecranConstruction(app2, v, suite) {
+    const q = QUALITES[v.qualite];
+    const stats = Object.entries(v.stats).map(([k, val]) => `<div class="stat"><span>${NOMS_STATS[k]}</span><div class="jauge"><i data-cible="${val}" style="width:0;background:${COULEURS_STATS[k]}"></i></div><b data-val="${val}">0</b></div>`).join("");
+    return {
+      classe: "transparent",
+      html: `<div class="ecran construction">
+      <section class="panneau">
+        <h2 class="titre-panneau">Construction<small>${e(v.nom)}</small></h2>
+        <div class="contenu">
+          <ol class="etapes">${ETAPES_CONSTRUCTION.map((x, i) => `<li data-etape="${i}">${x.nom}</li>`).join("")}</ol>
+          <div class="cri" aria-live="polite"></div>
+          <div class="stats">${stats}</div>
+          <div class="verdict" hidden>
+            <div class="grosses-etoiles">${Array.from({ length: 5 }, (_, i) => `<i class="${i < q.etoiles ? "pleine" : ""}" style="--i:${i}">\u2605</i>`).join("")}</div>
+            <b class="qualite q${q.etoiles}">${q.nom}${q.bonus ? ` \xB7 +${q.bonus} partout` : ""}</b>
+          </div>
+        </div>
+      </section>
+      <button class="btn btn-principal" data-action="suite" hidden>Sortir la voiture !</button>
+    </div>`,
+      actions: { suite },
+      apres: (racine) => {
+        const etapes = racine.querySelectorAll("[data-etape]");
+        const cri = racine.querySelector(".cri");
+        const barres = [...racine.querySelectorAll("[data-cible]")];
+        const valeurs = [...racine.querySelectorAll("[data-val]")];
+        const DUREE = 1500;
+        ETAPES_CONSTRUCTION.forEach((x, i) => setTimeout(() => {
+          if (!racine.isConnected) return;
+          etapes.forEach((el, k) => el.classList.toggle("active", k === i));
+          if (i > 0) etapes[i - 1].classList.add("faite");
+          cri.textContent = x.cri;
+          cri.classList.remove("pop");
+          void cri.offsetWidth;
+          cri.classList.add("pop");
+          app2.son.bip(520 + i * 160, 0.12);
+          const part = (i + 1) / ETAPES_CONSTRUCTION.length;
+          barres.forEach((b, k) => {
+            b.style.width = `${Math.round(b.dataset.cible * part)}%`;
+            valeurs[k].textContent = Math.round(valeurs[k].dataset.val * part);
+          });
+        }, 300 + i * DUREE));
+        setTimeout(() => {
+          if (!racine.isConnected) return;
+          etapes.forEach((el) => {
+            el.classList.remove("active");
+            el.classList.add("faite");
+          });
+          cri.textContent = "";
+          racine.querySelector(".verdict").hidden = false;
+          racine.querySelector('[data-action="suite"]').hidden = false;
+          if (q.etoiles >= 3) app2.son.niveau();
+          else app2.son.fanfare();
+        }, 300 + ETAPES_CONSTRUCTION.length * DUREE);
+      }
+    };
+  }
+  function ecranTombola(app2, retour) {
+    const p2 = app2.partie;
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau">
+        <h2 class="titre-panneau rose">Tombola de Pistonville<small>Un ticket par mont\xE9e de rang et par podium de Grand Prix.</small></h2>
+        <div class="contenu texte centre">
+          <div class="tambour"><i></i></div>
+          <p class="gros">${p2.tickets} ticket${p2.tickets > 1 ? "s" : ""}</p>
+          <p class="petit">Lots : pi\xE8ces (parfois super rares), points de recherche, argent.</p>
+        </div>
+      </section>
+      <div class="pile">
+        <button class="btn btn-principal" data-action="tirer" ${p2.tickets > 0 ? "" : "disabled"}>Tourner le tambour !</button>
+        <button class="btn" data-action="retour">Retour en ville</button>
+      </div>
+    </div>`,
+      actions: {
+        tirer: () => {
+          const lot = app2.action("tirerTombola");
+          if (!lot) return;
+          const tambour = app2.ui.racine.querySelector(".tambour");
+          tambour.classList.add("tourne");
+          app2.ui.racine.querySelectorAll("button").forEach((b) => {
+            b.disabled = true;
+          });
+          for (let i = 0; i < 8; i++) setTimeout(() => app2.son.roulement(), i * 110);
+          setTimeout(() => {
+            app2.son.caisse();
+            const titre = lot.type === "piece" ? lot.piece.nom : lot.type === "recherche" ? `+${lot.valeur} PR` : `+${formatArgent(lot.valeur)}`;
+            const rare = lot.type === "piece" ? lot.piece.rarete : "commune";
+            if (rare === "super") app2.son.niveau();
+            app2.montrer({
+              classe: "fond-sombre",
+              html: `<div class="ecran"><section class="panneau revele rarete-${rare}"><h2 class="titre-panneau">${rare === "super" ? "SUPER LOT !" : "Gagn\xE9 !"}</h2>
+              <div class="contenu texte centre"><div class="caisse-ouverte"></div><p class="gros">${e(titre)}</p>
+              ${lot.type === "piece" ? `<p class="rarete">${RARETES[rare].nom}</p><p class="petit">${texteBonus(lot.piece)}</p>` : ""}</div></section>
+              <button class="btn btn-principal" data-action="encore">Continuer</button></div>`,
+              actions: { encore: () => app2.montrer(ecranTombola(app2, retour)) }
+            });
+          }, 1e3);
+        },
+        retour
+      }
+    };
+  }
+  var CONSEILS = [
+    "Appuie pile au feu vert : un d\xE9part parfait donne un petit coup de nitro.",
+    "Un drift tenu plus d'une demi-seconde rapporte de l'EXP. Plus il est long, plus \xE7a paie.",
+    "Les pneus tout-terrain changent tout sur la terre et le sable.",
+    "Les pneus pluie accrochent sur le mouill\xE9 et les pav\xE9s.",
+    "Pousser un rival dans les barri\xE8res, \xE7a pla\xEEt au public : des fans en plus.",
+    "Les pi\xE8ces d'or reviennent \xE0 chaque tour : vise les lignes de trois.",
+    "Une voiture ab\xEEm\xE9e perd de la vitesse de pointe. Pense \xE0 r\xE9parer !",
+    "Le labo d\xE9bloque des pi\xE8ces rares, puis super rares. Garde tes disquettes.",
+    "Chez Pi\xE8ces Auto, en ville, une pi\xE8ce est en promo chaque jour.",
+    "Une construction 5 \xE9toiles est rare\u2026 mais elle ajoute +15 \xE0 toutes les qualit\xE9s.",
+    "Les Grands Prix nationaux demandent une voiture de classe B : construis plus gros !",
+    "Garder la direction dans un virage remplit la jauge d'aura : 4 secondes de folie."
+  ];
+  function ecranCafe(app2, retour) {
+    const p2 = app2.partie;
+    const deja = p2.cafeJour === p2.jour;
+    const conseil = CONSEILS[(p2.jour * 5 + p2.rang) % CONSEILS.length];
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau">
+        <h2 class="titre-panneau marron">Caf\xE9 des pilotes<small>On y parle courses, pneus et ragots.</small></h2>
+        <div class="contenu texte">
+          <p class="citation">\xAB ${e(conseil)} \xBB</p>
+          <p class="petit">${deja ? "Tu as d\xE9j\xE0 pris ton caf\xE9 aujourd'hui." : `Un caf\xE9 avec les pilotes : ${formatArgent(PRIX_CAFE)}, +15 EXP et 3 fans.`}</p>
+        </div>
+      </section>
+      <div class="pile">
+        <button class="btn btn-principal" data-action="cafe" ${deja || p2.argent < PRIX_CAFE ? "disabled" : ""}>Prendre un caf\xE9</button>
+        <button class="btn" data-action="retour">Retour en ville</button>
+      </div>
+    </div>`,
+      actions: {
+        cafe: () => {
+          const rangs = app2.action("boireCafe");
+          if (rangs) {
+            app2.son.caisse();
+            app2.toast("+15 EXP \xB7 +3 fans");
+          }
+          app2.apresRangs(rangs, () => app2.montrer(ecranCafe(app2, retour)));
+        },
+        retour
+      }
+    };
+  }
+  function ecranFinBalade(app2, g, suite) {
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau tele">
+        <h2 class="titre-panneau">19:00 \xB7 Fin de la balade</h2>
+        <div class="contenu gains">
+          <div><small>Argent ramass\xE9</small><b data-compte="${g.argent}" data-avant="+" data-apres=" G">0</b></div>
+          <div><small>Recherche</small><b data-compte="${g.recherche}" data-avant="+" data-apres=" PR">0</b></div>
+          <div><small>Fans</small><b data-compte="${g.fans}" data-avant="+">0</b></div>
+          <div><small>EXP</small><b data-compte="${g.exp}" data-avant="+">0</b></div>
+        </div>
+      </section>
+      <button class="btn btn-principal" data-action="suite">Retour au garage</button>
+    </div>`,
+      actions: { suite },
+      apres: (r) => animerCompteurs(r)
+    };
+  }
   function ligneGP(app2, gp) {
-    const p = app2.partie;
-    const v = voitureActive(p);
-    const statut = statutGP(p, gp);
-    const trophee = p.trophees[gp.id];
-    const infos = `${gp.manches.length} manches \xB7 1er prix ${formatArgent(gp.prix)}${trophee ? ` \xB7 meilleur : ${ordinal(trophee)}` : ""}`;
+    const p2 = app2.partie;
+    const v = voitureActive(p2);
+    const statut = statutGP(p2, gp);
+    const trophee = p2.trophees[gp.id];
+    const infos = `${gp.manches.length} manches \xB7 1er prix ${formatArgent(gp.prix)} \xB7 niveau ${"\u25CF".repeat(gp.niveau)}${trophee ? ` \xB7 meilleur : ${ordinal(trophee)}` : ""}`;
+    const coupe = trophee ? `<i class="coupe c${Math.min(trophee, 4)}" title="Meilleure place : ${ordinal(trophee)}"></i>` : "";
     let action = "";
     if (gp.palier === "ouvert") {
       if (statut === "inscrit") action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? "" : "disabled"}>Courir ce soir</button>`;
       else action = `<button class="btn btn-mini" data-action="inscrire" data-id="${gp.id}" ${v ? "" : "disabled"}>${v ? "S'inscrire" : "Il faut une voiture"}</button>`;
-    } else {
-      const c2 = p.candidatures[gp.id];
-      const verdict = evaluerCandidature(p, gp, v);
-      const conditions = gp.conditions;
-      const crit = [
-        conditions.points && `<span class="${p.pointsLicence >= conditions.points ? "ok" : "ko"}">${Math.min(p.pointsLicence, conditions.points)}/${conditions.points} pts</span>`,
-        conditions.podiums && `<span class="${p.podiums >= conditions.podiums ? "ok" : "ko"}">${Math.min(p.podiums, conditions.podiums)}/${conditions.podiums} podiums</span>`,
-        conditions.victoires && `<span class="${p.victoires >= conditions.victoires ? "ok" : "ko"}">${Math.min(p.victoires, conditions.victoires)}/${conditions.victoires} victoire${conditions.victoires > 1 ? "s" : ""}</span>`,
-        conditions.classe && `<span class="${v && CLASSES.indexOf(v.classe) >= CLASSES.indexOf(conditions.classe) ? "ok" : "ko"}">classe ${conditions.classe}+</span>`
-      ].filter(Boolean).join("");
-      if (statut === "acceptee") action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? "" : "disabled"}>Courir ce soir</button>`;
-      else if (statut === "attente") action = '<span class="etat">R\xE9ponse demain</span>';
-      else if (statut === "liste") action = `<span class="etat">Liste d'attente</span>`;
-      else action = `<button class="btn btn-mini" data-action="candidater" data-id="${gp.id}" ${p.argent < fraisDossier(gp) ? "disabled" : ""}>Candidater \xB7 ${formatArgent(fraisDossier(gp))}</button>`;
-      const refus = statut === "refusee" && c2?.manques ? `<div class="petit ko">Refus\xE9e : il manquait ${e(c2.manques.join(", "))}.</div>` : "";
-      return `<div class="gp">
-      <div class="gp-tete"><b>${e(gp.nom)}</b>${action}</div>
-      <div class="petit">${infos}</div>
-      <div class="criteres">${crit}${verdict.ok && statut !== "acceptee" ? '<span class="ok">dossier complet</span>' : ""}</div>${refus}
-    </div>`;
+      return `<div class="gp"><div class="gp-tete"><b>${coupe}${e(gp.nom)}</b>${action}</div><div class="petit">${infos}</div></div>`;
     }
-    return `<div class="gp"><div class="gp-tete"><b>${e(gp.nom)}</b>${action}</div><div class="petit">${infos}</div></div>`;
+    const c2 = p2.candidatures[gp.id];
+    const verdict = evaluerCandidature(p2, gp, v);
+    const cond = gp.conditions;
+    const crit = [
+      cond.points && `<span class="${p2.pointsLicence >= cond.points ? "ok" : "ko"}">${Math.min(p2.pointsLicence, cond.points)}/${cond.points} pts</span>`,
+      cond.podiums && `<span class="${p2.podiums >= cond.podiums ? "ok" : "ko"}">${Math.min(p2.podiums, cond.podiums)}/${cond.podiums} podiums</span>`,
+      cond.victoires && `<span class="${p2.victoires >= cond.victoires ? "ok" : "ko"}">${Math.min(p2.victoires, cond.victoires)}/${cond.victoires} victoire${cond.victoires > 1 ? "s" : ""}</span>`,
+      cond.classe && `<span class="${v && CLASSES.indexOf(v.classe) >= CLASSES.indexOf(cond.classe) ? "ok" : "ko"}">classe ${cond.classe}+</span>`
+    ].filter(Boolean).join("");
+    if (statut === "acceptee") action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? "" : "disabled"}>Courir ce soir</button>`;
+    else if (statut === "attente") action = '<span class="etat">R\xE9ponse demain</span>';
+    else if (statut === "liste") action = `<span class="etat">Liste d'attente</span>`;
+    else action = `<button class="btn btn-mini" data-action="candidater" data-id="${gp.id}" ${p2.argent < fraisDossier(gp) ? "disabled" : ""}>Candidater \xB7 ${formatArgent(fraisDossier(gp))}</button>`;
+    const refus = statut === "refusee" && c2?.manques ? `<div class="petit ko">Refus\xE9e : il manquait ${e(c2.manques.join(", "))}.</div>` : "";
+    return `<div class="gp">
+    <div class="gp-tete"><b>${coupe}${e(gp.nom)}</b>${action}</div>
+    <div class="petit">${infos}</div>
+    <div class="criteres">${crit}${verdict.ok && statut !== "acceptee" ? '<span class="ok">dossier complet</span>' : ""}</div>${refus}
+  </div>`;
   }
-  function ecranBureau(app2) {
-    const p = app2.partie;
+  function ecranBureau(app2, retour = () => app2.garage()) {
+    const p2 = app2.partie;
     const blocs = ORDRE_PALIERS.map((palier) => {
       const gps = GRANDS_PRIX.filter((g) => g.palier === palier);
       if (!gps.length) return "";
       const lic = PALIERS[palier].licence;
+      const precedente = PALIERS[ORDRE_PALIERS[ORDRE_PALIERS.indexOf(palier) - 1]]?.licence;
       const sous = palier === "ouvert" ? "Sans candidature : il suffit d'avoir une voiture" : `Sur candidature \xB7 donne la licence ${lic}`;
-      const atteint = palier === "ouvert" || palier === "regional" || licenceAuMoins(p.licence, PALIERS[ORDRE_PALIERS[ORDRE_PALIERS.indexOf(palier) - 1]].licence);
+      const atteint = palier === "ouvert" || palier === "regional" || licenceAuMoins(p2.licence, precedente);
       return `<section class="panneau ${atteint ? "" : "verrouille"}">
       <h2 class="titre-panneau">${PALIERS[palier].nom}<small>${sous}</small></h2>
-      <div class="contenu">${atteint ? gps.map((g) => ligneGP(app2, g)).join("") : `<p class="petit">${gps.length} Grand${gps.length > 1 ? "s" : ""} Prix \xB7 se d\xE9bloque avec la licence ${PALIERS[ORDRE_PALIERS[ORDRE_PALIERS.indexOf(palier) - 1]].licence}.</p>`}</div>
+      <div class="contenu">${atteint ? gps.map((g) => ligneGP(app2, g)).join("") : `<p class="petit">${gps.length} Grand${gps.length > 1 ? "s" : ""} Prix \xB7 se d\xE9bloque avec la licence ${precedente}.</p>`}</div>
     </section>`;
     }).join("");
     return {
       classe: "garage plein",
-      html: `${barre(p)}<div class="defile">
+      html: `${barre(p2)}<div class="defile">
       <h2 class="titre-section">Bureau des courses</h2>
       ${blocs}
     </div>
-    <div class="pied"><button class="btn" data-action="retour">Retour au garage</button></div>`,
+    <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
       actions: {
         inscrire: (d) => {
           app2.action("inscrire", d.id);
-          app2.montrer(ecranBureau(app2));
+          app2.montrer(ecranBureau(app2, retour));
         },
         candidater: (d) => {
           if (app2.action("candidater", d.id)) app2.toast("Dossier d\xE9pos\xE9 : r\xE9ponse demain matin.");
-          app2.montrer(ecranBureau(app2));
+          app2.montrer(ecranBureau(app2, retour));
         },
         briefing: (d) => app2.briefing(d.id),
-        retour: () => app2.garage()
+        retour
       }
     };
   }
   function ecranBriefing(app2, gp, manche, apercu) {
     const def = gp.manches[manche];
     const theme = THEMES[def.theme] || THEMES.parc;
+    const v = voitureActive(app2.partie);
+    const bonusSol = v?.surfaces?.[def.surface];
     return {
       classe: "fond-sombre",
       html: `<div class="ecran">
@@ -3197,14 +5017,14 @@ body {
             <h3>${e(def.nom)}</h3>
             <dl>
               <dt>D\xE9cor</dt><dd>${theme.nom}</dd>
-              <dt>Surface</dt><dd>${SURFACES[def.surface].nom}</dd>
+              <dt>Surface</dt><dd>${SURFACES[def.surface].nom}${bonusSol ? ` <span class="ok">+${Math.round(bonusSol * 100)} %</span>` : ""}</dd>
               <dt>Tours</dt><dd>${def.tours}</dd>
               <dt>Longueur</dt><dd>${Math.round(def.longueur / 16)} cases</dd>
               <dt>Adversaires</dt><dd>${gp.adversaires}</dd>
             </dl>
           </div>
         </div>
-        <div class="contenu texte petit">\u2190 \u2192 ou toucher la moiti\xE9 gauche / droite pour tourner \xB7 Espace : nitro \xB7 E : aura</div>
+        <div class="contenu texte petit">Touche l'\xE9cran pile au feu vert pour un d\xE9part parfait. Ramasse les pi\xE8ces d'or et les disquettes sur la piste !</div>
       </section>
       <div class="pile">
         <button class="btn btn-principal" data-action="depart">D\xE9part !</button>
@@ -3221,14 +5041,14 @@ body {
     return { classe: "fond-sombre", html: `<div class="ecran chargement"><p>${e(texte2)}</p></div>`, actions: {} };
   }
   function ecranPause(app2) {
-    const p = app2.partie;
+    const p2 = app2.partie;
     return {
       classe: "fond-sombre",
       html: `<div class="ecran">
       <section class="panneau"><h2 class="titre-panneau">Pause</h2>
         <div class="contenu">
-          <div class="ligne"><span>Aide au pilotage (la voiture se recentre seule)</span><button class="btn btn-mini" data-action="aide">${p.aide ? "Activ\xE9e" : "Coup\xE9e"}</button></div>
-          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p.son ? "Activ\xE9" : "Coup\xE9"}</button></div>
+          <div class="ligne"><span>Aide au pilotage (la voiture se recentre seule)</span><button class="btn btn-mini" data-action="aide">${p2.aide ? "Activ\xE9e" : "Coup\xE9e"}</button></div>
+          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p2.son ? "Activ\xE9" : "Coup\xE9"}</button></div>
         </div>
       </section>
       <div class="pile">
@@ -3239,14 +5059,14 @@ body {
       actions: {
         reprendre: () => app2.reprendre(),
         aide: () => {
-          p.aide = !p.aide;
-          if (app2.course) app2.course.aide = p.aide;
+          p2.aide = !p2.aide;
+          if (app2.course) app2.course.aide = p2.aide;
           app2.sauver();
           app2.montrer(ecranPause(app2));
         },
         son: () => {
-          p.son = !p.son;
-          app2.son.actif = p.son;
+          p2.son = !p2.son;
+          app2.son.actif = p2.son;
           app2.sauver();
           app2.montrer(ecranPause(app2));
         },
@@ -3255,27 +5075,44 @@ body {
     };
   }
   function ecranResultats(app2, r) {
+    const g = r.gain;
     const lignes = r.resultats.map((x) => `<tr class="${x.id === "joueur" ? "moi" : ""}">
       <td>${ordinal(x.place)}</td><td><i class="puce" style="background:${x.couleur}"></i>${e(x.nom)}</td><td class="petit">${e(x.ecurie)}</td><td class="num">${x.place === 1 ? formatTemps(x.temps) : `+${x.ecart.toFixed(1)} s`}</td></tr>`).join("");
     const general = r.general.map((x, i) => `<tr class="${x.id === "joueur" ? "moi" : ""}"><td>${ordinal(i + 1)}</td><td>${e(x.nom)}</td><td class="num">${x.points} pts</td></tr>`).join("");
+    const p2 = app2.partie;
+    const besoin = expPourRang(p2.rang);
+    const butin = g.butin ? `<section class="panneau revele rarete-${g.butin.piece.rarete} retarde"><h2 class="titre-panneau">Caisse de pi\xE8ces !</h2>
+        <div class="contenu texte centre"><div class="caisse-ouverte"></div><p class="gros">${e(g.butin.piece.nom)}</p><p class="rarete">${RARETES[g.butin.piece.rarete].nom}</p><p class="petit">${texteBonus(g.butin.piece)}</p></div></section>` : "";
     return {
       classe: "fond-sombre",
       html: `<div class="ecran defile-ecran">
       <section class="panneau tele">
         <h2 class="titre-panneau">PISTON TV<small>${e(r.gp.nom)} \xB7 manche ${r.manche}</small></h2>
-        <div class="podium-titre ${r.gain.place <= 3 ? "podium" : ""}">${ordinal(r.gain.place)}</div>
+        <div class="podium-titre ${g.place <= 3 ? "podium" : ""}">${ordinal(g.place)}</div>
         <div class="contenu gains">
-          <div><small>Prime</small><b>+${formatArgent(r.gain.prime)}</b></div>
-          <div><small>Points de licence</small><b>+${r.gain.licence}</b></div>
-          <div><small>Fans</small><b>+${r.gain.fans}</b></div>
-          <div><small>D\xE9passements</small><b>${r.depassements}</b></div>
+          <div><small>Prime</small><b data-compte="${g.prime}" data-avant="+" data-apres=" G">0</b></div>
+          <div><small>Ramass\xE9</small><b data-compte="${g.ramasses.argent}" data-avant="+" data-apres=" G">0</b></div>
+          <div><small>Recherche</small><b data-compte="${g.recherche}" data-avant="+" data-apres=" PR">0</b></div>
+          <div><small>Fans</small><b data-compte="${g.fans}" data-avant="+">0</b></div>
+          <div><small>Licence</small><b data-compte="${g.licence}" data-avant="+" data-apres=" pts">0</b></div>
+          <div><small>EXP</small><b data-compte="${g.exp}" data-avant="+">0</b></div>
+        </div>
+        <div class="contenu">
+          <div class="ligne petit-clair"><span>Rang ${p2.rang}</span><span>${p2.exp} / ${besoin} EXP</span></div>
+          <div class="jauge grande"><i class="remplir" style="--w:${Math.round(p2.exp / besoin * 100)}%;background:#f2c14e"></i></div>
+          <p class="petit-clair">${r.depassements} d\xE9passement${r.depassements > 1 ? "s" : ""} \xB7 ${r.drift} EXP de drift</p>
         </div>
       </section>
+      ${butin}
       <section class="panneau"><h2 class="titre-panneau">Arriv\xE9e</h2><div class="contenu"><table class="classement">${lignes}</table></div></section>
       <section class="panneau"><h2 class="titre-panneau">Classement du Grand Prix</h2><div class="contenu"><table class="classement">${general}</table></div></section>
-      <button class="btn btn-principal" data-action="suite">${r.gain.fini ? "Fin du Grand Prix" : "Manche suivante"}</button>
+      <button class="btn btn-principal" data-action="suite">${g.fini ? "Fin du Grand Prix" : "Manche suivante"}</button>
     </div>`,
-      actions: { suite: () => r.gain.fini ? app2.finGP() : app2.mancheSuivante() }
+      actions: { suite: () => app2.apresRangs(g.rangs, () => g.fini ? app2.finGP() : app2.mancheSuivante()) },
+      apres: (racine) => {
+        animerCompteurs(racine, 1100);
+        if (g.butin) setTimeout(() => app2.son.disque(), 1300);
+      }
     };
   }
   function ecranFinGP(app2, f) {
@@ -3283,19 +5120,32 @@ body {
     return {
       classe: "fond-sombre",
       html: `<div class="ecran defile-ecran">
+      ${f.place <= 3 ? `<div class="confettis">${Array.from({ length: 24 }, (_, i) => `<i style="--i:${i}"></i>`).join("")}</div>` : ""}
       <section class="panneau tele">
         <h2 class="titre-panneau">${e(f.gp.nom)}<small>Classement final</small></h2>
         <div class="podium-titre ${f.place <= 3 ? "podium" : ""}">${f.place === 1 ? "Troph\xE9e !" : ordinal(f.place)}</div>
+        ${f.place <= 3 ? `<div class="trophee-grand c${f.place}"></div>` : ""}
         <div class="contenu gains">
-          <div><small>Gains du Grand Prix</small><b>+${formatArgent(f.gains)}</b></div>
-          <div><small>Nouveaux fans</small><b>+${f.fans}</b></div>
+          <div><small>Gains du Grand Prix</small><b data-compte="${f.gains}" data-avant="+" data-apres=" G">0</b></div>
+          <div><small>Nouveaux fans</small><b data-compte="${f.fans}" data-avant="+">0</b></div>
+          ${f.place <= 3 ? "<div><small>Tombola</small><b>+1 ticket</b></div>" : ""}
         </div>
       </section>
       <section class="panneau"><div class="contenu"><table class="classement">${lignes}</table></div></section>
       <button class="btn btn-principal" data-action="garage">Retour au garage (jour suivant)</button>
     </div>`,
-      actions: { garage: () => app2.garage() }
+      actions: { garage: () => app2.garage() },
+      apres: (r) => animerCompteurs(r, 1200)
     };
+  }
+  function ecranRang(app2, m, suite) {
+    return ecranCelebration(
+      app2,
+      `RANG ${m.rang} !`,
+      "L'\xE9quipe monte en grade.",
+      suite,
+      `<div class="recompenses"><span>+${formatArgent(m.argent)}</span><span>+${m.recherche} PR</span><span>+${m.tickets} ticket</span></div>`
+    );
   }
 
   // pistonville/src/main.js
@@ -3362,9 +5212,20 @@ body {
         }
         this.course.dessiner(this.ctx, W, H, secondes);
         if (this.course.etat === "fini" && !this.pause) this.finManche();
+      } else if (this.ville && this.ecran === "ville") {
+        if (!this.pause) {
+          this.accu += dt;
+          while (this.accu >= PAS2) {
+            this.ville.maj(PAS2, this.entrees());
+            this.accu -= PAS2;
+          }
+        }
+        this.ville.dessiner(this.ctx, W, H, secondes);
+        if (this.ville.entree && !this.ui.racine.innerHTML) this.entrerBatiment(this.ville.entree);
+        if (this.ville.fini && !this.villeFinie) this.finBalade();
       } else if (this.scene) {
         this.scene.maj(dt);
-        this.scene.dessiner(this.ctx, W, H, secondes, this.partie, voitureActive(this.partie));
+        this.scene.dessiner(this.ctx, W, H, secondes, this.partie);
       }
       requestAnimationFrame((tt) => this.boucle(tt));
     }
@@ -3379,11 +5240,12 @@ body {
       };
       window.addEventListener("keydown", (ev) => {
         this.son.reveiller();
-        if (this.ecran !== "course") return;
+        if (this.ecran !== "course" && this.ecran !== "ville") return;
         if (clavier[ev.code]) {
           this.touches.add(clavier[ev.code]);
           ev.preventDefault();
         }
+        if (this.ecran === "ville") return;
         if (ev.repeat) return;
         if (ev.code === "Space" || ev.code === "ArrowUp" || ev.code === "KeyW" || ev.code === "KeyZ") {
           this.impulsions.nitro = true;
@@ -3403,27 +5265,32 @@ body {
         const r = this.canvas.getBoundingClientRect();
         return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
       };
-      const dans = (p, z) => p.x >= z.x && p.x <= z.x + z.w && p.y >= z.y && p.y <= z.y + z.h;
+      const dans = (p2, z) => p2.x >= z.x && p2.x <= z.x + z.w && p2.y >= z.y && p2.y <= z.y + z.h;
       this.canvas.addEventListener("pointerdown", (ev) => {
         this.son.reveiller();
-        if (this.ecran !== "course" || this.pause) return;
+        if (this.ecran !== "course" && this.ecran !== "ville" || this.pause) return;
         ev.preventDefault();
-        const p = position(ev);
+        const p2 = position(ev);
+        if (this.ecran === "ville") {
+          this.canvas.setPointerCapture?.(ev.pointerId);
+          this.pointeurs.set(ev.pointerId, p2);
+          return;
+        }
         const z = this.course.zones(W, H);
-        if (dans(p, z.pause)) {
+        if (dans(p2, z.pause)) {
           this.basculerPause();
           return;
         }
-        if (dans(p, z.nitro)) {
+        if (dans(p2, z.nitro)) {
           this.impulsions.nitro = true;
           return;
         }
-        if (dans(p, z.portrait)) {
+        if (dans(p2, z.portrait)) {
           this.impulsions.aura = true;
           return;
         }
         this.canvas.setPointerCapture?.(ev.pointerId);
-        this.pointeurs.set(ev.pointerId, p);
+        this.pointeurs.set(ev.pointerId, p2);
       });
       this.canvas.addEventListener("pointermove", (ev) => {
         if (this.pointeurs.has(ev.pointerId)) this.pointeurs.set(ev.pointerId, position(ev));
@@ -3436,8 +5303,8 @@ body {
     }
     entrees() {
       let gauche = this.touches.has("gauche"), droite = this.touches.has("droite");
-      for (const p of this.pointeurs.values()) {
-        if (p.x < W / 2) gauche = true;
+      for (const p2 of this.pointeurs.values()) {
+        if (p2.x < W / 2) gauche = true;
         else droite = true;
       }
       const e2 = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura };
@@ -3482,17 +5349,25 @@ body {
     garage() {
       this.ecran = "garage";
       this.course = null;
+      this.ville = null;
       this.montrer(ecranGarage(this));
     }
     /** Actions de gestion : renvoie vrai si elles ont réussi, puis sauvegarde. */
     action(nom, arg) {
       const f = {
         acheter,
-        construire,
         ameliorer,
         reparer,
+        peindre,
         inscrire,
-        candidater: deposerCandidature
+        candidater: deposerCandidature,
+        acheterPiece: (p2, [id, remise]) => acheterPiece(p2, id, remise),
+        monter,
+        demonter,
+        vendrePiece,
+        rechercher,
+        tirerTombola,
+        boireCafe
       }[nom];
       const ok = f(this.partie, arg);
       if (ok) this.sauver();
@@ -3504,7 +5379,91 @@ body {
       this.garage();
       if (!nouvelles.length) this.toast(`Jour ${this.partie.jour} : rien de neuf au garage.`);
     }
+    /** Enchaîne les écrans de montée de rang, puis `suite`. */
+    apresRangs(rangs, suite) {
+      if (!rangs || !rangs.length) {
+        suite();
+        return;
+      }
+      const [m, ...reste] = rangs;
+      this.sauver();
+      this.son.niveau();
+      this.montrer(ecranRang(this, m, () => this.apresRangs(reste, suite)));
+    }
+    /** Construction : la voiture apparaît sur le pont pendant l'animation, puis on passe au lendemain. */
+    construireVoiture(idModele, couleur, enVille) {
+      const r = construire(this.partie, idModele, couleur);
+      if (!r) return;
+      this.son.caisse();
+      this.sauver();
+      const brute = this.partie.garage.find((g) => g.uid === r.uid);
+      const v = decrireVoiture(this.partie, brute);
+      if (enVille) {
+        this.ville = null;
+      }
+      this.ecran = "garage";
+      this.scene.construire(v, 5.4);
+      this.montrer(ecranConstruction(this, v, () => {
+        this.scene.finConstruction();
+        const nouvelles = jourSuivant(this.partie);
+        this.partie.nouvelles = [{ titre: "Voiture termin\xE9e", texte: `${v.nom} sort de l'atelier. Une journ\xE9e de travail !` }, ...nouvelles];
+        this.sauver();
+        this.garage();
+      }));
+    }
+    // --- Ville -------------------------------------------------------------------------
+    sortirEnVille() {
+      if (!peutSortir(this.partie)) return;
+      const v = voitureActive(this.partie);
+      if (!v) return;
+      this.ville = new Ville({ planche: this.assets.urbain, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7 });
+      this.villeFinie = false;
+      this.pause = false;
+      this.accu = 0;
+      this.pointeurs.clear();
+      this.touches.clear();
+      this.ecran = "ville";
+      this.ui.vider();
+      this.toast("Gare-toi sur une zone jaune pour entrer.");
+    }
+    entrerBatiment(porte) {
+      const retour = () => {
+        this.ville.sortir();
+        this.pointeurs.clear();
+        this.touches.clear();
+        this.ui.vider();
+      };
+      this.pointeurs.clear();
+      const ecrans = {
+        garage: () => {
+          this.ville.temps = Math.max(this.ville.temps, 1e9);
+          this.ville.entree = null;
+          this.ville.fini = true;
+          return null;
+        },
+        bureau: () => ecranBureau(this, retour),
+        concession: () => ecranBoutique(this, retour, true),
+        pieces: () => ecranPieces(this, { enVille: true, retour }),
+        tombola: () => ecranTombola(this, retour),
+        cafe: () => ecranCafe(this, retour)
+      };
+      const ecran = ecrans[porte.id]();
+      if (ecran) this.montrer(ecran);
+    }
+    finBalade() {
+      this.villeFinie = true;
+      const g = this.ville.bilan();
+      const rangs = finBalade(this.partie, g);
+      this.sauver();
+      this.son.fanfare();
+      this.montrer(ecranFinBalade(this, g, () => this.apresRangs(rangs, () => this.garage())));
+    }
     briefing(gpId, reprise = false) {
+      if (this.ville && !this.villeFinie) {
+        this.villeFinie = true;
+        finBalade(this.partie, this.ville.bilan());
+      }
+      this.ville = null;
       if (!reprise || !this.partie.gp) commencerGP(this.partie, gpId);
       this.sauver();
       const gp = grandPrix(gpId);
@@ -3530,7 +5489,15 @@ body {
         decor,
         planche: this.assets.urbain,
         tours: def.tours,
-        joueur: { physique: v.physique, couleur: v.couleur, pilote: this.partie.pilote, nitros: 2 },
+        joueur: {
+          physique: v.physique,
+          couleur: v.couleur,
+          looks: v.looks,
+          pilote: this.partie.pilote,
+          nitros: v.nitros,
+          nitroDuree: v.nitroDuree,
+          surfaces: v.surfaces
+        },
         adversaires: this.adversaires,
         aide: this.partie.aide,
         son: this.son,
@@ -3583,11 +5550,10 @@ body {
         const id = r.voiture.joueur ? "joueur" : r.voiture.equipe;
         return { id, ...noms[id], place: r.place, temps: r.temps, ecart: r.ecart };
       });
-      const usure = 1 - c2.joueur.durabilite / c2.joueur.p.durabiliteMax;
-      const gain = enregistrerManche(this.partie, resultats, c2.fans, usure);
+      const gain = enregistrerManche(this.partie, resultats, c2.bilan());
       this.sauver();
       const general = classementGP(this.partie, noms);
-      this.montrer(ecranResultats(this, { gp, manche: this.partie.gp.manche, resultats, general, gain, depassements: c2.depassements }));
+      this.montrer(ecranResultats(this, { gp, manche: this.partie.gp.manche, resultats, general, gain, depassements: c2.depassements, drift: c2.drift }));
     }
     noms() {
       const noms = { joueur: { nom: this.partie.pilote, ecurie: "Garage Piston", couleur: voitureActive(this.partie).couleur } };

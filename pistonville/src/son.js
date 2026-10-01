@@ -54,5 +54,9 @@ export class Son {
   aura() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.note(f, 0.18, 'triangle', 0.05), i * 60)); }
   choc(force) { this.bruit(0.18, Math.min(0.2, 0.05 + force / 1500), 500); }
   fanfare() { [523, 659, 784, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.note(f, 0.2, 'square', 0.045), i * 110)); }
+  piece() { this.note(988, 0.06, 'square', 0.035); setTimeout(() => this.note(1319, 0.1, 'square', 0.035), 50); }
+  disque() { [660, 880, 1175].forEach((f, i) => setTimeout(() => this.note(f, 0.08, 'triangle', 0.05), i * 45)); }
+  niveau() { [523, 659, 784, 1047, 1319].forEach((f, i) => setTimeout(() => this.note(f, 0.16, 'square', 0.045), i * 90)); }
+  roulement() { this.note(180 + Math.random() * 60, 0.05, 'square', 0.025); }
   caisse() { [880, 1320].forEach((f, i) => setTimeout(() => this.note(f, 0.12, 'square', 0.04), i * 80)); }
 }

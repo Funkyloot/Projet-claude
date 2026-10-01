@@ -16,9 +16,11 @@ import { genererCircuit } from './circuit.js';
 import { rendreCircuit, miniCarte } from './rendu-circuit.js';
 import { Course } from './course.js';
 import { SceneGarage } from './scene-garage.js';
+import { Ville } from './ville.js';
 import { Son } from './son.js';
 import {
   Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranResultats, ecranFinGP,
+  ecranConstruction, ecranRang, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
 } from './ecrans.js';
 import * as P from './partie.js';
 
@@ -90,9 +92,20 @@ class App {
       }
       this.course.dessiner(this.ctx, W, H, secondes);
       if (this.course.etat === 'fini' && !this.pause) this.finManche();
+    } else if (this.ville && this.ecran === 'ville') {
+      if (!this.pause) {
+        this.accu += dt;
+        while (this.accu >= PAS) {
+          this.ville.maj(PAS, this.entrees());
+          this.accu -= PAS;
+        }
+      }
+      this.ville.dessiner(this.ctx, W, H, secondes);
+      if (this.ville.entree && !this.ui.racine.innerHTML) this.entrerBatiment(this.ville.entree);
+      if (this.ville.fini && !this.villeFinie) this.finBalade();
     } else if (this.scene) {
       this.scene.maj(dt);
-      this.scene.dessiner(this.ctx, W, H, secondes, this.partie, P.voitureActive(this.partie));
+      this.scene.dessiner(this.ctx, W, H, secondes, this.partie);
     }
     requestAnimationFrame((tt) => this.boucle(tt));
   }
@@ -106,8 +119,9 @@ class App {
     };
     window.addEventListener('keydown', (ev) => {
       this.son.reveiller();
-      if (this.ecran !== 'course') return;
+      if (this.ecran !== 'course' && this.ecran !== 'ville') return;
       if (clavier[ev.code]) { this.touches.add(clavier[ev.code]); ev.preventDefault(); }
+      if (this.ecran === 'ville') return;
       if (ev.repeat) return;
       if (ev.code === 'Space' || ev.code === 'ArrowUp' || ev.code === 'KeyW' || ev.code === 'KeyZ') { this.impulsions.nitro = true; ev.preventDefault(); }
       if (ev.code === 'KeyE' || ev.code === 'ShiftLeft' || ev.code === 'ShiftRight') this.impulsions.aura = true;
@@ -125,9 +139,10 @@ class App {
     const dans = (p, z) => p.x >= z.x && p.x <= z.x + z.w && p.y >= z.y && p.y <= z.y + z.h;
     this.canvas.addEventListener('pointerdown', (ev) => {
       this.son.reveiller();
-      if (this.ecran !== 'course' || this.pause) return;
+      if ((this.ecran !== 'course' && this.ecran !== 'ville') || this.pause) return;
       ev.preventDefault();
       const p = position(ev);
+      if (this.ecran === 'ville') { this.canvas.setPointerCapture?.(ev.pointerId); this.pointeurs.set(ev.pointerId, p); return; }
       const z = this.course.zones(W, H);
       if (dans(p, z.pause)) { this.basculerPause(); return; }
       if (dans(p, z.nitro)) { this.impulsions.nitro = true; return; }
@@ -188,14 +203,17 @@ class App {
   garage() {
     this.ecran = 'garage';
     this.course = null;
+    this.ville = null;
     this.montrer(ecranGarage(this));
   }
 
   /** Actions de gestion : renvoie vrai si elles ont réussi, puis sauvegarde. */
   action(nom, arg) {
     const f = {
-      acheter: P.acheter, construire: P.construire, ameliorer: P.ameliorer, reparer: P.reparer,
+      acheter: P.acheter, ameliorer: P.ameliorer, reparer: P.reparer, peindre: P.peindre,
       inscrire: P.inscrire, candidater: P.deposerCandidature,
+      acheterPiece: (p, [id, remise]) => P.acheterPiece(p, id, remise), monter: P.monter, demonter: P.demonter,
+      vendrePiece: P.vendrePiece, rechercher: P.rechercher, tirerTombola: P.tirerTombola, boireCafe: P.boireCafe,
     }[nom];
     const ok = f(this.partie, arg);
     if (ok) this.sauver();
@@ -209,7 +227,83 @@ class App {
     if (!nouvelles.length) this.toast(`Jour ${this.partie.jour} : rien de neuf au garage.`);
   }
 
+  /** Enchaîne les écrans de montée de rang, puis `suite`. */
+  apresRangs(rangs, suite) {
+    if (!rangs || !rangs.length) { suite(); return; }
+    const [m, ...reste] = rangs;
+    this.sauver();
+    this.son.niveau();
+    this.montrer(ecranRang(this, m, () => this.apresRangs(reste, suite)));
+  }
+
+  /** Construction : la voiture apparaît sur le pont pendant l'animation, puis on passe au lendemain. */
+  construireVoiture(idModele, couleur, enVille) {
+    const r = P.construire(this.partie, idModele, couleur);
+    if (!r) return;
+    this.son.caisse();
+    this.sauver();
+    const brute = this.partie.garage.find((g) => g.uid === r.uid);
+    const v = P.decrireVoiture(this.partie, brute);
+    if (enVille) {
+      // Depuis la ville : la balade s'arrête, on file au garage.
+      this.ville = null;
+    }
+    this.ecran = 'garage';
+    this.scene.construire(v, 5.4);
+    this.montrer(ecranConstruction(this, v, () => {
+      this.scene.finConstruction();
+      const nouvelles = P.jourSuivant(this.partie);
+      this.partie.nouvelles = [{ titre: 'Voiture terminée', texte: `${v.nom} sort de l'atelier. Une journée de travail !` }, ...nouvelles];
+      this.sauver();
+      this.garage();
+    }));
+  }
+
+  // --- Ville -------------------------------------------------------------------------
+
+  sortirEnVille() {
+    if (!P.peutSortir(this.partie)) return;
+    const v = P.voitureActive(this.partie);
+    if (!v) return;
+    this.ville = new Ville({ planche: this.assets.urbain, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7 });
+    this.villeFinie = false;
+    this.pause = false;
+    this.accu = 0;
+    this.pointeurs.clear();
+    this.touches.clear();
+    this.ecran = 'ville';
+    this.ui.vider();
+    this.toast('Gare-toi sur une zone jaune pour entrer.');
+  }
+
+  entrerBatiment(porte) {
+    const retour = () => { this.ville.sortir(); this.pointeurs.clear(); this.touches.clear(); this.ui.vider(); };
+    this.pointeurs.clear();
+    const ecrans = {
+      garage: () => { this.ville.temps = Math.max(this.ville.temps, 1e9); this.ville.entree = null; this.ville.fini = true; return null; },
+      bureau: () => ecranBureau(this, retour),
+      concession: () => ecranBoutique(this, retour, true),
+      pieces: () => ecranPieces(this, { enVille: true, retour }),
+      tombola: () => ecranTombola(this, retour),
+      cafe: () => ecranCafe(this, retour),
+    };
+    const ecran = ecrans[porte.id]();
+    if (ecran) this.montrer(ecran);
+  }
+
+  finBalade() {
+    this.villeFinie = true;
+    const g = this.ville.bilan();
+    const rangs = P.finBalade(this.partie, g);
+    this.sauver();
+    this.son.fanfare();
+    this.montrer(ecranFinBalade(this, g, () => this.apresRangs(rangs, () => this.garage())));
+  }
+
   briefing(gpId, reprise = false) {
+    // Partir courir depuis la ville termine la balade (les gains sont gardés).
+    if (this.ville && !this.villeFinie) { this.villeFinie = true; P.finBalade(this.partie, this.ville.bilan()); }
+    this.ville = null;
     if (!reprise || !this.partie.gp) P.commencerGP(this.partie, gpId);
     this.sauver();
     const gp = P.grandPrix(gpId);
@@ -238,7 +332,10 @@ class App {
       decor,
       planche: this.assets.urbain,
       tours: def.tours,
-      joueur: { physique: v.physique, couleur: v.couleur, pilote: this.partie.pilote, nitros: 2 },
+      joueur: {
+        physique: v.physique, couleur: v.couleur, looks: v.looks, pilote: this.partie.pilote,
+        nitros: v.nitros, nitroDuree: v.nitroDuree, surfaces: v.surfaces,
+      },
       adversaires: this.adversaires,
       aide: this.partie.aide,
       son: this.son,
@@ -291,11 +388,10 @@ class App {
       const id = r.voiture.joueur ? 'joueur' : r.voiture.equipe;
       return { id, ...noms[id], place: r.place, temps: r.temps, ecart: r.ecart };
     });
-    const usure = 1 - c.joueur.durabilite / c.joueur.p.durabiliteMax;
-    const gain = P.enregistrerManche(this.partie, resultats, c.fans, usure);
+    const gain = P.enregistrerManche(this.partie, resultats, c.bilan());
     this.sauver();
     const general = P.classementGP(this.partie, noms);
-    this.montrer(ecranResultats(this, { gp, manche: this.partie.gp.manche, resultats, general, gain, depassements: c.depassements }));
+    this.montrer(ecranResultats(this, { gp, manche: this.partie.gp.manche, resultats, general, gain, depassements: c.depassements, drift: c.drift }));
   }
 
   noms() {

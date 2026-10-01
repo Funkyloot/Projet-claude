@@ -479,7 +479,7 @@ function batir(ctx, planche, g) {
 
 // --- Petits dessins pixel ------------------------------------------------------
 
-function immeuble(c, x, y, w, h, toit, r) {
+export function immeuble(c, x, y, w, h, toit, r) {
   const facade = 18;
   c.fillStyle = '#3a3550'; c.fillRect(x - 1, y - 1, w + 2, h + 2);
   c.fillStyle = toit; c.fillRect(x, y, w, h - facade);
@@ -502,7 +502,7 @@ function immeuble(c, x, y, w, h, toit, r) {
   c.fillStyle = 'rgba(42,40,56,0.35)'; c.fillRect(x + w + 1, y + 3, 3, h);
 }
 
-function maison(c, x, y, w, h, toit) {
+export function maison(c, x, y, w, h, toit) {
   const facade = 12;
   c.fillStyle = '#3a3550'; c.fillRect(x - 1, y - 1, w + 2, h + 2);
   c.fillStyle = toit; c.fillRect(x, y, w, (h - facade) / 2);
@@ -522,7 +522,7 @@ function conteneur(c, x, y, r) {
   for (let i = x + 3; i < x + 15; i += 3) c.fillRect(i, y + 4, 1, 8);
 }
 
-function voitureGaree(c, x, y, couleur, horizontale) {
+export function voitureGaree(c, x, y, couleur, horizontale) {
   const s = spriteVoiture(couleur);
   c.save();
   c.translate(x, y);

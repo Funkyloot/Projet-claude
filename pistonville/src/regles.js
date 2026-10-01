@@ -55,6 +55,44 @@ export const BOOSTS = {
   aspiration: { vitesse: 1.08 },
 };
 
+/** Pièces : emplacements et raretés. */
+export const EMPLACEMENTS = {
+  moteur: 'Moteur', pneus: 'Pneus', boite: 'Boîte', aileron: 'Aileron', nitro: 'Nitro', chassis: 'Châssis',
+};
+export const RARETES = {
+  commune: { nom: 'Commune', couleur: '#8a94a6' },
+  rare: { nom: 'Rare', couleur: '#2f6fdb' },
+  super: { nom: 'Super rare', couleur: '#d69a12' },
+};
+
+/** Labo : points de recherche pour débloquer chaque niveau de pièces. */
+export const COUT_RECHERCHE = [0, 30, 90, 220];
+
+/** Construction : tirage de la qualité, ajoutée à chaque qualité de la voiture. */
+export const QUALITES = [
+  { nom: 'Correcte', bonus: 0, etoiles: 1, chance: 0.34 },
+  { nom: 'Bonne', bonus: 3, etoiles: 2, chance: 0.34 },
+  { nom: 'Excellente', bonus: 6, etoiles: 3, chance: 0.2 },
+  { nom: 'Remarquable', bonus: 10, etoiles: 4, chance: 0.09 },
+  { nom: 'Légendaire', bonus: 15, etoiles: 5, chance: 0.03 },
+];
+export function tirerQualite(alea) {
+  let r = alea();
+  for (let i = 0; i < QUALITES.length; i++) {
+    if (r < QUALITES[i].chance) return i;
+    r -= QUALITES[i].chance;
+  }
+  return 0;
+}
+
+/** Rang de l'équipe : EXP à atteindre pour passer au rang suivant. */
+export const expPourRang = (rang) => Math.round(90 * rang ** 1.35);
+export const recompenseRang = (rang) => ({ argent: 700 * rang, recherche: 6 + 2 * rang, tickets: 1 });
+export const EXP_PLACE = [60, 45, 36, 28, 22, 18, 15, 12, 10, 8];
+export const EXP_DEPASSEMENT = 4;
+export const COUT_PEINTURE = 600;
+export const PEINTURES = ['#f2c14e', '#e4432d', '#2f6fdb', '#3fa34d', '#f4f1e8', '#2a2838', '#e86ca6', '#8a6ad6', '#f39c33', '#4fc3d8'];
+
 /** Atelier : chaque amélioration ajoute 5 points à une qualité. */
 export const coutAmelioration = (niveau) => 1500 * (1 + niveau);
 export const GAIN_AMELIORATION = 5;

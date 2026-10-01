@@ -90,38 +90,60 @@ const MOTIF_VOITURE = [
   '.otbbbbbbto.',
   '..oooooooo..',
 ];
-export const VOITURE_L = MOTIF_VOITURE[0].length;
-export const VOITURE_H = MOTIF_VOITURE.length;
+export const VOITURE_L = MOTIF_VOITURE[0].length + 2;
+export const VOITURE_H = MOTIF_VOITURE.length + 2;
 
 const cacheVoitures = new Map();
 
-export function spriteVoiture(couleur, bande = '#f4f1e8') {
-  const cle = couleur + bande;
+/**
+ * Voiture vue de dessus, avant en haut. `looks` : ce que les pièces montées
+ * ajoutent à la carrosserie (becquet, aileron, pneus larges, nitro…).
+ */
+export function spriteVoiture(couleur, bande = '#f4f1e8', looks = []) {
+  const cle = couleur + bande + looks.join(',');
   if (cacheVoitures.has(cle)) return cacheVoitures.get(cle);
   const c = document.createElement('canvas');
   c.width = VOITURE_L;
   c.height = VOITURE_H;
   const ctx = c.getContext('2d');
+  const sombre = melangerCouleur(couleur, '#000000', 0.3);
   const teintes = {
-    o: '#2a2838',
-    b: couleur,
-    l: melangerCouleur(couleur, '#ffffff', 0.35),
-    d: melangerCouleur(couleur, '#000000', 0.3),
-    w: '#9fd3ff',
-    W: '#5d7fa6',
-    k: '#1c1b24',
-    h: '#fff4b8',
-    t: '#e4432d',
-    s: bande,
+    o: '#2a2838', b: couleur, l: melangerCouleur(couleur, '#ffffff', 0.35), d: sombre,
+    w: '#9fd3ff', W: '#5d7fa6', k: '#1c1b24', h: '#fff4b8', t: '#e4432d', s: bande,
   };
+  const px = (x, y, couleurPixel) => { ctx.fillStyle = couleurPixel; ctx.fillRect(x + 1, y + 1, 1, 1); };
+  const a = new Set(looks);
+  if (a.has('larges')) {
+    // Pneus larges : une colonne de gomme en plus de chaque côté.
+    for (const y of [3, 4, 5, 15, 16, 17]) { px(-1, y, '#1c1b24'); px(12, y, '#1c1b24'); }
+  }
   MOTIF_VOITURE.forEach((ligne, y) => {
     for (let x = 0; x < ligne.length; x++) {
-      const t = teintes[ligne[x]];
-      if (!t) continue;
-      ctx.fillStyle = t;
-      ctx.fillRect(x, y, 1, 1);
+      const tt = teintes[ligne[x]];
+      if (tt) px(x, y, tt);
     }
   });
+  if (a.has('carbone')) {
+    for (let y = 2; y <= 4; y++) for (let x = 3; x <= 8; x++) px(x, y, (x + y) % 2 ? '#3a3a46' : '#24242e');
+    for (let y = 8; y <= 12; y++) for (let x = 3; x <= 8; x++) if (x !== 3 && x !== 8) px(x, y, (x + y) % 2 ? '#3a3a46' : '#24242e');
+  }
+  if (a.has('prise')) { for (let x = 4; x <= 7; x++) { px(x, 3, '#2a2838'); px(x, 4, '#5c6278'); } }
+  if (a.has('turbine')) {
+    for (const [x, y] of [[4, 2], [5, 2], [6, 2], [7, 2], [4, 3], [7, 3], [4, 4], [5, 4], [6, 4], [7, 4]]) px(x, y, '#2a2838');
+    px(5, 3, '#f39c33'); px(6, 3, '#ffe066');
+  }
+  if (a.has('arceau')) { for (let y = 8; y <= 12; y++) { px(2, y, '#2a2838'); px(9, y, '#2a2838'); } }
+  if (a.has('nitro1') || a.has('nitro2')) {
+    const colonnes = a.has('nitro2') ? [3, 7] : [5];
+    for (const x of colonnes) { for (let y = 14; y <= 17; y++) { px(x, y, '#2a7fd6'); px(x + 1, y, '#7fd0ff'); } px(x, 13, '#2a2838'); px(x + 1, 13, '#2a2838'); }
+  }
+  if (a.has('becquet')) { for (let x = 2; x <= 9; x++) px(x, 20, '#2a2838'); }
+  if (a.has('aileron') || a.has('aileronGT')) {
+    const gt = a.has('aileronGT');
+    for (let x = -1; x <= 12; x++) { px(x, 20, '#2a2838'); px(x, 21, gt ? bande : sombre); }
+    if (gt) for (let x = -1; x <= 12; x++) px(x, 22 - 1, bande);
+    px(3, 19, '#2a2838'); px(8, 19, '#2a2838');
+  }
   cacheVoitures.set(cle, c);
   return c;
 }

@@ -7,7 +7,7 @@
  */
 
 import { situer, pointA, courbureDevant, DEMI, BARRIERE } from './circuit.js';
-import { Voiture, RAYON_VOITURE } from './voiture.js';
+import { Voiture, RAYON_VOITURE, DEMI_LONGUEUR, DEMI_LARGEUR } from './voiture.js';
 import { SURFACES, kmh, BOOSTS } from './regles.js';
 import { spriteVoiture, tuile, idPersonnage, bulle, police } from './sprites.js';
 import { clamp, lerp, angleNorm, formatTemps, ordinal, creerAlea } from './outils.js';
@@ -15,12 +15,14 @@ import { clamp, lerp, angleNorm, formatTemps, ordinal, creerAlea } from './outil
 export const HAUTEUR_PANNEAU = 112;
 const COMPTE_A_REBOURS = 3.2;
 const TEXTES_PUBLIC = ['Bravo !', 'Ouah !', 'Allez !', 'Ooh !', 'Vas-y !'];
+const RAYON_POTEAU = 4;
+const ECART_POTEAU = DEMI + 9;
 
 export class Course {
   /**
    * @param {object} o
    *   circuit, decor (rendreCircuit), planche, tours,
-   *   joueur: { physique, couleur, pilote, nitros },
+   *   joueur: { physique, couleur, looks, pilote, nitros, nitroDuree, surfaces },
    *   adversaires: [{ physique, couleur, nom, talent }],
    *   aide (aide au pilotage), son, niveau
    */
@@ -43,17 +45,19 @@ export class Course {
       let v;
       if (i === placeJoueur) {
         v = new Voiture({ physique: o.joueur.physique, couleur: o.joueur.couleur, nom: o.joueur.pilote, joueur: true });
+        v.looks = o.joueur.looks || [];
         this.joueur = v;
       } else {
         const adv = o.adversaires[a++];
         v = new Voiture({ physique: adv.physique, couleur: adv.couleur, nom: adv.nom, equipe: adv.equipe });
         v.talent = adv.talent || 0;
         v.voie = (this.alea() - 0.5) * 24;
-        v.nitroIA = this.niveau >= 2 ? 1 : 0;
+        v.nitroIA = 1 + Math.floor(this.niveau / 2);
         v.prochaineVoie = this.alea() * 2;
       }
-      v.adherenceSol = surface.adherence;
-      v.vitesseSol = surface.vitesse;
+      const bonusSol = v.joueur ? (o.joueur.surfaces?.[o.circuit.def.surface] || 0) : 0;
+      v.adherenceSol = surface.adherence + bonusSol;
+      v.vitesseSol = Math.min(1, surface.vitesse + bonusSol * 0.3);
       const s = this.circuit.longueur - 40 - i * 26;
       const lat = i % 2 ? -15 : 15;
       const p = pointA(this.circuit, s, lat);
@@ -65,7 +69,17 @@ export class Course {
       this.voitures.push(v);
     }
 
-    this.nitros = o.joueur.nitros ?? 2;
+    this.nitros = o.joueur.nitros ?? 1;
+    this.nitroDuree = o.joueur.nitroDuree ?? BOOSTS.nitro.duree;
+    this.poteaux = [pointA(this.circuit, 0, -ECART_POTEAU), pointA(this.circuit, 0, ECART_POTEAU)];
+    this.bonus = this.semerBonus();
+    this.ramasses = { argent: 0, recherche: 0 };
+    this.drift = 0;            // EXP gagnée en drift
+    this.driftEnCours = 0;     // secondes de drift continu
+    this.secousse = 0;
+    this.departJoue = false;
+    this.appuiAvant = false;
+    this.tourBonus = 0;
     this.jaugeAura = 0;
     this.temps = -COMPTE_A_REBOURS;
     this.etat = 'compte';
@@ -95,6 +109,7 @@ export class Course {
     }
 
     const j = this.joueur;
+    this.departParfait(entrees);
     if (!j.fini) {
       j.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
       if (j.direction === 0 && this.aide && demarre) this.aider(j);
@@ -113,9 +128,12 @@ export class Course {
       this.contraindre(v, dt);
       this.suivre(v);
     }
-    this.collisions();
+    for (let iter = 0; iter < 2; iter++) this.collisions();
+    for (const v of this.voitures) this.poteauxPortique(v);
     this.classer();
+    if (demarre) { this.compterDrift(dt); this.ramasser(); }
     this.effets(dt);
+    if (this.secousse > 0) this.secousse = Math.max(0, this.secousse - dt * 18);
 
     if (j.fini && this.etat === 'course') {
       this.etat = 'arrivee';
@@ -158,10 +176,10 @@ export class Course {
     let cibleV = Math.sqrt(52 * R * v.p.adherence * v.adherenceSol) * prudence;
     // Un peu d'élastique pour que la course reste disputée.
     const ecartJoueur = v.progres - this.joueur.progres;
-    if (!this.joueur.fini) cibleV *= ecartJoueur > 500 ? 0.94 : ecartJoueur < -500 ? 1.05 : 1;
+    if (!this.joueur.fini) cibleV *= ecartJoueur > 700 ? 0.97 : ecartJoueur < -400 ? 1.06 : 1;
     v.frein = v.vitesse > cibleV + 12 ? clamp((v.vitesse - cibleV) / 60, 0, 1) : 0;
 
-    if (v.nitroIA > 0 && this.etat === 'course' && R > 1500 && this.alea() < dt * 0.15) {
+    if (v.nitroIA > 0 && this.etat === 'course' && R > 1500 && this.alea() < dt * 0.2) {
       v.nitroIA--;
       v.nitro = BOOSTS.nitro.duree;
     }
@@ -193,7 +211,8 @@ export class Course {
   declencherNitro() {
     if (this.nitros <= 0 || this.joueur.nitro > 0) return;
     this.nitros--;
-    this.joueur.nitro = BOOSTS.nitro.duree;
+    this.joueur.nitro = this.nitroDuree;
+    this.secousse = Math.max(this.secousse, 2);
     this.son?.souffle();
     this.message('NITRO !', 0.9, '#ffe066', this.joueur);
   }
@@ -213,9 +232,12 @@ export class Course {
     if (!sit) return;
     v.situation = sit;
     v.horsPiste = clamp((sit.d - DEMI + 2) / 14, 0, 1);
-    const limite = BARRIERE - RAYON_VOITURE + 2;
+    const nx = sit.nx * sit.cote, ny = sit.ny * sit.cote;
+    // Étendue de la voiture (rectangle orienté) vers la barrière.
+    const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+    const etendue = DEMI_LONGUEUR * Math.abs(fx * nx + fy * ny) + DEMI_LARGEUR * Math.abs(-fy * nx + fx * ny);
+    const limite = BARRIERE - 1 - etendue;
     if (sit.d > limite) {
-      const nx = sit.nx * sit.cote, ny = sit.ny * sit.cote;
       v.x = sit.px + nx * limite;
       v.y = sit.py + ny * limite;
       const choc = v.vx * nx + v.vy * ny;
@@ -226,7 +248,7 @@ export class Course {
         v.durabilite = Math.max(0, v.durabilite - choc / 9);
         if (choc > 40) {
           this.etincelles(v.x + nx * 8, v.y + ny * 8, choc);
-          if (v.joueur) this.son?.choc(choc);
+          if (v.joueur) { this.son?.choc(choc); this.secousse = Math.max(this.secousse, Math.min(5, choc / 40)); }
         }
         if (!v.joueur && choc > 85) {
           v.tete = 0.7;
@@ -265,27 +287,153 @@ export class Course {
     }
   }
 
+  /**
+   * Chocs entre voitures : deux rectangles orientés (12 × 21 px), séparés
+   * selon l'axe de moindre recouvrement (théorème des axes séparateurs).
+   * Le choc fait aussi pivoter un peu les voitures, selon le point d'impact.
+   */
   collisions() {
     const vs = this.voitures;
-    const r2 = RAYON_VOITURE * 2;
     for (let i = 0; i < vs.length; i++) for (let k = i + 1; k < vs.length; k++) {
       const a = vs[i], b = vs[k];
       const dx = b.x - a.x, dy = b.y - a.y;
-      const d = Math.hypot(dx, dy);
-      if (d >= r2 || d === 0) continue;
-      const nx = dx / d, ny = dy / d;
-      const recouvrement = (r2 - d) / 2;
-      a.x -= nx * recouvrement; a.y -= ny * recouvrement;
-      b.x += nx * recouvrement; b.y += ny * recouvrement;
+      if (dx * dx + dy * dy > 26 * 26) continue;
+      const c = recouvrement(a, b);
+      if (!c) continue;
+      const { nx, ny, prof } = c;
+      a.x -= nx * prof / 2; a.y -= ny * prof / 2;
+      b.x += nx * prof / 2; b.y += ny * prof / 2;
       const rel = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
-      if (rel < 0) {
-        const imp = -rel * 0.65;
-        a.vx -= nx * imp; a.vy -= ny * imp;
-        b.vx += nx * imp; b.vy += ny * imp;
-        if (a.joueur) b.dernierContact = this.temps;
-        if (b.joueur) a.dernierContact = this.temps;
-        if ((a.joueur || b.joueur) && imp > 25) this.son?.choc(imp);
+      if (rel >= 0) continue;
+      const imp = -rel * 0.6;
+      a.vx -= nx * imp; a.vy -= ny * imp;
+      b.vx += nx * imp; b.vy += ny * imp;
+      // Pivot : le point de contact est entre les deux coins les plus avancés.
+      const pa = coinVers(a, nx, ny), pb = coinVers(b, -nx, -ny);
+      const cx = (pa.x + pb.x) / 2, cy = (pa.y + pb.y) / 2;
+      a.angle += clamp(((cx - a.x) * -ny - (cy - a.y) * -nx) * imp * 0.0006, -0.12, 0.12);
+      b.angle += clamp(((cx - b.x) * ny - (cy - b.y) * nx) * imp * 0.0006, -0.12, 0.12);
+      a.durabilite = Math.max(0, a.durabilite - imp / 30);
+      b.durabilite = Math.max(0, b.durabilite - imp / 30);
+      if (a.joueur) b.dernierContact = this.temps;
+      if (b.joueur) a.dernierContact = this.temps;
+      if (a.joueur || b.joueur) {
+        if (imp > 25) this.son?.choc(imp);
+        if (imp > 40) { this.secousse = Math.max(this.secousse, Math.min(4, imp / 35)); this.etincelles(cx, cy, imp); }
+        const autre = a.joueur ? b : a;
+        if (imp > 90 && !autre.joueur && autre.tete <= 0) {
+          autre.tete = 0.5;
+          this.fans += 5;
+          this.message('BAM ! +5 fans', 1, '#ffe066', autre);
+        }
       }
+    }
+  }
+
+  /** Les deux poteaux du portique de départ sont solides. */
+  poteauxPortique(v) {
+    for (const p of this.poteaux) {
+      const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+      const rx = p.x - v.x, ry = p.y - v.y;
+      // Point du rectangle le plus proche du poteau.
+      const u = clamp(rx * fx + ry * fy, -DEMI_LONGUEUR, DEMI_LONGUEUR);
+      const w = clamp(-rx * fy + ry * fx, -DEMI_LARGEUR, DEMI_LARGEUR);
+      const qx = v.x + fx * u - fy * w, qy = v.y + fy * u + fx * w;
+      let nx = qx - p.x, ny = qy - p.y;
+      let d = Math.hypot(nx, ny);
+      if (d >= RAYON_POTEAU) continue;
+      if (d < 1e-3) { nx = v.x - p.x; ny = v.y - p.y; d = Math.hypot(nx, ny) || 1; nx /= d; ny /= d; d = 0; } else { nx /= d; ny /= d; }
+      const prof = RAYON_POTEAU - d;
+      v.x += nx * prof; v.y += ny * prof;
+      const choc = -(v.vx * nx + v.vy * ny);
+      if (choc > 0) {
+        v.vx += nx * choc * 1.4; v.vy += ny * choc * 1.4;
+        v.vx *= 0.6; v.vy *= 0.6;
+        v.durabilite = Math.max(0, v.durabilite - choc / 8);
+        this.etincelles(p.x, p.y, choc);
+        if (v.joueur) { this.son?.choc(choc); this.secousse = Math.max(this.secousse, 4); }
+      }
+    }
+  }
+
+  // --- Bonus sur la piste, drift, départ parfait -------------------------------
+
+  /** Pièces d'or (argent) et disquettes (points de recherche), en lignes de 3. */
+  semerBonus() {
+    const L = this.circuit.longueur;
+    const alea = creerAlea(this.circuit.def.graine * 13 + 5);
+    const bonus = [];
+    for (let s = 260; s < L - 160; s += 200 + alea() * 120) {
+      const voie = [-18, 0, 18][Math.floor(alea() * 3)];
+      if (alea() < 0.16) {
+        const p = pointA(this.circuit, s, voie);
+        bonus.push({ type: 'disque', x: p.x, y: p.y, pris: false });
+      } else {
+        for (let k = 0; k < 3; k++) {
+          const p = pointA(this.circuit, s + k * 16, voie);
+          bonus.push({ type: 'piece', x: p.x, y: p.y, pris: false });
+        }
+      }
+    }
+    return bonus;
+  }
+
+  ramasser() {
+    const j = this.joueur;
+    if (j.fini) return;
+    // Les bonus réapparaissent à chaque nouveau tour.
+    if (j.tour !== this.tourBonus) { this.tourBonus = j.tour; for (const b of this.bonus) b.pris = false; }
+    for (const b of this.bonus) {
+      if (b.pris) continue;
+      const dx = b.x - j.x, dy = b.y - j.y;
+      if (dx * dx + dy * dy > 13 * 13) continue;
+      b.pris = true;
+      if (b.type === 'piece') {
+        const valeur = 10 * this.niveau;
+        this.ramasses.argent += valeur;
+        this.message(`+${valeur} G`, 0.7, '#ffe066', b);
+        this.son?.piece();
+      } else {
+        this.ramasses.recherche += 1;
+        this.message('+1 PR', 0.9, '#7dd3fc', b);
+        this.son?.disque();
+      }
+    }
+  }
+
+  /** Un drift tenu longtemps rapporte de l'EXP, affichée à la sortie du virage. */
+  compterDrift(dt) {
+    const j = this.joueur;
+    if (j.drift && !j.fini && j.vitesse > 70) {
+      this.driftEnCours += dt;
+      return;
+    }
+    if (this.driftEnCours > 0.5) {
+      const gain = Math.round(this.driftEnCours * 6);
+      this.drift += gain;
+      this.message(`DRIFT ! +${gain} EXP`, 1, '#c4b5fd', j);
+      this.applaudir(j, 160);
+    }
+    this.driftEnCours = 0;
+  }
+
+  /** Appuyer pile au feu vert (ni trop tôt, ni trop tard) lance la voiture. */
+  departParfait(entrees) {
+    const appui = entrees.gauche || entrees.droite || entrees.nitro;
+    const nouveau = appui && !this.appuiAvant;
+    this.appuiAvant = appui;
+    if (this.departJoue || !nouveau) return;
+    if (this.temps < -0.5) return;                     // trop tôt pour compter
+    this.departJoue = true;
+    if (this.temps < -0.12) {
+      this.message('Trop tôt !', 1, '#fca5a5', this.joueur);
+      this.joueur.calage = 0.6;
+    } else if (this.temps < 0.3) {
+      this.joueur.nitro = Math.max(this.joueur.nitro, 1.2);
+      this.message('DÉPART PARFAIT !', 1.4, '#9fe870');
+      this.drift += 10;
+      this.son?.aura();
+      this.secousse = 3;
     }
   }
 
@@ -304,7 +452,7 @@ export class Course {
       this.fans += 2;
       this.jaugeAura = Math.min(1, this.jaugeAura + 0.22);
       this.applaudir(this.joueur, 200);
-      this.message(`${ordinal(this.positionJoueur)} !`, 0.9, '#9fe870', this.joueur);
+      this.message(`${ordinal(this.positionJoueur)} ! +4 EXP`, 0.9, '#9fe870', this.joueur);
     } else if (this.positionJoueur > avant) {
       this.jaugeAura = Math.min(1, this.jaugeAura + 0.08);
     }
@@ -370,6 +518,15 @@ export class Course {
 
   // --- Fin de course -----------------------------------------------------------
 
+  /** Ce que la manche rapporte en plus de la place (pour partie.enregistrerManche). */
+  bilan() {
+    return {
+      fans: this.fans, depassements: this.depassements, drift: this.drift,
+      ramasses: { ...this.ramasses },
+      usure: 1 - this.joueur.durabilite / this.joueur.p.durabiliteMax,
+    };
+  }
+
   /** Classement final : les voitures pas encore arrivées sont estimées. */
   resultats() {
     const L = this.circuit.longueur;
@@ -408,8 +565,10 @@ export class Course {
     this.camera.x = lerp(this.camera.x, cibleX, 0.12);
     this.camera.y = lerp(this.camera.y, cibleY, 0.12);
     const cw = this.decor.canvas.width, ch = this.decor.canvas.height;
-    const camX = Math.round(clamp(this.camera.x - W / 2, 0, cw - W));
-    const camY = Math.round(clamp(this.camera.y - hVue / 2, 0, ch - hVue));
+    const sx = this.secousse > 0 ? (Math.random() - 0.5) * this.secousse : 0;
+    const sy = this.secousse > 0 ? (Math.random() - 0.5) * this.secousse : 0;
+    const camX = Math.round(clamp(this.camera.x - W / 2 + sx, 0, cw - W));
+    const camY = Math.round(clamp(this.camera.y - hVue / 2 + sy, 0, ch - hVue));
 
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(this.decor.canvas, camX, camY, W, hVue, 0, 0, W, hVue);
@@ -427,14 +586,20 @@ export class Course {
       tuile(ctx, this.planche, idPersonnage(s.base, s.dir, pas), s.x - 8, s.y - 12 - (saute ? 2 : 0));
     }
 
+    // Bonus : pièces qui tournent, disquettes qui flottent.
+    for (const b of this.bonus) {
+      if (b.pris || b.x < camX - 8 || b.x > camX + W + 8 || b.y < camY - 8 || b.y > camY + hVue + 8) continue;
+      dessinerBonus(ctx, b, t);
+    }
+
     // Ombres puis voitures.
     for (const v of this.voitures) {
       ctx.fillStyle = 'rgba(30,28,40,0.28)';
       ctx.save(); ctx.translate(Math.round(v.x) + 2, Math.round(v.y) + 2); ctx.rotate(v.angle + Math.PI / 2);
-      ctx.fillRect(-6, -10, 12, 21); ctx.restore();
+      ctx.fillRect(-7, -11, 14, 23); ctx.restore();
     }
     for (const v of this.voitures) {
-      const sprite = spriteVoiture(v.couleur, v.joueur ? '#f2c14e' : '#f4f1e8');
+      const sprite = spriteVoiture(v.couleur, v.joueur ? '#f2c14e' : '#f4f1e8', v.looks || []);
       ctx.save();
       ctx.translate(Math.round(v.x), Math.round(v.y));
       ctx.rotate(v.angle + Math.PI / 2);
@@ -506,6 +671,8 @@ export class Course {
     pastille(ctx, 6, 6, `TOUR ${tourAffiche}/${this.tours}`, '#1f2a44');
     pastille(ctx, 6, 26, `${ordinal(this.positionJoueur)} / ${this.voitures.length}`, '#c2504d');
     pastille(ctx, 6, 46, formatTemps(Math.max(0, this.temps)), '#1f2a44');
+    pastille(ctx, 6, 66, `${this.ramasses.argent} G · ${this.ramasses.recherche} PR`, '#7a5a12');
+    if (this.driftEnCours > 0.5) texte(ctx, `DRIFT ${(this.driftEnCours * 6).toFixed(0)}`, W / 2, 44, 14, '#c4b5fd', 'center');
 
     // Pause.
     const z = this.zones(W, H);
@@ -617,4 +784,54 @@ function pastille(ctx, x, y, chaine, fond) {
   ctx.fillStyle = fond; ctx.fillRect(x + 1, y + 1, w, 14);
   ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText(chaine, x + 6, y + 8.5);
+}
+
+/** Coin de la voiture le plus avancé dans la direction (nx, ny). */
+function coinVers(v, nx, ny) {
+  const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+  const sf = Math.sign(fx * nx + fy * ny) || 1, sl = Math.sign(-fy * nx + fx * ny) || 1;
+  return { x: v.x + fx * DEMI_LONGUEUR * sf - fy * DEMI_LARGEUR * sl, y: v.y + fy * DEMI_LONGUEUR * sf + fx * DEMI_LARGEUR * sl };
+}
+
+/** Recouvrement de deux voitures (rectangles orientés) : normale de a vers b et profondeur. */
+export function recouvrement(a, b) {
+  const axes = [];
+  for (const v of [a, b]) {
+    const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+    axes.push([fx, fy], [-fy, fx]);
+  }
+  const dx = b.x - a.x, dy = b.y - a.y;
+  let meilleur = null;
+  for (const [nx, ny] of axes) {
+    const ra = etendue(a, nx, ny), rb = etendue(b, nx, ny);
+    const d = dx * nx + dy * ny;
+    const prof = ra + rb - Math.abs(d);
+    if (prof <= 0) return null;
+    if (!meilleur || prof < meilleur.prof) meilleur = { nx: d < 0 ? -nx : nx, ny: d < 0 ? -ny : ny, prof };
+  }
+  return meilleur;
+}
+
+function etendue(v, nx, ny) {
+  const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+  return DEMI_LONGUEUR * Math.abs(fx * nx + fy * ny) + DEMI_LARGEUR * Math.abs(-fy * nx + fx * ny);
+}
+
+function dessinerBonus(ctx, b, t) {
+  const x = Math.round(b.x), y = Math.round(b.y);
+  if (b.type === 'piece') {
+    // Pièce qui tourne : sa largeur varie.
+    const w = Math.max(1, Math.round(Math.abs(Math.cos(t * 5 + b.x * 0.05)) * 3));
+    ctx.fillStyle = 'rgba(30,28,40,0.3)'; ctx.fillRect(x - w, y + 4, w * 2 + 1, 2);
+    ctx.fillStyle = '#7a5a12'; ctx.fillRect(x - w - 1, y - 4, w * 2 + 3, 9);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(x - w, y - 3, w * 2 + 1, 7);
+    ctx.fillStyle = '#fff3b0'; ctx.fillRect(x - w, y - 3, 1, 3);
+  } else {
+    const f = Math.sin(t * 4 + b.y) > 0 ? 1 : 0;
+    ctx.fillStyle = 'rgba(30,28,40,0.3)'; ctx.fillRect(x - 4, y + 5, 9, 2);
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(x - 5, y - 6 - f, 11, 11);
+    ctx.fillStyle = '#2f6fdb'; ctx.fillRect(x - 4, y - 5 - f, 9, 9);
+    ctx.fillStyle = '#c9ccd4'; ctx.fillRect(x - 2, y - 5 - f, 5, 3);
+    ctx.fillStyle = '#f4f1e8'; ctx.fillRect(x - 3, y + 0 - f, 7, 3);
+  }
 }

@@ -10,6 +10,9 @@ import { BOOSTS } from './regles.js';
 import { clamp } from './outils.js';
 
 export const RAYON_VOITURE = 8;
+/** La voiture est un rectangle de 12 × 21 px (moitiés), pour les chocs. */
+export const DEMI_LONGUEUR = 10.5;
+export const DEMI_LARGEUR = 6;
 
 export class Voiture {
   constructor({ physique, couleur, nom, joueur = false, equipe = null }) {
@@ -32,6 +35,7 @@ export class Voiture {
     this.vitesseSol = 1;
     this.glisse = 0;           // vitesse latérale (px/s) ; au-delà de 35 : drift
     this.tete = 0;             // tête-à-queue en cours (secondes)
+    this.calage = 0;           // moteur calé après un faux départ (secondes)
     this.tour = -1;
     this.s = 0;
     this.progres = 0;
@@ -62,6 +66,7 @@ export class Voiture {
     if (this.nitro > 0) this.nitro = Math.max(0, this.nitro - dt);
     if (this.aura > 0) this.aura = Math.max(0, this.aura - dt);
     if (!demarre) { this.vx = 0; this.vy = 0; return; }
+    if (this.calage > 0) this.calage = Math.max(0, this.calage - dt);
 
     // 1. Le cap tourne.
     const vitesse = this.vitesse;
@@ -71,7 +76,7 @@ export class Voiture {
       this.angle += 7 * dt;
     } else {
       // Le volant agit peu à l'arrêt, pleinement à vitesse moyenne.
-      const efficacite = clamp(vitesse / 60, 0, 1) * (1 - 0.18 * clamp(vitesse / this.p.vmax, 0, 1));
+      const efficacite = Math.max(this.braquageMin || 0, clamp(vitesse / 60, 0, 1)) * (1 - 0.18 * clamp(vitesse / this.p.vmax, 0, 1));
       this.angle += this.direction * this.p.rotation * efficacite * dt;
     }
 
@@ -90,7 +95,8 @@ export class Voiture {
       let accel = this.p.accel;
       if (this.nitro > 0) accel *= BOOSTS.nitro.accel;
       if (this.aura > 0) accel *= BOOSTS.aura.accel;
-      if (this.frein > 0) avant -= 280 * this.frein * dt;
+      if (this.calage > 0) avant += 0;
+      else if (this.frein > 0) avant -= 280 * this.frein * dt;
       else if (avant < vmax) avant = Math.min(vmax, avant + accel * (1 - 0.55 * clamp(avant / vmax, 0, 1)) * dt);
       else avant -= 160 * dt;
     }
