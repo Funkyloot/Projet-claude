@@ -1,4 +1,4 @@
-# Pistonville — version d'essai 0.4
+# Pistonville — version d'essai 0.5
 
 Jeu mobile de gestion d'écurie et de course en pixel art, inspiré de
 *Grand Prix Story* (Kairosoft) et des jeux de poursuite mobiles où l'on tourne
@@ -31,6 +31,15 @@ L'aide au pilotage (activée par défaut, réglable dans la pause) recentre
 doucement la voiture quand on ne touche à rien.
 
 ## Ce que contient cette version
+
+**Nouveau en 0.5** : nouveau style graphique, celui des packs Kenney « Tiny »
+(CC0), et tout est à l'échelle (1 case ≈ 1 m : une personne = 1 case, une
+voiture = 2 × 3 cases). Le garage est vu de l'intérieur, façon Tiny Factory ;
+chaque lieu de la ville a son intérieur ; la ville a des rues à deux voies,
+des passages piétons, des feux sur poteaux et des bâtiments modernes à étages ;
+les pistes sont plus larges et les voitures dessinées en vue 3/4. Le contenu
+est triplé : 97 pièces (rareté Légendaire, labo sur 10 niveaux), 45 voitures,
+55 Grands Prix et 141 circuits, 20 écuries.
 
 **Nouveau en 0.4** : le garage est un terrain à construire, façon Kairosoft :
 15 bâtiments à niveaux (ponts, bureau d'études, soufflerie, bancs d'essai,

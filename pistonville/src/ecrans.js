@@ -17,7 +17,6 @@ import {
   saisonDe, jourDeSaison, JOURS_SAISON, SAISONS_CARRIERE, pieceNiveau, coutNiveauPiece, NIVEAU_PIECE_MAX,
   tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, exporter, importer, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
 } from './partie.js';
-import { idPersonnage } from './sprites.js';
 import {
   coutAmelioration, evaluerCandidature, SURFACES, kmh, CLASSES, EMPLACEMENTS, RARETES, COUT_RECHERCHE,
   QUALITES, PEINTURES, COUT_PEINTURE, expPourRang,
@@ -25,7 +24,7 @@ import {
 import { formatArgent, formatTemps, ordinal } from './outils.js';
 import { urlAsset } from './assets.js';
 import { THEMES } from './rendu-circuit.js';
-import { spriteVoiture } from './sprites.js';
+import { spriteVoitureTiny, dessinerVoitureTiny, spritePerso, tenue, VOITURE_LONGUEUR, VOITURE_LARGEUR } from './tiny.js';
 import { imgPiece } from './icones.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -86,20 +85,18 @@ const COURTS = { vitesse: 'Vit', acceleration: 'Acc', maniabilite: 'Man', solidi
 
 const etoiles = (n, max = 5) => `<span class="etoiles">${'★'.repeat(n)}<span>${'★'.repeat(max - n)}</span></span>`;
 
-/** Image de la voiture vue de dessus, avec sa peinture et ses pièces. */
+/** Image de la voiture à l'échelle (vue 3/4, style Kenney Tiny), avec sa peinture et ses pièces. */
 const cacheApercus = new Map();
 export function apercuVoiture(couleur, looks = [], echelle = 3) {
   const cle = `${couleur}|${looks.join(',')}|${echelle}`;
   if (cacheApercus.has(cle)) return cacheApercus.get(cle);
-  const s = spriteVoiture(couleur, '#f2c14e', looks);
+  const k = 1;   // une voiture = 60 × 44 px, agrandie en CSS par multiples entiers de l'écran
+  void echelle;
   const c = document.createElement('canvas');
-  c.width = s.height * echelle; c.height = s.width * echelle;
+  c.width = (VOITURE_LONGUEUR + 14) * k; c.height = (VOITURE_LARGEUR + 16) * k;
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  ctx.translate(c.width / 2, c.height / 2);
-  ctx.rotate(Math.PI / 2);
-  ctx.scale(echelle, echelle);
-  ctx.drawImage(s, -s.width / 2, -s.height / 2);
+  dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, '#f2c14e', looks), c.width / 2, c.height / 2 - 2 * k, 0, k);
   const url = c.toDataURL();
   cacheApercus.set(cle, url);
   return url;
@@ -155,7 +152,7 @@ export function ecranTitre(app) {
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>
       </div>
-      <p class="credits">Version d'essai 0.4.1 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
+      <p class="credits">Version d'essai 0.5 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
     </div>`,
     actions: {
       continuer: () => app.continuer(),
@@ -1019,14 +1016,11 @@ export function ecranRang(app, m, suite) {
 // --- Pilote ----------------------------------------------------------------------------------------
 
 function portrait(app, taille = 3) {
-  const planche = app.assets?.urbain;
-  if (!planche) return '';
   const c = document.createElement('canvas');
   c.width = 16 * taille; c.height = 16 * taille;
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  const id = idPersonnage(104, 1, 0);
-  ctx.drawImage(planche, (id % 27) * 16, Math.floor(id / 27) * 16, 16, 16, 0, 0, 16 * taille, 16 * taille);
+  ctx.drawImage(spritePerso({ ...tenue(4), casque: '#e4432d', haut: '#f4f1e8' }, 'face', 0), 0, 0, 16 * taille, 16 * taille);
   return `<img class="portrait" src="${c.toDataURL()}" alt="">`;
 }
 

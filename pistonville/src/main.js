@@ -16,6 +16,7 @@ import { genererCircuit } from './circuit.js';
 import { rendreCircuit, miniCarte } from './rendu-circuit.js';
 import { Course } from './course.js';
 import { SceneGarage } from './scene-garage.js';
+import { interieur } from './interieurs.js';
 import { Ville } from './ville.js';
 import { Son } from './son.js';
 import {
@@ -225,7 +226,14 @@ class App {
 
   // --- Écrans ---------------------------------------------------------------------
 
-  montrer(ecran) { this.ui.montrer(ecran); }
+  montrer(ecran) {
+    // Dans un lieu de la ville : la vue de la pièce en tête de son menu.
+    const lieu = this.ecran === 'ville' && this.ville?.entree?.id;
+    const image = lieu && ecran?.html && interieur(lieu, this.assets?.tiny);
+    const balise = image && ecran.html.match(/<div class="(?:ecran(?! (?:celebration|chargement))[^"]*|defile)">/);
+    if (balise) ecran = { ...ecran, html: ecran.html.replace(balise[0], `${balise[0]}<img class="interieur" src="${image}" alt="">`) };
+    this.ui.montrer(ecran);
+  }
 
   toast(texte) {
     this.toastEl.textContent = texte;

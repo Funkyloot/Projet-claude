@@ -332,7 +332,7 @@ body {
 
 .etoiles { color: var(--jaune); font-size: calc(var(--u) * 13); letter-spacing: calc(var(--u) * 1); text-shadow: 0 calc(var(--u) * 1) 0 var(--encre); }
 .etoiles span { color: #c9bf9f; text-shadow: none; }
-.dessus { width: calc(var(--u) * 66); height: auto; image-rendering: pixelated; flex: none; }
+.dessus { width: calc(var(--u) * 60); height: auto; image-rendering: pixelated; flex: none; }
 
 .emplacements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * 5); }
 .emplacement {
@@ -383,7 +383,7 @@ body {
 .teinte.choisie { outline: calc(var(--u) * 2) solid var(--jaune); outline-offset: calc(var(--u) * 1); }
 .teinte:disabled { opacity: 0.4; }
 .teinte-voiture { background: #e6dcc4; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 4); cursor: pointer; }
-.teinte-voiture img { width: calc(var(--u) * 50); image-rendering: pixelated; display: block; }
+.teinte-voiture img { width: calc(var(--u) * 60); image-rendering: pixelated; display: block; }
 .nuancier.grand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-items: center; }
 .nuancier.grand .teinte-voiture img { width: 100%; max-width: calc(var(--u) * 60); }
 
@@ -666,3 +666,10 @@ body {
 .petit-titre { font-size: calc(var(--u) * 15.9); }
 .carte-batiment.sans-image { grid-template-columns: 1fr auto; }
 .gp-en-cours { margin: 0 calc(var(--u) * 8) calc(var(--u) * 6); min-height: calc(var(--u) * 36); }
+
+/* Vue de l'intérieur d'un lieu de la ville, en tête de son menu. */
+.interieur {
+  display: block; width: 100%; max-width: calc(var(--u) * 320); height: auto; margin: 0 auto;
+  image-rendering: pixelated; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 6);
+  box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
+}

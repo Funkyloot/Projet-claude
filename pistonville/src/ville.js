@@ -111,8 +111,8 @@ export class Ville {
     this.voiture.looks = o.voiture.looks || [];
     this.voiture.braquageMin = 0.6;   // on peut se dégager d'un mur en braquant
     const garage = this.portes.find((g) => g.id === 'garage');
-    // Au départ, la voiture sort du garage : devant l'entrée, au bord de la rue.
-    this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h + 18, Math.PI / 2);
+    // Au départ, la voiture sort du garage et prend la voie de droite, vers l'est.
+    this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h + 72, 0);
     this.ignorer = 'garage';
     this.camera = { x: this.voiture.x, y: this.voiture.y };
     this.temps = 0;
@@ -689,7 +689,8 @@ export class Ville {
     const p = this.entree;
     this.entree = null;
     if (!p) return;
-    this.voiture.placer(p.x + p.w / 2, p.y + p.h + 18, Math.PI / 2);
+    // En sortant, on reprend la voie de droite de la rue, dans le sens de la circulation.
+    this.voiture.placer(p.x + p.w / 2, p.y + p.h + 72, 0);
   }
 
   message(texteMsg, couleur, ancre) {

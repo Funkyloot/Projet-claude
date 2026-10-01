@@ -340,7 +340,7 @@ body {
 
 .etoiles { color: var(--jaune); font-size: calc(var(--u) * 13); letter-spacing: calc(var(--u) * 1); text-shadow: 0 calc(var(--u) * 1) 0 var(--encre); }
 .etoiles span { color: #c9bf9f; text-shadow: none; }
-.dessus { width: calc(var(--u) * 66); height: auto; image-rendering: pixelated; flex: none; }
+.dessus { width: calc(var(--u) * 60); height: auto; image-rendering: pixelated; flex: none; }
 
 .emplacements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: calc(var(--u) * 5); }
 .emplacement {
@@ -391,7 +391,7 @@ body {
 .teinte.choisie { outline: calc(var(--u) * 2) solid var(--jaune); outline-offset: calc(var(--u) * 1); }
 .teinte:disabled { opacity: 0.4; }
 .teinte-voiture { background: #e6dcc4; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 4); cursor: pointer; }
-.teinte-voiture img { width: calc(var(--u) * 50); image-rendering: pixelated; display: block; }
+.teinte-voiture img { width: calc(var(--u) * 60); image-rendering: pixelated; display: block; }
 .nuancier.grand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-items: center; }
 .nuancier.grand .teinte-voiture img { width: 100%; max-width: calc(var(--u) * 60); }
 
@@ -674,6 +674,13 @@ body {
 .petit-titre { font-size: calc(var(--u) * 15.9); }
 .carte-batiment.sans-image { grid-template-columns: 1fr auto; }
 .gp-en-cours { margin: 0 calc(var(--u) * 8) calc(var(--u) * 6); min-height: calc(var(--u) * 36); }
+
+/* Vue de l'intérieur d'un lieu de la ville, en tête de son menu. */
+.interieur {
+  display: block; width: 100%; max-width: calc(var(--u) * 320); height: auto; margin: 0 auto;
+  image-rendering: pixelated; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 6);
+  box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
+}
 
 </style>
 </head>
@@ -1139,7 +1146,6 @@ body {
   };
   var PERSONNAGES = [23, 104, 185, 266, 347, 428];
   var DIRECTION = { gauche: 0, face: 1, dos: 2, droite: 3 };
-  var idPersonnage = (base, direction = 1, pas = 0) => base + direction + pas * COLONNES;
   function directionVers(dx, dy) {
     if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? DIRECTION.droite : DIRECTION.gauche;
     return dy > 0 ? DIRECTION.face : DIRECTION.dos;
@@ -1175,92 +1181,6 @@ body {
   ];
   var VOITURE_L = MOTIF_VOITURE[0].length + 2;
   var VOITURE_H = MOTIF_VOITURE.length + 2;
-  var cacheVoitures = /* @__PURE__ */ new Map();
-  function spriteVoiture(couleur, bande = "#f4f1e8", looks = []) {
-    const cle = couleur + bande + looks.join(",");
-    if (cacheVoitures.has(cle)) return cacheVoitures.get(cle);
-    const c3 = document.createElement("canvas");
-    c3.width = VOITURE_L;
-    c3.height = VOITURE_H;
-    const ctx = c3.getContext("2d");
-    const sombre = melangerCouleur(couleur, "#000000", 0.3);
-    const teintes = {
-      o: "#2a2838",
-      b: couleur,
-      l: melangerCouleur(couleur, "#ffffff", 0.35),
-      d: sombre,
-      w: "#9fd3ff",
-      W: "#5d7fa6",
-      k: "#1c1b24",
-      h: "#fff4b8",
-      t: "#e4432d",
-      s: bande
-    };
-    const px = (x, y, couleurPixel) => {
-      ctx.fillStyle = couleurPixel;
-      ctx.fillRect(x + 1, y + 1, 1, 1);
-    };
-    const a = new Set(looks);
-    if (a.has("larges")) {
-      for (const y of [3, 4, 5, 15, 16, 17]) {
-        px(-1, y, "#1c1b24");
-        px(12, y, "#1c1b24");
-      }
-    }
-    MOTIF_VOITURE.forEach((ligne, y) => {
-      for (let x = 0; x < ligne.length; x++) {
-        const tt = teintes[ligne[x]];
-        if (tt) px(x, y, tt);
-      }
-    });
-    if (a.has("carbone")) {
-      for (let y = 2; y <= 4; y++) for (let x = 3; x <= 8; x++) px(x, y, (x + y) % 2 ? "#3a3a46" : "#24242e");
-      for (let y = 8; y <= 12; y++) for (let x = 3; x <= 8; x++) if (x !== 3 && x !== 8) px(x, y, (x + y) % 2 ? "#3a3a46" : "#24242e");
-    }
-    if (a.has("prise")) {
-      for (let x = 4; x <= 7; x++) {
-        px(x, 3, "#2a2838");
-        px(x, 4, "#5c6278");
-      }
-    }
-    if (a.has("turbine")) {
-      for (const [x, y] of [[4, 2], [5, 2], [6, 2], [7, 2], [4, 3], [7, 3], [4, 4], [5, 4], [6, 4], [7, 4]]) px(x, y, "#2a2838");
-      px(5, 3, "#f39c33");
-      px(6, 3, "#ffe066");
-    }
-    if (a.has("arceau")) {
-      for (let y = 8; y <= 12; y++) {
-        px(2, y, "#2a2838");
-        px(9, y, "#2a2838");
-      }
-    }
-    if (a.has("nitro1") || a.has("nitro2")) {
-      const colonnes = a.has("nitro2") ? [3, 7] : [5];
-      for (const x of colonnes) {
-        for (let y = 14; y <= 17; y++) {
-          px(x, y, "#2a7fd6");
-          px(x + 1, y, "#7fd0ff");
-        }
-        px(x, 13, "#2a2838");
-        px(x + 1, 13, "#2a2838");
-      }
-    }
-    if (a.has("becquet")) {
-      for (let x = 2; x <= 9; x++) px(x, 20, "#2a2838");
-    }
-    if (a.has("aileron") || a.has("aileronGT")) {
-      const gt = a.has("aileronGT");
-      for (let x = -1; x <= 12; x++) {
-        px(x, 20, "#2a2838");
-        px(x, 21, gt ? bande : sombre);
-      }
-      if (gt) for (let x = -1; x <= 12; x++) px(x, 22 - 1, bande);
-      px(3, 19, "#2a2838");
-      px(8, 19, "#2a2838");
-    }
-    cacheVoitures.set(cle, c3);
-    return c3;
-  }
   function bulle(ctx, x, y, texte2, couleurTexte = "#c2504d") {
     ctx.font = police(8);
     const w = Math.ceil(ctx.measureText(texte2).width) + 6;
@@ -1372,10 +1292,10 @@ body {
   }
   var VOITURE_LARGEUR = 28;
   var VOITURE_LONGUEUR = 46;
-  var cacheVoitures2 = /* @__PURE__ */ new Map();
+  var cacheVoitures = /* @__PURE__ */ new Map();
   function spriteVoitureTiny(couleur, bande = null, looks = []) {
     const cle = `${couleur}|${bande}|${looks.join(",")}`;
-    if (cacheVoitures2.has(cle)) return cacheVoitures2.get(cle);
+    if (cacheVoitures.has(cle)) return cacheVoitures.get(cle);
     const L = VOITURE_LONGUEUR + 8, l = VOITURE_LARGEUR + 6;
     const ox = 4, oy = 3;
     const a = new Set(looks);
@@ -1467,7 +1387,7 @@ body {
     o3.ctx.fillStyle = "rgba(20,16,34,0.32)";
     o3.ctx.fillRect(0, 0, L, l);
     const sprite = { flanc: f.c, dessus: d2.c, ombre: o3.c, cx: ox + VOITURE_LONGUEUR / 2, cy: oy + VOITURE_LARGEUR / 2 };
-    cacheVoitures2.set(cle, sprite);
+    cacheVoitures.set(cle, sprite);
     return sprite;
   }
   function rond(ctx, x, y, w, h, r, col) {
@@ -1620,7 +1540,7 @@ body {
     return ok;
   }
   function rendreCircuit(circuit, planche, niveau = 1, tiny = {}) {
-    const { largeur: W2, hauteur: H2, def } = circuit;
+    const { largeur: W3, hauteur: H3, def } = circuit;
     const theme = THEMES[def.theme] || THEMES.parc;
     const alea = creerAlea(def.graine * 31 + 7);
     const graine = def.graine;
@@ -1628,7 +1548,7 @@ body {
     const exterieur = -circuit.interieur;
     const rangs = Math.min(3, niveau + 1);
     const profondeurTribune = rangs * 14 + 8;
-    const GW = Math.ceil(W2 / T), GH = Math.ceil(H2 / T);
+    const GW = Math.ceil(W3 / T), GH = Math.ceil(H3 / T);
     const cel = new Uint8Array(GW * GH);
     const R = indexRendu(circuit, PUBLIC_FIN + 40);
     const m = { d: 0, s: 0, cote: 0, k: 0, i: 0 };
@@ -1646,10 +1566,10 @@ body {
     const env = { ville: false, eau: null };
     amenager(def.theme, { GW, GH, at, set, alea, graine, statiques, env, circuit });
     const canvas = document.createElement("canvas");
-    canvas.width = W2;
-    canvas.height = H2;
+    canvas.width = W3;
+    canvas.height = H3;
     const ctx = canvas.getContext("2d");
-    const img = ctx.createImageData(W2, H2);
+    const img = ctx.createImageData(W3, H3);
     const px = img.data;
     const solsEnv = {
       [C.ABORDS]: tons(SOLS[theme.abords]),
@@ -1680,9 +1600,9 @@ body {
       const h = hash2(x >> 2, y >> 2, graine);
       return liste[h < 0.9 ? 0 : h < 0.96 ? 1 : 2];
     };
-    for (let y = 0; y < H2; y++) {
-      for (let x = 0; x < W2; x++) {
-        const o3 = (y * W2 + x) * 4;
+    for (let y = 0; y < H3; y++) {
+      for (let x = 0; x < W3; x++) {
+        const o3 = (y * W3 + x) * 4;
         const type = cel[Math.floor(y / T) * GW + Math.floor(x / T)];
         const liste = R.grille.get(Math.floor(x / R.CEL) * 1e5 + Math.floor(y / R.CEL));
         if (!liste || !mesurer(R, liste, x, y, m) || m.d >= PUBLIC_FIN + 20) {
@@ -2898,47 +2818,47 @@ body {
     }
     // --- Dessin ------------------------------------------------------------------
     /** Zones tactiles du panneau, en coordonnées d'écran. */
-    zones(W2, H2) {
-      const y0 = H2 - HAUTEUR_PANNEAU;
+    zones(W3, H3) {
+      const y0 = H3 - HAUTEUR_PANNEAU;
       return {
         portrait: { x: 10, y: y0 + 8, w: 36, h: 36 },
-        nitro: { x: W2 / 2 - 34, y: y0 + 50, w: 68, h: 54 },
-        gauche: { x: 8, y: y0 + 50, w: W2 / 2 - 46, h: 54 },
-        droite: { x: W2 / 2 + 38, y: y0 + 50, w: W2 / 2 - 46, h: 54 },
-        pause: { x: W2 / 2 - 14, y: 6, w: 28, h: 22 }
+        nitro: { x: W3 / 2 - 34, y: y0 + 50, w: 68, h: 54 },
+        gauche: { x: 8, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
+        droite: { x: W3 / 2 + 38, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
+        pause: { x: W3 / 2 - 14, y: 6, w: 28, h: 22 }
       };
     }
-    dessiner(ctx, W2, H2, t) {
+    dessiner(ctx, W3, H3, t) {
       const j = this.joueur;
-      const hVue = H2 - HAUTEUR_PANNEAU;
+      const hVue = H3 - HAUTEUR_PANNEAU;
       const cibleX = j.x + j.vx * 0.45, cibleY = j.y + j.vy * 0.45;
       this.camera.x = lerp(this.camera.x, cibleX, 0.12);
       this.camera.y = lerp(this.camera.y, cibleY, 0.12);
       const cw = this.decor.canvas.width, ch = this.decor.canvas.height;
       const sx = this.secousse > 0 ? (Math.random() - 0.5) * this.secousse : 0;
       const sy = this.secousse > 0 ? (Math.random() - 0.5) * this.secousse : 0;
-      const camX = Math.round(clamp(this.camera.x - W2 / 2 + sx, 0, cw - W2));
+      const camX = Math.round(clamp(this.camera.x - W3 / 2 + sx, 0, cw - W3));
       const camY = Math.round(clamp(this.camera.y - hVue / 2 + sy, 0, ch - hVue));
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(this.decor.canvas, camX, camY, W2, hVue, 0, 0, W2, hVue);
+      ctx.drawImage(this.decor.canvas, camX, camY, W3, hVue, 0, 0, W3, hVue);
       ctx.save();
       ctx.beginPath();
-      ctx.rect(0, 0, W2, hVue);
+      ctx.rect(0, 0, W3, hVue);
       ctx.clip();
       ctx.translate(-camX, -camY);
-      const visibles = this.decor.spectateurs.filter((s2) => s2.x > camX - 16 && s2.x < camX + W2 + 16 && s2.y > camY - 16 && s2.y < camY + hVue + 24);
+      const visibles = this.decor.spectateurs.filter((s2) => s2.x > camX - 16 && s2.x < camX + W3 + 16 && s2.y > camY - 16 && s2.y < camY + hVue + 24);
       for (const s2 of visibles) {
         if (s2.joie > 0) s2.joie -= 1 / 60;
         const saute = s2.joie > 0 && Math.sin(t * 14 + s2.phase) > 0;
         dessinerPerso(ctx, tenue(Math.floor(s2.phase * 7) + s2.base), s2.x, s2.y + 3 - (saute ? 3 : 0), NOMS_DIRECTION[s2.dir] || "face", saute ? 1 : 0);
       }
       for (const b2 of this.bonus) {
-        if (b2.pris || b2.x < camX - 8 || b2.x > camX + W2 + 8 || b2.y < camY - 8 || b2.y > camY + hVue + 8) continue;
+        if (b2.pris || b2.x < camX - 8 || b2.x > camX + W3 + 8 || b2.y < camY - 8 || b2.y > camY + hVue + 8) continue;
         dessinerBonus(ctx, b2, t);
       }
       const ordre = this.voitures.slice().sort((a, b2) => a.y - b2.y);
       for (const v2 of ordre) {
-        if (v2.x < camX - 40 || v2.x > camX + W2 + 40 || v2.y < camY - 40 || v2.y > camY + hVue + 40) continue;
+        if (v2.x < camX - 40 || v2.x > camX + W3 + 40 || v2.y < camY - 40 || v2.y > camY + hVue + 40) continue;
         if (v2.aura > 0) {
           ctx.fillStyle = `rgba(244,114,182,${0.22 + 0.14 * Math.sin(t * 20)})`;
           ctx.beginPath();
@@ -2979,11 +2899,11 @@ body {
         texte(ctx, m.texte, m.ancre.x, m.ancre.y - 38 - a * 16, 10, m.couleur, "center");
       }
       ctx.restore();
-      this.dessinerInterface(ctx, W2, H2, t);
+      this.dessinerInterface(ctx, W3, H3, t);
     }
     /** Portique de départ en vue 3/4 : deux poteaux posés au sol, la poutre et ses feux en hauteur. */
     dessinerPortique(ctx) {
-      const H2 = 30;
+      const H3 = 30;
       const a = pointA(this.circuit, 0, -(DEMI + 12));
       const b2 = pointA(this.circuit, 0, DEMI + 12);
       for (const p3 of [a, b2]) {
@@ -2991,15 +2911,15 @@ body {
         ctx.fillStyle = "rgba(38,24,46,0.3)";
         ctx.fillRect(x - 3, y - 1, 9, 4);
         ctx.fillStyle = "#26182e";
-        ctx.fillRect(x - 3, y - H2, 6, H2 + 1);
+        ctx.fillRect(x - 3, y - H3, 6, H3 + 1);
         ctx.fillStyle = "#c0cbdc";
-        ctx.fillRect(x - 2, y - H2 + 1, 4, H2 - 1);
+        ctx.fillRect(x - 2, y - H3 + 1, 4, H3 - 1);
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(x - 2, y - H2 + 1, 1, H2 - 1);
+        ctx.fillRect(x - 2, y - H3 + 1, 1, H3 - 1);
       }
       const dx = b2.x - a.x, dy = b2.y - a.y, l = Math.hypot(dx, dy);
       ctx.save();
-      ctx.translate(a.x, a.y - H2);
+      ctx.translate(a.x, a.y - H3);
       ctx.rotate(Math.atan2(dy, dx));
       ctx.fillStyle = "#26182e";
       ctx.fillRect(-2, -6, l + 4, 12);
@@ -3022,22 +2942,22 @@ body {
       }
       ctx.restore();
     }
-    dessinerInterface(ctx, W2, H2, t) {
+    dessinerInterface(ctx, W3, H3, t) {
       const j = this.joueur;
       const tourAffiche = clamp(j.tour + 1, 1, this.tours);
       pastille(ctx, 6, 6, `TOUR ${tourAffiche}/${this.tours}`, "#1f2a44");
       pastille(ctx, 6, 26, `${ordinal(this.positionJoueur)} / ${this.voitures.length}`, "#c2504d");
       pastille(ctx, 6, 46, formatTemps(Math.max(0, this.temps)), "#1f2a44");
       pastille(ctx, 6, 66, `${this.ramasses.argent} G \xB7 ${this.ramasses.recherche} PR`, "#7a5a12");
-      if (this.driftEnCours > 0.5) texte(ctx, `DRIFT ${(this.driftEnCours * 6).toFixed(0)}`, W2 / 2, 44, 14, "#c4b5fd", "center");
-      const z = this.zones(W2, H2);
+      if (this.driftEnCours > 0.5) texte(ctx, `DRIFT ${(this.driftEnCours * 6).toFixed(0)}`, W3 / 2, 44, 14, "#c4b5fd", "center");
+      const z = this.zones(W3, H3);
       ctx.fillStyle = "rgba(31,42,68,0.85)";
       ctx.fillRect(z.pause.x, z.pause.y, z.pause.w, z.pause.h);
       ctx.fillStyle = "#f4f1e8";
       ctx.fillRect(z.pause.x + 9, z.pause.y + 6, 3, 10);
       ctx.fillRect(z.pause.x + 16, z.pause.y + 6, 3, 10);
       const mc = this.decor.minicarte;
-      const mx = W2 - mc.canvas.width - 6, my = 6;
+      const mx = W3 - mc.canvas.width - 6, my = 6;
       ctx.fillStyle = "#0f172a";
       ctx.fillRect(mx - 4, my - 4, mc.canvas.width + 8, mc.canvas.height + 8);
       ctx.fillStyle = "#1f2a44";
@@ -3051,20 +2971,20 @@ body {
         ctx.fillStyle = v2.couleur;
         ctx.fillRect(Math.round(x) - (v2.joueur ? 2 : 1), Math.round(y) - (v2.joueur ? 2 : 1), v2.joueur ? 4 : 2, v2.joueur ? 4 : 2);
       }
-      const hVue = H2 - HAUTEUR_PANNEAU;
+      const hVue = H3 - HAUTEUR_PANNEAU;
       if (this.etat === "compte") {
         const n2 = Math.ceil(-this.temps);
-        texte(ctx, n2 > 3 ? "" : String(n2), W2 / 2, hVue * 0.38, 36, "#ffffff", "center");
+        texte(ctx, n2 > 3 ? "" : String(n2), W3 / 2, hVue * 0.38, 36, "#ffffff", "center");
       }
       for (const m of this.messages) if (!m.ancre) {
         const echelle = 1 + 0.3 * clamp((m.vie - m.max + 0.2) / 0.2, 0, 1);
-        texte(ctx, m.texte, W2 / 2, hVue * 0.38, Math.round(22 * echelle), m.couleur, "center");
+        texte(ctx, m.texte, W3 / 2, hVue * 0.38, Math.round(22 * echelle), m.couleur, "center");
       }
-      const y0 = H2 - HAUTEUR_PANNEAU;
+      const y0 = H3 - HAUTEUR_PANNEAU;
       ctx.fillStyle = "#1f2a44";
-      ctx.fillRect(0, y0, W2, HAUTEUR_PANNEAU);
+      ctx.fillRect(0, y0, W3, HAUTEUR_PANNEAU);
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, y0, W2, 3);
+      ctx.fillRect(0, y0, W3, 3);
       const pr = z.portrait;
       const pleine = this.jaugeAura >= 1;
       ctx.fillStyle = pleine ? Math.sin(t * 10) > 0 ? "#f472b6" : "#db2777" : "#3a4a6b";
@@ -3077,19 +2997,19 @@ body {
       ctx.drawImage(spritePerso({ ...tenue(4), casque: "#e4432d", haut: "#f4f1e8" }, "face", 0), -8, -8);
       ctx.restore();
       texte(ctx, j.nom, 54, y0 + 16, 11, "#f4f1e8", "left");
-      texte(ctx, `${kmh(j.vitesse)}`, W2 - 52, y0 + 22, 20, "#ffe066", "right");
-      texte(ctx, "km/h", W2 - 10, y0 + 22, 9, "#ffe066", "right");
+      texte(ctx, `${kmh(j.vitesse)}`, W3 - 52, y0 + 22, 20, "#ffe066", "right");
+      texte(ctx, "km/h", W3 - 10, y0 + 22, 9, "#ffe066", "right");
       texte(ctx, pleine ? "AURA PR\xCATE" : "Aura", 54, y0 + 33, 9, pleine ? "#f472b6" : "#9fb3d9", "left");
       for (let i = 0; i < 6; i++) {
         ctx.fillStyle = this.jaugeAura * 6 > i ? "#ec4899" : "#3a4a6b";
         ctx.fillRect(112 + i * 13, y0 + 29, 11, 6);
       }
       const dur = j.durabilite / j.p.durabiliteMax;
-      texte(ctx, "Voiture", W2 - 92, y0 + 38, 8, "#9fb3d9", "left");
+      texte(ctx, "Voiture", W3 - 92, y0 + 38, 8, "#9fb3d9", "left");
       ctx.fillStyle = "#3a4a6b";
-      ctx.fillRect(W2 - 54, y0 + 34, 44, 5);
+      ctx.fillRect(W3 - 54, y0 + 34, 44, 5);
       ctx.fillStyle = dur > 0.5 ? "#5ad16a" : dur > 0.25 ? "#f2c14e" : "#e4432d";
-      ctx.fillRect(W2 - 54, y0 + 34, Math.round(44 * dur), 5);
+      ctx.fillRect(W3 - 54, y0 + 34, Math.round(44 * dur), 5);
       for (const [cle, fleche] of [["gauche", -1], ["droite", 1]]) {
         const r = z[cle];
         ctx.fillStyle = "#2a3654";
@@ -3607,7 +3527,7 @@ body {
   ];
 
   // pistonville/contenu/base/pieces.js
-  var p = (id, nom, emplacement, rarete, prix, recherche, bonus, extra = {}) => ({ id, nom, emplacement, rarete, prix, recherche, bonus, ...extra });
+  var p = (id, nom, emplacement, rarete, prix2, recherche, bonus, extra = {}) => ({ id, nom, emplacement, rarete, prix: prix2, recherche, bonus, ...extra });
   var pieces_default = [
     // Moteurs
     p("moteur-4cyl", "Moteur 4 cylindres", "moteur", "commune", 2500, 0, { vitesse: 6, acceleration: 6 }),
@@ -3772,8 +3692,8 @@ body {
   ];
 
   // pistonville/contenu/base/batiments.js
-  var b = (id, nom, l, h, prix, effet, extra = {}) => ({ id, nom, l, h, prix, effet, categorie: "batiment", niveauMax: 5, places: 0, rang: 1, ...extra });
-  var d = (id, nom, l, h, prix, ambiance2, extra = {}) => ({ id, nom, l, h, prix, ambiance: ambiance2, categorie: "decor", niveauMax: 1, places: 0, rang: 1, ...extra });
+  var b = (id, nom, l, h, prix2, effet, extra = {}) => ({ id, nom, l, h, prix: prix2, effet, categorie: "batiment", niveauMax: 5, places: 0, rang: 1, ...extra });
+  var d = (id, nom, l, h, prix2, ambiance2, extra = {}) => ({ id, nom, l, h, prix: prix2, ambiance: ambiance2, categorie: "decor", niveauMax: 1, places: 0, rang: 1, ...extra });
   var batiments_default = [
     // --- Atelier et conception -------------------------------------------------
     b(
@@ -3939,12 +3859,12 @@ body {
   var PERMIS = [8e3, 4e4, 15e4, 4e5];
 
   // pistonville/contenu/grand-garage/vehicules.js
-  var v = (id, nom, classe, prix, jours, stats, couleur, profil, extra = {}) => ({
+  var v = (id, nom, classe, prix2, jours, stats, couleur, profil, extra = {}) => ({
     id,
     nom,
     classe,
-    prix,
-    construction: { prix: Math.round(prix * 0.7 / 100) * 100, jours },
+    prix: prix2,
+    construction: { prix: Math.round(prix2 * 0.7 / 100) * 100, jours },
     stats,
     couleur,
     profil,
@@ -4389,8 +4309,8 @@ body {
     const total = Object.values(poids).reduce((a, b2) => a + Math.max(0, b2), 0) || 1;
     const bonus = {};
     for (const [k, w] of Object.entries(poids)) bonus[k] = Math.round(budget * w / total);
-    const prix = Math.round(2e3 * 1.45 ** niveau * PRIX_RARETE[rarete] / 100) * 100;
-    return { id, nom, emplacement, rarete, prix, recherche: niveau, bonus, ...extra };
+    const prix2 = Math.round(2e3 * 1.45 ** niveau * PRIX_RARETE[rarete] / 100) * 100;
+    return { id, nom, emplacement, rarete, prix: prix2, recherche: niveau, bonus, ...extra };
   }
   var pieces_default2 = [
     // --- Moteurs -------------------------------------------------------------------------
@@ -4661,12 +4581,12 @@ body {
     const b2 = t.batiments.find((o3) => o3.uid === buid);
     if (!b2) return 0;
     if (b2.id === "pont" && t.batiments.filter((o3) => o3.id === "pont").length <= 1) return 0;
-    const prix = prixRevente(partie, buid);
-    partie.argent += prix;
+    const prix2 = prixRevente(partie, buid);
+    partie.argent += prix2;
     t.batiments = t.batiments.filter((o3) => o3 !== b2);
     delete t.depenses[buid];
     for (const s2 of partie.personnel) if (s2.poste === buid) s2.poste = null;
-    return prix;
+    return prix2;
   }
   var coutNiveauBatiment = (b2) => Math.round(batiment(b2.id).prix * 0.8 * b2.niveau ** 1.4 / 100) * 100;
   function ameliorerBatiment(partie, buid) {
@@ -4682,9 +4602,9 @@ body {
   }
   function agrandirTerrain(partie) {
     const t = partie.terrain;
-    const prix = PERMIS[t.permis];
-    if (prix === void 0 || partie.argent < prix) return false;
-    partie.argent -= prix;
+    const prix2 = PERMIS[t.permis];
+    if (prix2 === void 0 || partie.argent < prix2) return false;
+    partie.argent -= prix2;
     t.permis += 1;
     t.lignes += 2;
     return true;
@@ -5220,9 +5140,9 @@ body {
   }
   function acheterPiece(partie, id, remise = 0) {
     const pc = piece(id);
-    const prix = pc && prixPiece(pc, remise);
-    if (!pc || pc.recherche > partie.labo || partie.argent < prix) return null;
-    partie.argent -= prix;
+    const prix2 = pc && prixPiece(pc, remise);
+    if (!pc || pc.recherche > partie.labo || partie.argent < prix2) return null;
+    partie.argent -= prix2;
     const inv = { uid: uid2("p"), piece: id, niveau: 0 };
     partie.inventaire.push(inv);
     partie.collection[id] = true;
@@ -5253,9 +5173,9 @@ body {
     const ailleurs = montureDe(partie, iuid);
     if (ailleurs) delete ailleurs.voiture.pieces[ailleurs.emplacement];
     partie.inventaire = partie.inventaire.filter((i) => i !== inv);
-    const prix = Math.round(piece(inv.piece).prix * 0.4);
-    partie.argent += prix;
-    return prix;
+    const prix2 = Math.round(piece(inv.piece).prix * 0.4);
+    partie.argent += prix2;
+    return prix2;
   }
   var NIVEAU_PIECE_MAX = 5;
   function pieceNiveau(pc, niveau) {
@@ -5630,7 +5550,7 @@ body {
     const st = partie.saisonStats;
     const s2 = saison;
     const rivaux = EQUIPES.slice().sort((a, b2) => b2.talent - a.talent);
-    const prix = [
+    const prix2 = [
       { id: "ecurie", nom: "\xC9curie de l'ann\xE9e", ok: st.trophees >= 2 + Math.floor(s2 / 2), detail: `${st.trophees} Grand${st.trophees > 1 ? "s" : ""} Prix gagn\xE9${st.trophees > 1 ? "s" : ""}`, gain: { argent: 4e3 * s2 } },
       { id: "pilote", nom: "Pilote de l'ann\xE9e", ok: st.victoires >= 6 + 2 * s2, detail: `${st.victoires} manche${st.victoires > 1 ? "s" : ""} gagn\xE9e${st.victoires > 1 ? "s" : ""}`, gain: { recherche: 15 + 5 * s2 } },
       { id: "public", nom: "Prix du public", ok: st.fans >= Math.round(300 * s2 ** 1.5), detail: `${st.fans} nouveaux fans`, gain: { tickets: 2 } },
@@ -5638,11 +5558,11 @@ body {
       { id: "ingenieur", nom: "Ing\xE9nieur de l'ann\xE9e", ok: st.construction + st.labo + st.medailles + st.installations >= 3, detail: "constructions, labo, m\xE9dailles", gain: { piece: "rare" } }
     ];
     const alea = creerAlea(saison * 7717);
-    for (const p3 of prix) {
+    for (const p3 of prix2) {
       p3.nomines = [rivaux[Math.floor(alea() * 4)], rivaux[4 + Math.floor(alea() * 4)]].map((e3) => e3.nom);
       p3.laureat = p3.ok ? "Garage Piston" : p3.nomines[0];
     }
-    return { saison, prix, stats: { ...st } };
+    return { saison, prix: prix2, stats: { ...st } };
   }
   function recevoirCeremonie(partie) {
     const c3 = partie.ceremonie;
@@ -5719,15 +5639,15 @@ body {
     const n = partie.cadeau.n % CADEAUX.length;
     const c3 = CADEAUX[n];
     partie.cadeau = { date: aujourdhui, n: partie.cadeau.n + 1 };
-    let piece3 = null;
+    let piece4 = null;
     if (c3.argent) partie.argent += c3.argent;
     if (c3.recherche) partie.recherche += c3.recherche;
     if (c3.tickets) partie.tickets += c3.tickets;
     if (c3.piece) {
-      piece3 = pieceAuHasard(creerAlea(Date.now() >>> 0), c3.piece, partie.labo);
-      appliquerLot(partie, { type: "piece", piece: piece3 });
+      piece4 = pieceAuHasard(creerAlea(Date.now() >>> 0), c3.piece, partie.labo);
+      appliquerLot(partie, { type: "piece", piece: piece4 });
     }
-    return { jour: n, cadeau: c3, piece: piece3 };
+    return { jour: n, cadeau: c3, piece: piece4 };
   }
 
   // pistonville/src/scene-garage.js
@@ -5938,49 +5858,18 @@ body {
      * chaque bâtiment posé comme une pièce meublée (mur, machines, établis), et le
      * personnel qui circule entre les postes. 1 case du terrain = 2 m.
      */
-    dessiner(ctx, W2, H2, t, partie) {
+    dessiner(ctx, W3, H3, t, partie) {
       const tiny = this.tiny;
       ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = "#34283a";
-      ctx.fillRect(0, 0, W2, H2);
+      ctx.fillRect(0, 0, W3, H3);
       if (!partie?.terrain) return;
       const o3 = this.origine();
       const L = partie.terrain.lignes;
       const largeur = COLONNES_TERRAIN * CASE, hauteur = L * CASE;
-      const dy = (o3.y % 16 + 16) % 16;
-      for (let y = dy - 16; y < H2; y += 16) for (let x = 0; x < W2; x += 16) {
-        const k = ((x * 7 + (y - o3.y) * 13) % 23 + 23) % 23;
-        tuileTiny(ctx, tiny, "factory", k === 0 ? 32 : k === 5 ? 33 : 3, x, y);
-      }
-      const yRue = o3.y - 96;
-      ctx.fillStyle = "#d9d3c3";
-      ctx.fillRect(0, yRue - 10, W2, 10);
-      ctx.fillRect(0, yRue + 38, W2, 12);
-      ctx.fillStyle = "#a59f90";
-      ctx.fillRect(0, yRue - 1, W2, 1);
-      ctx.fillRect(0, yRue + 38, W2, 1);
-      ctx.fillStyle = "#4f5470";
-      ctx.fillRect(0, yRue, W2, 38);
-      ctx.fillStyle = "#e8e4d6";
-      for (let x = 4; x < W2; x += 24) ctx.fillRect(x, yRue + 18, 12, 2);
-      dessinerVoitureTiny(ctx, spriteVoitureTiny("#4f7ddb"), Math.round(this.passant), yRue + 22, 0);
-      const porteX = o3.x + largeur / 2 - 24;
-      ctx.fillStyle = "#bdb6a4";
-      ctx.fillRect(porteX, yRue + 50, 48, o3.y - 20 - (yRue + 50));
-      ctx.fillStyle = "#a59f90";
-      for (let y = yRue + 56; y < o3.y - 20; y += 8) ctx.fillRect(porteX, y, 48, 1);
-      cadreTiny(ctx, o3.x - 4, o3.y - 20, largeur + 8, hauteur + 24);
-      for (let x = 0; x < largeur; x += 16) {
-        const i = Math.floor((x - (largeur / 2 - 24)) / 16);
-        const n = i >= 0 && i < 3 ? [69, 70, 71][i] : [44, 46, 47, 57, 46, 58, 59, 47][x / 16 % 8];
-        tuileTiny(ctx, tiny, "factory", n, o3.x + x, o3.y - 16);
-      }
-      ctx.fillStyle = CONTOUR;
-      ctx.fillRect(o3.x + 6, o3.y - 40, 88, 18);
-      ctx.fillStyle = "#f2c14e";
-      ctx.fillRect(o3.x + 8, o3.y - 38, 84, 14);
-      texte(ctx, "GARAGE PISTON", o3.x + 50, o3.y - 31, 9, "#1f2a44", "center");
-      for (let y = 0; y < hauteur; y += 16) for (let x = 0; x < largeur; x += 16) tuileTiny(ctx, tiny, "factory", 0, o3.x + x, o3.y + y);
+      const fond = this.fondGarage(W3, H3, L);
+      ctx.drawImage(fond, 0, -this.scroll);
+      dessinerVoitureTiny(ctx, spriteVoitureTiny("#4f7ddb"), Math.round(this.passant), o3.y - 96 + 22, 0);
       if (this.placement) {
         ctx.fillStyle = "rgba(38,24,46,0.22)";
         for (let x = 0; x <= COLONNES_TERRAIN; x++) ctx.fillRect(o3.x + x * CASE, o3.y, 1, hauteur);
@@ -5995,7 +5884,7 @@ body {
         if (this.placement?.sauf === b2.uid) continue;
         const d2 = batiment(b2.id);
         const x = o3.x + b2.x * CASE, y = o3.y + b2.y * CASE, w = d2.l * CASE, h = d2.h * CASE;
-        if (y + h < -16 || y > H2) continue;
+        if (y + h < -16 || y > H3) continue;
         dessinerBatiment(ctx, tiny, b2, d2, x, y, w, h, t, !!this.placement || this.selection === b2.uid);
         if (b2.id === "pont") {
           const i = ponts.indexOf(b2);
@@ -6046,6 +5935,53 @@ body {
         ctx.lineWidth = 2;
         ctx.strokeRect(x + 1, y + 1, d2.l * CASE - 2, d2.h * CASE - 2);
       }
+    }
+    /** Image du fond du garage (sans défilement), refaite seulement si le terrain change de taille. */
+    fondGarage(W3, H3, L) {
+      const largeur = COLONNES_TERRAIN * CASE, hauteur = L * CASE;
+      const h = Y0 + hauteur + H3;
+      if (this.fond && this.fond.cle === `${L}|${W3}|${H3}`) return this.fond.canvas;
+      const canvas = document.createElement("canvas");
+      canvas.width = W3;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.imageSmoothingEnabled = false;
+      const tiny = this.tiny;
+      const o3 = { x: X0, y: Y0 };
+      for (let y = 0; y < h; y += 16) for (let x = 0; x < W3; x += 16) {
+        const k = ((x * 7 + (y - o3.y) * 13) % 23 + 23) % 23;
+        tuileTiny(ctx, tiny, "factory", k === 0 ? 32 : k === 5 ? 33 : 3, x, y);
+      }
+      const yRue = o3.y - 96;
+      ctx.fillStyle = "#d9d3c3";
+      ctx.fillRect(0, yRue - 10, W3, 10);
+      ctx.fillRect(0, yRue + 38, W3, 12);
+      ctx.fillStyle = "#a59f90";
+      ctx.fillRect(0, yRue - 1, W3, 1);
+      ctx.fillRect(0, yRue + 38, W3, 1);
+      ctx.fillStyle = "#4f5470";
+      ctx.fillRect(0, yRue, W3, 38);
+      ctx.fillStyle = "#e8e4d6";
+      for (let x = 4; x < W3; x += 24) ctx.fillRect(x, yRue + 18, 12, 2);
+      const porteX = o3.x + largeur / 2 - 24;
+      ctx.fillStyle = "#bdb6a4";
+      ctx.fillRect(porteX, yRue + 50, 48, o3.y - 20 - (yRue + 50));
+      ctx.fillStyle = "#a59f90";
+      for (let y = yRue + 56; y < o3.y - 20; y += 8) ctx.fillRect(porteX, y, 48, 1);
+      cadreTiny(ctx, o3.x - 4, o3.y - 20, largeur + 8, hauteur + 24);
+      for (let x = 0; x < largeur; x += 16) {
+        const i = Math.floor((x - (largeur / 2 - 24)) / 16);
+        const n = i >= 0 && i < 3 ? [69, 70, 71][i] : [44, 46, 47, 57, 46, 58, 59, 47][x / 16 % 8];
+        tuileTiny(ctx, tiny, "factory", n, o3.x + x, o3.y - 16);
+      }
+      ctx.fillStyle = CONTOUR;
+      ctx.fillRect(o3.x + 6, o3.y - 40, 88, 18);
+      ctx.fillStyle = "#f2c14e";
+      ctx.fillRect(o3.x + 8, o3.y - 38, 84, 14);
+      texte(ctx, "GARAGE PISTON", o3.x + 50, o3.y - 31, 9, "#1f2a44", "center");
+      for (let y = 0; y < hauteur; y += 16) for (let x = 0; x < largeur; x += 16) tuileTiny(ctx, tiny, "factory", 0, o3.x + x, o3.y + y);
+      this.fond = { cle: `${L}|${W3}|${H3}`, canvas };
+      return canvas;
     }
     voituresSurPonts(partie, n) {
       const enChantier = this.construction?.voiture?.uid;
@@ -6376,6 +6312,176 @@ body {
     return url;
   }
 
+  // pistonville/src/interieurs.js
+  var W = 320;
+  var H = 112;
+  var cache = /* @__PURE__ */ new Map();
+  function rangee2(c3, tiny, ns, x, y) {
+    ns.forEach((n, i) => {
+      if (n !== null) tuileTiny(c3, tiny, "factory", n, x + i * 16, y);
+    });
+  }
+  function piece3(c3, tiny, sol, murs) {
+    for (let y = 16; y < H; y += 16) for (let x = 0; x < W; x += 16) tuileTiny(c3, tiny, "factory", sol, x, y);
+    for (let x = 0; x < W; x += 16) tuileTiny(c3, tiny, "factory", murs[x / 16 % murs.length], x, 0);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(0, 0, W, 2);
+    c3.fillRect(0, H - 2, W, 2);
+    c3.fillRect(0, 0, 2, H);
+    c3.fillRect(W - 2, 0, 2, H);
+  }
+  function plateau(c3, x, y) {
+    c3.fillStyle = CONTOUR;
+    c3.beginPath();
+    c3.ellipse(x, y, 30, 20, 0, 0, Math.PI * 2);
+    c3.fill();
+    c3.fillStyle = "#d4d9e3";
+    c3.beginPath();
+    c3.ellipse(x, y, 29, 19, 0, 0, Math.PI * 2);
+    c3.fill();
+    c3.fillStyle = "#c0cbdc";
+    c3.beginPath();
+    c3.ellipse(x, y, 23, 14, 0, 0, Math.PI * 2);
+    c3.fill();
+  }
+  function prix(c3, x, y) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x, y, 16, 12);
+    c3.fillRect(x + 7, y + 12, 2, 5);
+    c3.fillStyle = "#ffffff";
+    c3.fillRect(x + 1, y + 1, 14, 10);
+    c3.fillStyle = "#3fa34d";
+    c3.fillRect(x + 2, y + 2, 12, 3);
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x + 2, y + 7, 8, 2);
+  }
+  function comptoir(c3, x, y, w) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x, y, w, 18);
+    c3.fillStyle = "#c98a55";
+    c3.fillRect(x + 1, y + 1, w - 2, 6);
+    c3.fillStyle = "#a86e40";
+    c3.fillRect(x + 1, y + 7, w - 2, 10);
+  }
+  function table(c3, x, y) {
+    c3.fillStyle = CONTOUR;
+    c3.fillRect(x - 12, y - 10, 24, 12);
+    c3.fillRect(x - 2, y + 2, 4, 6);
+    c3.fillStyle = "#f4f6fb";
+    c3.fillRect(x - 11, y - 9, 22, 8);
+    c3.fillStyle = "#c2504d";
+    c3.fillRect(x - 3, y - 8, 6, 4);
+  }
+  var DESSINS = {
+    concession(c3, tiny) {
+      piece3(c3, tiny, 1, [44, 74, 46, 74, 47, 74]);
+      const voitures = [["#e4432d", 52], ["#3fa34d", 130], ["#8a6ad6", 208]];
+      for (const [coul, x] of voitures) {
+        plateau(c3, x, 66);
+        dessinerVoitureTiny(c3, spriteVoitureTiny(coul, coul === "#e4432d" ? "#f4f6fb" : null), x, 62, 0);
+        prix(c3, x + 26, 78);
+      }
+      comptoir(c3, 256, 64, 52);
+      tuileTiny(c3, tiny, "factory", 111, 288, 48);
+      dessinerPerso(c3, tenue(13), 272, 62, "face");
+      dessinerPerso(c3, tenue(22), 96, 104, "dos");
+      tuileTiny(c3, tiny, "town", 17, 300, 92);
+    },
+    pieces(c3, tiny) {
+      piece3(c3, tiny, 0, [44, 46, 47, 57]);
+      rangee2(c3, tiny, [72, 84, 72, 84, 72, 84], 8, 18);
+      rangee2(c3, tiny, [73, 73, 97, 85, 85], 8, 50);
+      rangee2(c3, tiny, [126, 126, 114], 104, 50);
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+        c3.fillStyle = CONTOUR;
+        c3.beginPath();
+        c3.ellipse(170 + i * 16, 88 - j * 6, 7, 4, 0, 0, Math.PI * 2);
+        c3.fill();
+        c3.fillStyle = "#4b5873";
+        c3.beginPath();
+        c3.ellipse(170 + i * 16, 88 - j * 6, 3, 2, 0, 0, Math.PI * 2);
+        c3.fill();
+      }
+      comptoir(c3, 222, 60, 86);
+      rangee2(c3, tiny, [121, 122, 123], 232, 46);
+      dessinerPerso(c3, tenue(5, "mecano"), 270, 58, "face");
+      dessinerPerso(c3, tenue(31), 250, 104, "dos");
+    },
+    bureau(c3, tiny) {
+      piece3(c3, tiny, 1, [44, 57, 58, 59, 46]);
+      tuileTiny(c3, tiny, "ski", 8, 40, 2);
+      tuileTiny(c3, tiny, "ski", 9, 56, 2);
+      tuileTiny(c3, tiny, "ski", 22, 120, 2);
+      tuileTiny(c3, tiny, "ski", 23, 136, 2);
+      comptoir(c3, 100, 52, 120);
+      rangee2(c3, tiny, [111, null, null, 112], 112, 38);
+      dessinerPerso(c3, tenue(9), 140, 50, "face");
+      dessinerPerso(c3, tenue(17), 190, 50, "face");
+      c3.fillStyle = CONTOUR;
+      c3.fillRect(250, 20, 56, 40);
+      c3.fillStyle = "#cfe8ff";
+      c3.fillRect(252, 22, 52, 36);
+      for (const [x, col] of [[260, "#f2c14e"], [276, "#c0cbdc"], [292, "#d08a3e"]]) {
+        c3.fillStyle = CONTOUR;
+        c3.fillRect(x - 4, 30, 9, 14);
+        c3.fillStyle = col;
+        c3.fillRect(x - 3, 31, 7, 12);
+      }
+      rangee2(c3, tiny, [6, 6, 6], 16, 86);
+      dessinerPerso(c3, tenue(26), 30, 98, "face");
+      dessinerPerso(c3, tenue(40), 150, 106, "dos");
+    },
+    tombola(c3, tiny) {
+      piece3(c3, tiny, 1, [44, 46, 47]);
+      const cx = 80, cy = 58, r = 30;
+      const couleurs = ["#e4432d", "#f2c14e", "#2f6fdb", "#3fa34d", "#e86ca6", "#f39c33"];
+      for (let i = 0; i < 6; i++) {
+        c3.fillStyle = couleurs[i];
+        c3.beginPath();
+        c3.moveTo(cx, cy);
+        c3.arc(cx, cy, r, i / 6 * Math.PI * 2, (i + 1) / 6 * Math.PI * 2);
+        c3.fill();
+      }
+      c3.strokeStyle = CONTOUR;
+      c3.lineWidth = 2;
+      c3.beginPath();
+      c3.arc(cx, cy, r, 0, Math.PI * 2);
+      c3.stroke();
+      c3.fillStyle = CONTOUR;
+      c3.fillRect(cx - 3, cy - 3, 6, 6);
+      c3.fillRect(cx - 2, cy - r - 8, 4, 8);
+      comptoir(c3, 150, 60, 80);
+      rangee2(c3, tiny, [123, 73, 97], 160, 46);
+      dessinerPerso(c3, tenue(11), 200, 58, "face");
+      dessinerPerso(c3, tenue(3), 120, 104, "dos");
+      dessinerPerso(c3, tenue(44), 264, 100, "gauche");
+    },
+    cafe(c3, tiny) {
+      piece3(c3, tiny, 0, [44, 58, 59, 46, 47]);
+      comptoir(c3, 12, 44, 104);
+      rangee2(c3, tiny, [75, 76, 86], 20, 28);
+      dessinerPerso(c3, tenue(7), 70, 44, "face");
+      for (const [x, y] of [[170, 66], [250, 66], [210, 100]]) {
+        table(c3, x, y);
+        dessinerPerso(c3, tenue(x + y), x - 18, y + 6, "droite");
+        dessinerPerso(c3, { ...tenue(x * 3), casque: "#e4432d", haut: "#f4f1e8" }, x + 18, y + 6, "gauche");
+      }
+    }
+  };
+  function interieur(id, tiny) {
+    if (!DESSINS[id] || !tiny?.factory) return null;
+    if (cache.has(id)) return cache.get(id);
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const c3 = canvas.getContext("2d");
+    c3.imageSmoothingEnabled = false;
+    DESSINS[id](c3, tiny);
+    const url = canvas.toDataURL();
+    cache.set(id, url);
+    return url;
+  }
+
   // pistonville/src/ville-vie.js
   var CASES_RUE = 6;
   var CASES_ILOT = 10;
@@ -6509,9 +6615,9 @@ body {
       }
       return options[0][0];
     }
-    dessiner(ctx, camX, camY, W2, H2) {
+    dessiner(ctx, camX, camY, W3, H3) {
       for (const c3 of this.voitures) {
-        if (c3.x < camX - 40 || c3.x > camX + W2 + 40 || c3.y < camY - 40 || c3.y > camY + H2 + 40) continue;
+        if (c3.x < camX - 40 || c3.x > camX + W3 + 40 || c3.y < camY - 40 || c3.y > camY + H3 + 40) continue;
         dessinerVoitureTiny(ctx, spriteVoitureTiny(c3.couleur), c3.x, c3.y, c3.angle);
         if (c3.v < c3.vmax * 0.5) {
           const fx = Math.cos(c3.angle), fy = Math.sin(c3.angle);
@@ -6599,9 +6705,9 @@ body {
       this.placer();
       return effrayes;
     }
-    dessiner(ctx, planche, t, camX, camY, W2, H2) {
+    dessiner(ctx, planche, t, camX, camY, W3, H3) {
       for (const p3 of this.liste) {
-        if (p3.x < camX - 16 || p3.x > camX + W2 + 16 || p3.y < camY - 20 || p3.y > camY + H2 + 20) continue;
+        if (p3.x < camX - 16 || p3.x > camX + W3 + 16 || p3.y < camY - 20 || p3.y > camY + H3 + 20) continue;
         const pas = p3.saut > 0 ? 1 : Math.floor(t * 6 + p3.s * 0.1) % 2 + 1;
         dessinerPerso(ctx, p3.tenue, p3.x, p3.y + 6 - (p3.saut > 0 ? 3 : 0), NOMS_DIRECTION3[p3.dir] || "face", pas);
       }
@@ -6877,7 +6983,7 @@ body {
       this.voiture.looks = o3.voiture.looks || [];
       this.voiture.braquageMin = 0.6;
       const garage = this.portes.find((g) => g.id === "garage");
-      this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h + 18, Math.PI / 2);
+      this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h + 72, 0);
       this.ignorer = "garage";
       this.camera = { x: this.voiture.x, y: this.voiture.y };
       this.temps = 0;
@@ -7490,7 +7596,7 @@ body {
       const p3 = this.entree;
       this.entree = null;
       if (!p3) return;
-      this.voiture.placer(p3.x + p3.w / 2, p3.y + p3.h + 18, Math.PI / 2);
+      this.voiture.placer(p3.x + p3.w / 2, p3.y + p3.h + 72, 0);
     }
     message(texteMsg, couleur, ancre) {
       this.messages.push({ texte: texteMsg, couleur, x: ancre.x, y: ancre.y, vie: 1, max: 1 });
@@ -7602,18 +7708,18 @@ body {
       }
       return canvas;
     }
-    dessiner(ctx, W2, H2, t) {
+    dessiner(ctx, W3, H3, t) {
       const v2 = this.voiture;
       this.camera.x = lerp(this.camera.x, v2.x + v2.vx * 0.4, 0.12);
       this.camera.y = lerp(this.camera.y, v2.y + v2.vy * 0.4, 0.12);
       const sx = this.secousse ? (Math.random() - 0.5) * this.secousse : 0;
-      const camX = Math.round(clamp(this.camera.x - W2 / 2 + sx, 0, TAILLE_VILLE - W2));
-      const camY = Math.round(clamp(this.camera.y - H2 / 2 + sx, 0, TAILLE_VILLE - H2));
+      const camX = Math.round(clamp(this.camera.x - W3 / 2 + sx, 0, TAILLE_VILLE - W3));
+      const camY = Math.round(clamp(this.camera.y - H3 / 2 + sx, 0, TAILLE_VILLE - H3));
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(this.canvas, camX, camY, W2, H2, 0, 0, W2, H2);
+      ctx.drawImage(this.canvas, camX, camY, W3, H3, 0, 0, W3, H3);
       ctx.save();
       ctx.translate(-camX, -camY);
-      const visible = (x, y, m = 40) => x > camX - m && x < camX + W2 + m && y > camY - m && y < camY + H2 + m;
+      const visible = (x, y, m = 40) => x > camX - m && x < camX + W3 + m && y > camY - m && y < camY + H3 + m;
       this.dessinerFeux(ctx, visible);
       for (const p3 of this.portes) {
         if (!visible(p3.x, p3.y, 60)) continue;
@@ -7633,14 +7739,14 @@ body {
       for (const r of this.radars) if (visible(r.x, r.y)) radar(ctx, r.x, r.y);
       for (const a of this.affiches) if (!this.memoire.affiches[a.id] && visible(a.x, a.y)) affiche(ctx, a.x, a.y, t);
       for (const b2 of this.bonus) if (!b2.pris && visible(b2.x, b2.y)) dessinerBonusVille(ctx, b2, t);
-      this.pietons.dessiner(ctx, this.planche, t, camX, camY, W2, H2);
+      this.pietons.dessiner(ctx, this.planche, t, camX, camY, W3, H3);
       for (const f of this.fans) {
         if (!visible(f.x, f.y)) continue;
         const saute = f.content > 0 && Math.sin(t * 14) > 0;
         dessinerPerso(ctx, f.tenue, f.x, f.y - (saute ? 3 : 0), "face", saute ? 1 : 0);
         if (!f.vu && Math.sin(t * 3 + f.x) > -0.3) bulle(ctx, f.x, f.y - 18, "Fan !");
       }
-      this.trafic.dessiner(ctx, camX, camY, W2, H2);
+      this.trafic.dessiner(ctx, camX, camY, W3, H3);
       dessinerVoitureTiny(ctx, spriteVoitureTiny(v2.couleur, "#f2c14e", v2.looks), v2.x, v2.y, v2.angle);
       ctx.fillStyle = "#ffe066";
       for (const p3 of this.particules) ctx.fillRect(Math.round(p3.x), Math.round(p3.y), 2, 2);
@@ -7648,14 +7754,14 @@ body {
         const a = 1 - m.vie / m.max;
         texte(ctx, m.texte, m.x, m.y - 32 - a * 16, 10, m.couleur, "center");
       }
-      this.dessinerSoir(ctx, camX, camY, W2, H2, visible);
+      this.dessinerSoir(ctx, camX, camY, W3, H3, visible);
       ctx.restore();
       if (this.flash > 0) {
         ctx.fillStyle = `rgba(255,255,255,${this.flash * 3})`;
-        ctx.fillRect(0, 0, W2, H2);
+        ctx.fillRect(0, 0, W3, H3);
       }
-      if (this.defi) this.fleche(ctx, W2, H2, camX, camY);
-      this.dessinerInterface(ctx, W2, H2, t);
+      if (this.defi) this.fleche(ctx, W3, H3, camX, camY);
+      this.dessinerInterface(ctx, W3, H3, t);
     }
     /** Un feu sur poteau à chaque coin de carrefour, tourné vers la voie qui arrive. */
     dessinerFeux(ctx, visible) {
@@ -7681,14 +7787,14 @@ body {
       }
     }
     /** Le soleil se couche, les lampadaires s'allument. */
-    dessinerSoir(ctx, camX, camY, W2, H2, visible) {
+    dessinerSoir(ctx, camX, camY, W3, H3, visible) {
       const a = this.temps / DUREE_BALADE;
       ctx.fillStyle = `rgba(255,140,60,${0.12 * Math.min(1, a * 2)})`;
-      ctx.fillRect(camX, camY, W2, H2);
+      ctx.fillRect(camX, camY, W3, H3);
       if (a > 0.45) {
         const nuit = Math.min(1, (a - 0.45) / 0.5);
         ctx.fillStyle = `rgba(30,24,80,${0.32 * nuit})`;
-        ctx.fillRect(camX, camY, W2, H2);
+        ctx.fillRect(camX, camY, W3, H3);
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
         for (const l of this.lampes) {
@@ -7704,13 +7810,13 @@ body {
       }
     }
     /** Flèche au bord de l'écran vers l'objectif du défi en cours. */
-    fleche(ctx, W2, H2, camX, camY) {
+    fleche(ctx, W3, H3, camX, camY) {
       const c3 = this.defi.cible;
-      const cx = W2 / 2, cy = (H2 + HAUT_HUD) / 2;
+      const cx = W3 / 2, cy = (H3 + HAUT_HUD) / 2;
       const dx = c3.x - camX - cx, dy = c3.y - camY - cy;
-      if (Math.abs(dx) < W2 / 2 - 20 && Math.abs(dy) < (H2 - HAUT_HUD) / 2 - 20) return;
+      if (Math.abs(dx) < W3 / 2 - 20 && Math.abs(dy) < (H3 - HAUT_HUD) / 2 - 20) return;
       const ang = Math.atan2(dy, dx);
-      const r = Math.min((W2 / 2 - 22) / Math.abs(Math.cos(ang) || 1e-3), ((H2 - HAUT_HUD) / 2 - 40) / Math.abs(Math.sin(ang) || 1e-3));
+      const r = Math.min((W3 / 2 - 22) / Math.abs(Math.cos(ang) || 1e-3), ((H3 - HAUT_HUD) / 2 - 40) / Math.abs(Math.sin(ang) || 1e-3));
       ctx.save();
       ctx.translate(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
       ctx.rotate(ang);
@@ -7728,11 +7834,11 @@ body {
       ctx.fill();
       ctx.restore();
     }
-    dessinerInterface(ctx, W2, H2) {
+    dessinerInterface(ctx, W3, H3) {
       ctx.fillStyle = "rgba(31,42,68,0.92)";
-      ctx.fillRect(0, 0, W2, HAUT_HUD);
+      ctx.fillRect(0, 0, W3, HAUT_HUD);
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, HAUT_HUD, W2, 2);
+      ctx.fillRect(0, HAUT_HUD, W3, 2);
       texte(ctx, "BALADE EN VILLE", 8, 12, 10, "#9fb3d9", "left");
       texte(ctx, this.heure(), 8, 32, 18, "#ffe066", "left");
       const reste = 1 - this.temps / DUREE_BALADE;
@@ -7753,7 +7859,7 @@ body {
         texte(ctx, `${Math.max(0, f.limite - f.t).toFixed(1)} s \xB7 ${det}`, 12, y + 24, 10, "#ffffff", "left");
       }
       const mc = this.minicarte;
-      const mx = W2 - mc.width - 6, my = HAUT_HUD + 8;
+      const mx = W3 - mc.width - 6, my = HAUT_HUD + 8;
       ctx.fillStyle = "#0f172a";
       ctx.fillRect(mx - 3, my - 3, mc.width + 6, mc.height + 6);
       ctx.drawImage(mc, mx, my);
@@ -7770,14 +7876,14 @@ body {
       texte(ctx, `Affiches ${Object.keys(this.memoire.affiches).length}/${AFFICHES}`, mx + mc.width / 2, my + mc.height + 10, 8, "#f4f1e8", "center");
       if (this.bandeau) {
         ctx.fillStyle = "rgba(15,23,42,0.88)";
-        ctx.fillRect(10, H2 - 70, W2 - 20, 30);
-        texte(ctx, this.bandeau.texte, W2 / 2, H2 - 55, 10, this.bandeau.couleur, "center");
+        ctx.fillRect(10, H3 - 70, W3 - 20, 30);
+        texte(ctx, this.bandeau.texte, W3 / 2, H3 - 55, 10, this.bandeau.couleur, "center");
       }
       ctx.fillStyle = "rgba(31,42,68,0.55)";
-      ctx.fillRect(0, H2 - 26, W2, 26);
-      texte(ctx, "\u25C0 gauche", 10, H2 - 13, 10, "#f4f1e8", "left");
-      texte(ctx, "les deux : freiner / reculer", W2 / 2, H2 - 13, 9, "#cfe0ff", "center");
-      texte(ctx, "droite \u25B6", W2 - 10, H2 - 13, 10, "#f4f1e8", "right");
+      ctx.fillRect(0, H3 - 26, W3, 26);
+      texte(ctx, "\u25C0 gauche", 10, H3 - 13, 10, "#f4f1e8", "left");
+      texte(ctx, "les deux : freiner / reculer", W3 / 2, H3 - 13, 9, "#cfe0ff", "center");
+      texte(ctx, "droite \u25B6", W3 - 10, H3 - 13, 10, "#f4f1e8", "right");
     }
     /** Gains nets de la balade, à verser dans la partie. */
     bilan() {
@@ -8195,16 +8301,16 @@ body {
     chassis: (p3) => chassis(p3, {})
   };
   var FAMILLES = { moteur, pneu, boite: boiteVitesses, aileron, nitro, chassis, turbine: (p3) => turbine(p3) };
-  var cache = /* @__PURE__ */ new Map();
+  var cache2 = /* @__PURE__ */ new Map();
   function iconePiece(pc) {
     const cle = typeof pc === "string" ? `@${pc}` : pc.id;
-    if (cache.has(cle)) return cache.get(cle);
+    if (cache2.has(cle)) return cache2.get(cle);
     const { c: c3, px } = nouveau();
     const decrite = typeof pc !== "string" && pc.icone && FAMILLES[pc.icone.famille];
     const plan = typeof pc === "string" ? PAR_EMPLACEMENT[pc] : PLANS[pc.id] || decrite && ((p3) => decrite(p3, pc.icone)) || PAR_EMPLACEMENT[pc.emplacement];
     plan(px);
     const url = c3.toDataURL();
-    cache.set(cle, url);
+    cache2.set(cle, url);
     return url;
   }
   function imgPiece(pc, classe = "") {
@@ -8618,16 +8724,14 @@ body {
   function apercuVoiture(couleur, looks = [], echelle = 3) {
     const cle = `${couleur}|${looks.join(",")}|${echelle}`;
     if (cacheApercus.has(cle)) return cacheApercus.get(cle);
-    const s2 = spriteVoiture(couleur, "#f2c14e", looks);
+    const k = 1;
+    void echelle;
     const c3 = document.createElement("canvas");
-    c3.width = s2.height * echelle;
-    c3.height = s2.width * echelle;
+    c3.width = (VOITURE_LONGUEUR + 14) * k;
+    c3.height = (VOITURE_LARGEUR + 16) * k;
     const ctx = c3.getContext("2d");
     ctx.imageSmoothingEnabled = false;
-    ctx.translate(c3.width / 2, c3.height / 2);
-    ctx.rotate(Math.PI / 2);
-    ctx.scale(echelle, echelle);
-    ctx.drawImage(s2, -s2.width / 2, -s2.height / 2);
+    dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, "#f2c14e", looks), c3.width / 2, c3.height / 2 - 2 * k, 0, k);
     const url = c3.toDataURL();
     cacheApercus.set(cle, url);
     return url;
@@ -8674,7 +8778,7 @@ body {
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="lien" data-action="sauvegarde">Transf\xE9rer ma sauvegarde (PC \u2194 t\xE9l\xE9phone)</button>
       </div>
-      <p class="credits">Version d'essai 0.4.1 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
+      <p class="credits">Version d'essai 0.5 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
     </div>`,
       actions: {
         continuer: () => app2.continuer(),
@@ -8919,13 +9023,13 @@ body {
     const liste = PIECES.filter((x) => x.emplacement === onglet).map((pc) => {
       const verrou = pc.recherche > p3.labo;
       const remise = pc.id === promo ? 0.3 : 0;
-      const prix = prixPiece(pc, remise);
+      const prix2 = prixPiece(pc, remise);
       const possede = p3.inventaire.filter((i) => i.piece === pc.id).length;
       return `<div class="piece rarete-${pc.rarete} ${verrou ? "verrou" : ""}">
       <div class="piece-tete">${imgPiece(pc)}<b>${e2(pc.nom)}</b><span class="rarete">${RARETES[pc.rarete].nom}</span></div>
       <div class="petit">${texteBonus(pc)}${possede ? ` \xB7 en stock : ${possede}` : ""}</div>
       <div class="ligne">${remise ? '<span class="promo">PROMO \u221230 %</span>' : "<span></span>"}
-        ${verrou ? `<span class="petit ko">Labo niveau ${pc.recherche} requis</span>` : `<button class="btn btn-mini btn-vert" data-action="acheter" data-id="${pc.id}" data-remise="${remise}" ${p3.argent < prix ? "disabled" : ""}>Acheter \xB7 ${formatArgent(prix)}</button>`}</div>
+        ${verrou ? `<span class="petit ko">Labo niveau ${pc.recherche} requis</span>` : `<button class="btn btn-mini btn-vert" data-action="acheter" data-id="${pc.id}" data-remise="${remise}" ${p3.argent < prix2 ? "disabled" : ""}>Acheter \xB7 ${formatArgent(prix2)}</button>`}</div>
     </div>`;
     }).join("");
     const onglets = Object.entries(EMPLACEMENTS).map(([k, nom]) => `<button class="onglet ${k === onglet ? "actif" : ""}" data-action="onglet" data-id="${k}">${nom}</button>`).join("");
@@ -9571,15 +9675,12 @@ body {
     );
   }
   function portrait(app2, taille = 3) {
-    const planche = app2.assets?.urbain;
-    if (!planche) return "";
     const c3 = document.createElement("canvas");
     c3.width = 16 * taille;
     c3.height = 16 * taille;
     const ctx = c3.getContext("2d");
     ctx.imageSmoothingEnabled = false;
-    const id = idPersonnage(104, 1, 0);
-    ctx.drawImage(planche, id % 27 * 16, Math.floor(id / 27) * 16, 16, 16, 0, 0, 16 * taille, 16 * taille);
+    ctx.drawImage(spritePerso({ ...tenue(4), casque: "#e4432d", haut: "#f4f1e8" }, "face", 0), 0, 0, 16 * taille, 16 * taille);
     return `<img class="portrait" src="${c3.toDataURL()}" alt="">`;
   }
   function ecranPilote(app2) {
@@ -9734,15 +9835,15 @@ body {
   }
 
   // pistonville/src/main.js
-  var W = 320;
-  var H = 568;
+  var W2 = 320;
+  var H2 = 568;
   var PAS2 = 1 / 60;
   var App = class {
     constructor() {
       this.canvas = document.getElementById("jeu");
       this.ctx = this.canvas.getContext("2d");
-      this.canvas.width = W;
-      this.canvas.height = H;
+      this.canvas.width = W2;
+      this.canvas.height = H2;
       this.cadre = document.getElementById("cadre");
       this.ui = new Interface(document.getElementById("interface"));
       this.toastEl = document.getElementById("toast");
@@ -9807,12 +9908,12 @@ body {
       }, 15e3);
     }
     redimensionner() {
-      const echelle = Math.min(window.innerWidth / W, window.innerHeight / H);
-      const w = Math.floor(W * echelle), h = Math.floor(H * echelle);
+      const echelle = Math.min(window.innerWidth / W2, window.innerHeight / H2);
+      const w = Math.floor(W2 * echelle), h = Math.floor(H2 * echelle);
       this.cadre.style.width = `${w}px`;
       this.cadre.style.height = `${h}px`;
-      this.cadre.style.setProperty("--u", `${w / W}px`);
-      this.echelle = w / W;
+      this.cadre.style.setProperty("--u", `${w / W2}px`);
+      this.echelle = w / W2;
     }
     // --- Boucle --------------------------------------------------------------------
     boucle(t) {
@@ -9827,7 +9928,7 @@ body {
             this.accu -= PAS2;
           }
         }
-        this.course.dessiner(this.ctx, W, H, secondes);
+        this.course.dessiner(this.ctx, W2, H2, secondes);
         if (this.course.etat === "fini" && !this.pause) this.finManche();
       } else if (this.ville && this.ecran === "ville") {
         if (!this.pause) {
@@ -9837,12 +9938,12 @@ body {
             this.accu -= PAS2;
           }
         }
-        this.ville.dessiner(this.ctx, W, H, secondes);
+        this.ville.dessiner(this.ctx, W2, H2, secondes);
         if (this.ville.entree && !this.ui.racine.innerHTML) this.entrerBatiment(this.ville.entree);
         if (this.ville.fini && !this.villeFinie) this.finBalade();
       } else if (this.scene) {
         this.scene.maj(dt, this.partie);
-        this.scene.dessiner(this.ctx, W, H, secondes, this.partie);
+        this.scene.dessiner(this.ctx, W2, H2, secondes, this.partie);
       }
       requestAnimationFrame((tt) => this.boucle(tt));
     }
@@ -9880,7 +9981,7 @@ body {
       });
       const position = (ev) => {
         const r = this.canvas.getBoundingClientRect();
-        return { x: (ev.clientX - r.left) / r.width * W, y: (ev.clientY - r.top) / r.height * H };
+        return { x: (ev.clientX - r.left) / r.width * W2, y: (ev.clientY - r.top) / r.height * H2 };
       };
       const dans = (p3, z) => p3.x >= z.x && p3.x <= z.x + z.w && p3.y >= z.y && p3.y <= z.y + z.h;
       const garageTactile = { id: null, y0: 0, y: 0, glisse: false };
@@ -9894,7 +9995,7 @@ body {
         if (this.ecran !== "garage" || garageTactile.id !== ev.pointerId) return;
         const p3 = position(ev);
         if (Math.abs(p3.y - garageTactile.y0) > 8) garageTactile.glisse = true;
-        if (garageTactile.glisse) this.scene.defiler(garageTactile.y - p3.y, this.partie, H - 290);
+        if (garageTactile.glisse) this.scene.defiler(garageTactile.y - p3.y, this.partie, H2 - 290);
         garageTactile.y = p3.y;
       });
       this.canvas.addEventListener("pointerup", (ev) => {
@@ -9904,7 +10005,7 @@ body {
       });
       this.canvas.addEventListener("wheel", (ev) => {
         if (this.ecran === "garage") {
-          this.scene.defiler(ev.deltaY * 0.5, this.partie, H - 290);
+          this.scene.defiler(ev.deltaY * 0.5, this.partie, H2 - 290);
           ev.preventDefault();
         }
       }, { passive: false });
@@ -9918,7 +10019,7 @@ body {
           this.pointeurs.set(ev.pointerId, p3);
           return;
         }
-        const z = this.course.zones(W, H);
+        const z = this.course.zones(W2, H2);
         if (dans(p3, z.pause)) {
           this.basculerPause();
           return;
@@ -9946,7 +10047,7 @@ body {
     entrees() {
       let gauche = this.touches.has("gauche"), droite = this.touches.has("droite");
       for (const p3 of this.pointeurs.values()) {
-        if (p3.x < W / 2) gauche = true;
+        if (p3.x < W2 / 2) gauche = true;
         else droite = true;
       }
       const e3 = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura };
@@ -9956,6 +10057,10 @@ body {
     }
     // --- Écrans ---------------------------------------------------------------------
     montrer(ecran) {
+      const lieu = this.ecran === "ville" && this.ville?.entree?.id;
+      const image = lieu && ecran?.html && interieur(lieu, this.assets?.tiny);
+      const balise = image && ecran.html.match(/<div class="(?:ecran(?! (?:celebration|chargement))[^"]*|defile)">/);
+      if (balise) ecran = { ...ecran, html: ecran.html.replace(balise[0], `${balise[0]}<img class="interieur" src="${image}" alt="">`) };
       this.ui.montrer(ecran);
     }
     toast(texte2) {

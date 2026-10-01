@@ -231,40 +231,11 @@ export class SceneGarage {
     const o = this.origine();
     const L = partie.terrain.lignes;
     const largeur = COLONNES_TERRAIN * CASE, hauteur = L * CASE;
-    // Sol extérieur : terre sombre et cailloux (tuiles Tiny Factory).
-    const dy = ((o.y % 16) + 16) % 16;
-    for (let y = dy - 16; y < H; y += 16) for (let x = 0; x < W; x += 16) {
-      const k = (((x * 7 + (y - o.y) * 13) % 23) + 23) % 23;
-      tuileTiny(ctx, tiny, 'factory', k === 0 ? 32 : k === 5 ? 33 : 3, x, y);
-    }
-
-    // La rue au-dessus, avec sa voiture qui passe.
-    const yRue = o.y - 96;
-    ctx.fillStyle = '#d9d3c3'; ctx.fillRect(0, yRue - 10, W, 10); ctx.fillRect(0, yRue + 38, W, 12);
-    ctx.fillStyle = '#a59f90'; ctx.fillRect(0, yRue - 1, W, 1); ctx.fillRect(0, yRue + 38, W, 1);
-    ctx.fillStyle = '#4f5470'; ctx.fillRect(0, yRue, W, 38);
-    ctx.fillStyle = '#e8e4d6';
-    for (let x = 4; x < W; x += 24) ctx.fillRect(x, yRue + 18, 12, 2);
-    dessinerVoitureTiny(ctx, spriteVoitureTiny('#4f7ddb'), Math.round(this.passant), yRue + 22, 0);
-    // Allée de béton entre la rue et la grande porte.
-    const porteX = o.x + largeur / 2 - 24;
-    ctx.fillStyle = '#bdb6a4'; ctx.fillRect(porteX, yRue + 50, 48, o.y - 20 - (yRue + 50));
-    ctx.fillStyle = '#a59f90'; for (let y = yRue + 56; y < o.y - 20; y += 8) ctx.fillRect(porteX, y, 48, 1);
-
-    // Le bâtiment : contour clair bordé de sombre, comme les pièces de Tiny Factory.
-    cadreTiny(ctx, o.x - 4, o.y - 20, largeur + 8, hauteur + 24);
-    // Mur du fond (une rangée de tuiles), avec la grande porte au milieu.
-    for (let x = 0; x < largeur; x += 16) {
-      const i = Math.floor((x - (largeur / 2 - 24)) / 16);
-      const n = i >= 0 && i < 3 ? [69, 70, 71][i] : [44, 46, 47, 57, 46, 58, 59, 47][(x / 16) % 8];
-      tuileTiny(ctx, tiny, 'factory', n, o.x + x, o.y - 16);
-    }
-    // Enseigne au-dessus du mur, de chaque côté de la porte.
-    ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(o.x + 6, o.y - 40, 88, 18);
-    ctx.fillStyle = '#f2c14e'; ctx.fillRect(o.x + 8, o.y - 38, 84, 14);
-    texte(ctx, 'GARAGE PISTON', o.x + 50, o.y - 31, 9, '#1f2a44', 'center');
-    // Sol : dalles orangées ; les cases libres forment les allées.
-    for (let y = 0; y < hauteur; y += 16) for (let x = 0; x < largeur; x += 16) tuileTiny(ctx, tiny, 'factory', 0, o.x + x, o.y + y);
+    // Le fond (sol extérieur, rue, bâtiment, mur, dalles) ne change qu'avec la
+    // taille du terrain : il est dessiné une fois dans une image, puis recopié.
+    const fond = this.fondGarage(W, H, L);
+    ctx.drawImage(fond, 0, -this.scroll);
+    dessinerVoitureTiny(ctx, spriteVoitureTiny('#4f7ddb'), Math.round(this.passant), o.y - 96 + 22, 0);
 
     // Grille en mode construction.
     if (this.placement) {
@@ -330,6 +301,54 @@ export class SceneGarage {
       ctx.strokeStyle = ok ? '#5ad16a' : '#e4432d'; ctx.lineWidth = 2;
       ctx.strokeRect(x + 1, y + 1, d.l * CASE - 2, d.h * CASE - 2);
     }
+  }
+
+  /** Image du fond du garage (sans défilement), refaite seulement si le terrain change de taille. */
+  fondGarage(W, H, L) {
+    const largeur = COLONNES_TERRAIN * CASE, hauteur = L * CASE;
+    const h = Y0 + hauteur + H;
+    if (this.fond && this.fond.cle === `${L}|${W}|${H}`) return this.fond.canvas;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    const tiny = this.tiny;
+    const o = { x: X0, y: Y0 };
+    // Sol extérieur : terre sombre et cailloux (tuiles Tiny Factory).
+    for (let y = 0; y < h; y += 16) for (let x = 0; x < W; x += 16) {
+      const k = (((x * 7 + (y - o.y) * 13) % 23) + 23) % 23;
+      tuileTiny(ctx, tiny, 'factory', k === 0 ? 32 : k === 5 ? 33 : 3, x, y);
+    }
+
+    // La rue au-dessus, avec sa voiture qui passe.
+    const yRue = o.y - 96;
+    ctx.fillStyle = '#d9d3c3'; ctx.fillRect(0, yRue - 10, W, 10); ctx.fillRect(0, yRue + 38, W, 12);
+    ctx.fillStyle = '#a59f90'; ctx.fillRect(0, yRue - 1, W, 1); ctx.fillRect(0, yRue + 38, W, 1);
+    ctx.fillStyle = '#4f5470'; ctx.fillRect(0, yRue, W, 38);
+    ctx.fillStyle = '#e8e4d6';
+    for (let x = 4; x < W; x += 24) ctx.fillRect(x, yRue + 18, 12, 2);
+    // Allée de béton entre la rue et la grande porte.
+    const porteX = o.x + largeur / 2 - 24;
+    ctx.fillStyle = '#bdb6a4'; ctx.fillRect(porteX, yRue + 50, 48, o.y - 20 - (yRue + 50));
+    ctx.fillStyle = '#a59f90'; for (let y = yRue + 56; y < o.y - 20; y += 8) ctx.fillRect(porteX, y, 48, 1);
+
+    // Le bâtiment : contour clair bordé de sombre, comme les pièces de Tiny Factory.
+    cadreTiny(ctx, o.x - 4, o.y - 20, largeur + 8, hauteur + 24);
+    // Mur du fond (une rangée de tuiles), avec la grande porte au milieu.
+    for (let x = 0; x < largeur; x += 16) {
+      const i = Math.floor((x - (largeur / 2 - 24)) / 16);
+      const n = i >= 0 && i < 3 ? [69, 70, 71][i] : [44, 46, 47, 57, 46, 58, 59, 47][(x / 16) % 8];
+      tuileTiny(ctx, tiny, 'factory', n, o.x + x, o.y - 16);
+    }
+    // Enseigne au-dessus du mur, de chaque côté de la porte.
+    ctx.fillStyle = CONTOUR_TINY; ctx.fillRect(o.x + 6, o.y - 40, 88, 18);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(o.x + 8, o.y - 38, 84, 14);
+    texte(ctx, 'GARAGE PISTON', o.x + 50, o.y - 31, 9, '#1f2a44', 'center');
+    // Sol : dalles orangées ; les cases libres forment les allées.
+    for (let y = 0; y < hauteur; y += 16) for (let x = 0; x < largeur; x += 16) tuileTiny(ctx, tiny, 'factory', 0, o.x + x, o.y + y);
+
+    this.fond = { cle: `${L}|${W}|${H}`, canvas };
+    return canvas;
   }
 
   voituresSurPonts(partie, n) {
