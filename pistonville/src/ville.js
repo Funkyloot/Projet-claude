@@ -1,16 +1,19 @@
 /* ville.js — la balade en ville, une fois par jour, de 18 h à 19 h.
  *
- * Pistonville est une grande carte de 14 × 14 pâtés (4 128 px de côté, environ
- * 4 km à l'échelle d'une case = 1 m) : la ville au centre (8 × 8 pâtés :
- * centre, quartiers, parcs, port sur le lac) et trois couronnes de campagne
- * autour (champs, fermes, prés, vergers, bois, étangs, hameaux, stations-
- * service, éoliennes ; voir ville-campagne.js). La ville vit : circulation à
- * droite avec feux en ville et stops à la campagne, tracteurs, piétons sur
- * les trottoirs, coucher de soleil, lampadaires (voir ville-vie.js). Tout ce
- * qui est construit est solide.
+ * Pistonville est une grande carte d'environ 5 km de côté (une case = 1 m),
+ * organisée comme une vraie carte (voir reseau.js) : la ville au centre, en
+ * grands pâtés de quatre lots, entourée d'un boulevard périphérique et
+ * traversée par deux boulevards à 2 × 2 voies ; le lac au fond d'un grand
+ * parc ; la zone d'activités en bordure. Autour, la campagne en grandes
+ * parcelles le long d'une boucle de routes départementales (champs, fermes,
+ * village, prés, vergers, éoliennes, étang, station-service ; voir
+ * ville-campagne.js), et la forêt au bord de la carte. La ville vit :
+ * circulation à droite avec feux en ville et STOP à la campagne, tracteurs,
+ * piétons sur les trottoirs, coucher de soleil, lampadaires (voir
+ * ville-vie.js). Tout ce qui est construit est solide.
  *
  * La carte est trop grande pour une seule image sur téléphone : elle est
- * peinte par morceaux de 516 px, à la demande, autour de la voiture.
+ * peinte par morceaux de 510 px, à la demande, autour de la voiture.
  *
  * Les choses à faire, inspirées des jeux de course en ville ouverte (on lance
  * un défi en roulant dessus, des objets cachés à trouver) :
@@ -30,70 +33,111 @@ import { Voiture, DEMI_LONGUEUR, DEMI_LARGEUR } from './voiture.js';
 import { PERSONNAGES, bulle, T } from './sprites.js';
 import { texte, recouvrement } from './course.js';
 import { clamp, lerp, creerAlea, hash2, formatTemps } from './outils.js';
-import { Trafic, Pietons, Feux, PERIODE, PAS_RUE, LARGEUR_RUE, CASES_RUE, CASES_ILOT } from './ville-vie.js';
+import { Trafic, Pietons, Feux } from './ville-vie.js';
+import { Reseau, CELLULE, LOT, COUR } from './reseau.js';
 import { tuileTiny, spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, tenue, CONTOUR } from './tiny.js';
 import {
   batimentModerne, hauteurBatiment, maisonModerne, conteneur, lampadaire, banc, poubelle, borne, feuTricolore, fleurs,
-  tracteur, palesEolienne, panneauStop, parapet,
+  palesEolienne, panneauStop,
 } from './ville-dessins.js';
-import { ilotChamp, ilotFerme, ilotPre, ilotVerger, ilotBois, ilotEtang, ilotHameau, ilotStation, ilotEoliennes } from './ville-campagne.js';
+import { CAMPAGNE, remplirParcelle, COULEURS_SOL } from './ville-campagne.js';
 
-const ILOTS = 14;
-const CASES = ILOTS * PERIODE + CASES_RUE;   // 258 cases : 4 128 px de côté
-export const TAILLE_VILLE = CASES * T;
 export const DUREE_BALADE = 150;     // secondes réelles pour une heure de jeu
 const HAUT_HUD = 52;
-const TAILLE_ILOT = CASES_ILOT * T;   // 160 px
+const TAILLE_ILOT = LOT;             // 160 px : un lot de ville
 const GRAINE_PLAN = 4242;            // le plan de la ville ne change jamais
-const MORCEAU = 516;                 // la carte est peinte par morceaux de 516 px (8 × 8)
+const MORCEAU = 510;                 // la carte est peinte par morceaux de 510 px (8 × 8)
 const MORCEAUX_GARDES = 18;          // morceaux gardés en mémoire (≈ 19 Mo)
-const C0 = 4;                        // décalage du vieux centre-ville dans la grande carte
 
-/** Bâtiments où l'on peut entrer, et leur îlot (colonne, ligne). */
+/** Bâtiments où l'on peut entrer, et leur lot (colonne, ligne dans la grille des lots de la ville). */
 export const BATIMENTS = [
-  { id: 'garage', nom: 'Garage Piston', ilot: [C0 + 2, C0 + 2], toit: '#f2c14e' },
-  { id: 'bureau', nom: 'Bureau des courses', ilot: [C0 + 3, C0 + 2], toit: '#c2504d' },
-  { id: 'concession', nom: 'Concession', ilot: [C0 + 1, C0 + 3], toit: '#2f6fdb' },
-  { id: 'pieces', nom: 'Pièces Auto', ilot: [C0 + 3, C0 + 3], toit: '#3fa34d' },
-  { id: 'tombola', nom: 'Tombola', ilot: [C0 + 4, C0 + 0], toit: '#e86ca6' },
-  { id: 'cafe', nom: 'Café des pilotes', ilot: [C0 + 2, C0 + 4], toit: '#8a5a3b' },
+  { id: 'garage', nom: 'Garage Piston', lot: [4, 3], toit: '#f2c14e' },
+  { id: 'bureau', nom: 'Bureau des courses', lot: [5, 3], toit: '#c2504d' },
+  { id: 'concession', nom: 'Concession', lot: [2, 5], toit: '#2f6fdb' },
+  { id: 'pieces', nom: 'Pièces Auto', lot: [5, 5], toit: '#3fa34d' },
+  { id: 'tombola', nom: 'Tombola', lot: [5, 1], toit: '#e86ca6' },
+  { id: 'cafe', nom: 'Café des pilotes', lot: [4, 5], toit: '#8a5a3b' },
 ];
+
 /*
- * Le plan. En minuscules, la ville : p parc, m maisons, i immeubles, d arène
- * de drift, k parking, q port, b et . les bâtiments où l'on entre.
- * En majuscules, la campagne : C champ, F ferme, P pré, V verger, B bois,
- * E étang (le lac au sud du port), H hameau, S station-service, W éoliennes.
+ * Le plan, comme une vraie carte : la ville au centre (4 × 4 grands pâtés),
+ * entourée d'un boulevard périphérique et traversée par deux boulevards qui
+ * se croisent au centre ; entre eux, des rues. Autour, la campagne en grandes
+ * parcelles le long d'une boucle de routes départementales, reliée au
+ * périphérique par six routes ; au bord de la carte, la forêt.
+ *
+ * PLAN : les pâtés de la carte. u = ville (voir LOTS), B forêt, F ferme,
+ * C champs, P prés, V vergers, H village, W éoliennes, E étang, S station-service.
  */
 const PLAN = [
-  'BBPCCLBBCCPFBB',
-  'BFCCHVCSCWCCPB',
-  'PCVLCCWCLCHCCP',
-  'CLHmimpmikmSFC',
-  'VCCmpmmibmiCLC',
-  'CHLimpiiimmVCP',
-  'FCSpmi..iimCHC',
-  'CLCmi.i.ippLCF',
-  'PCVmmm.idiiCPC',
-  'CHCkqqqqkqmSCB',
-  'LCPEEEEEEEEPCB',
-  'CFCEEEEEEEEVHB',
-  'PCWVCHCCPCLCFB',
-  'BBCCPCBBCLCPBB',
-].map((l) => l.replace(/L/g, 'C'));
-const CAMPAGNE = 'CFPVBEHSW';
-const typeIlot = (bx, by) => (bx < 0 || by < 0 || bx >= ILOTS || by >= ILOTS ? null : PLAN[by][bx]);
+  'BBBBBBBBBB',
+  'BFFCCHHWWB',
+  'BFFCCHHWWB',
+  'BPPuuuuVVB',
+  'BPPuuuuVVB',
+  'BCCuuuuPPB',
+  'BCCuuuuPPB',
+  'BFFSSCCEEB',
+  'BFFSSCCEEB',
+  'BBBBBBBBBB',
+];
+/*
+ * LOTS : la ville, lot par lot (2 × 2 lots par pâté ; les portes des lieux
+ * où l'on entre sont sur les lots du bas, face à la rue). m pavillons,
+ * i immeubles et commerces, p parc (un pâté entier), L parc du lac (deux
+ * pâtés), z zone d'activités, k parking, d arène de drift, . lieu où l'on entre.
+ */
+const LOTS = [
+  'mmiiiizz',
+  'miiii.zz',
+  'mmppiikd',
+  'mipp..ik',
+  'miiiiiim',
+  'mi.i..im',
+  'mmiiLLLL',
+  'mmmiLLLL',
+];
+const VILLE0 = 3;                          // premier pâté de la ville
+const N = PLAN.length;
+/** Largeur de chaque ligne de route, en cases : 13 = boulevard (2 × 2 voies), 6 = rue, 0 = pas de route. */
+const LARGEURS = [0, 6, 0, 13, 6, 13, 6, 13, 0, 6, 0];
+const VILLE = [3, 7];                      // carrefours de la ville (du périphérique au périphérique)
+const BOUCLE = [1, 9];                     // la boucle des routes de campagne
+const LIAISONS = [3, 5, 7];                // routes qui relient le périphérique à la boucle
+const dans = (k, [a, b]) => k >= a && k <= b;
+/** Tronçons fermés : le parc du lac tient sur deux pâtés. */
+const FERMES = new Set(['v6,6']);
+function troncon(axe, k, s) {
+  // axe 'h' : ligne est-ouest k, tronçon s → s + 1 ; axe 'v' : ligne nord-sud k.
+  if (FERMES.has(`${axe}${axe === 'h' ? s : k},${axe === 'h' ? k : s}`)) return false;
+  if (dans(k, VILLE) && dans(s, [VILLE[0], VILLE[1] - 1])) return true;                                // la ville
+  if (BOUCLE.includes(k) && dans(s, [BOUCLE[0], BOUCLE[1] - 1])) return true;                         // la boucle
+  if (LIAISONS.includes(k) && (dans(s, [BOUCLE[0], VILLE[0] - 1]) || dans(s, [VILLE[1], BOUCLE[1] - 1]))) return true;   // liaisons
+  return false;
+}
+const RESEAU = new Reseau(LARGEURS, (kx, ky) => troncon('h', ky, kx), (kx, ky) => troncon('v', kx, ky));
+export const TAILLE_VILLE = RESEAU.taille;
+
+/** Le type d'un lot de ville (lx, ly), ou null hors de la ville. */
+const typeLot = (lx, ly) => LOTS[ly]?.[lx] ?? null;
+/** Le type d'un pâté : pour la ville, celui de son lot du haut à gauche (parc, lac) ou 'u'. */
+const typePate = (bx, by) => {
+  const t = PLAN[by]?.[bx];
+  if (t !== 'u') return t ?? null;
+  const l = typeLot((bx - VILLE0) * 2, (by - VILLE0) * 2);
+  return l === 'p' || l === 'L' ? l : 'u';
+};
+/** Origine d'un lot de ville. */
+function origineLot(lx, ly) {
+  const o = RESEAU.origine(VILLE0 + (lx >> 1), VILLE0 + (ly >> 1));
+  return { x: o.x + (lx % 2) * (LOT + COUR), y: o.y + (ly % 2) * (LOT + COUR) };
+}
+
+const typeIlot = (bx, by) => (bx < 0 || by < 0 || bx >= N || by >= N ? null : PLAN[by][bx]);
+const lotsDuPate = (bx, by) => [0, 1].flatMap((dy) => [0, 1].map((dx) => [(bx - VILLE0) * 2 + dx, (by - VILLE0) * 2 + dy]));
 const estUrbain = (bx, by) => { const t = typeIlot(bx, by); return t !== null && !CAMPAGNE.includes(t); };
 /** Un carrefour est en ville si l'un des quatre pâtés qui le bordent l'est. */
 export const carrefourUrbain = (kx, ky) => estUrbain(kx - 1, ky - 1) || estUrbain(kx, ky - 1) || estUrbain(kx - 1, ky) || estUrbain(kx, ky);
-/** La branche d'un carrefour (vers le bas, le haut…) longe-t-elle un pâté de ville ? */
-const estUrbainCote = (kx, ky, cote) => ({
-  bas: estUrbain(kx - 1, ky) || estUrbain(kx, ky),
-  haut: estUrbain(kx - 1, ky - 1) || estUrbain(kx, ky - 1),
-  droite: estUrbain(kx, ky - 1) || estUrbain(kx, ky),
-  gauche: estUrbain(kx - 1, ky - 1) || estUrbain(kx - 1, ky),
-})[cote];
-
-const origineIlot = (bx, by) => ({ x: (bx * PERIODE + CASES_RUE + 1) * T, y: (by * PERIODE + CASES_RUE + 1) * T });
 
 /** Façades des bâtiments où l'on entre (le toit reprend la couleur de la carte). */
 const STYLES_BATIMENTS = {
@@ -110,7 +154,7 @@ function cone(c, x, y) {
   c.fillStyle = '#f39c33'; c.fillRect(x - 3, y - 11, 6, 9);
   c.fillStyle = '#ffffff'; c.fillRect(x - 3, y - 7, 6, 2);
 }
-const centreCarrefour = (kx, ky) => ({ x: kx * PAS_RUE + LARGEUR_RUE / 2, y: ky * PAS_RUE + LARGEUR_RUE / 2 });
+const centreCarrefour = (kx, ky) => RESEAU.centre(kx, ky);
 
 const AFFICHES = 12;
 
@@ -144,12 +188,19 @@ export class Ville {
     this.morceaux = new Map();
     this.minicarte = this.peindreMiniCarte();
 
-    this.feux = new Feux(ILOTS, 77, carrefourUrbain);
-    // Plus de circulation en ville qu'à la campagne, et des tracteurs dans les champs.
-    this.trafic = new Trafic(ILOTS, this.aleaJour, 46, this.feux, { centre: [C0 - 1, C0 + 7], tracteurs: true });
-    const ilotsUrbains = [];
-    for (let by = 0; by < ILOTS; by++) for (let bx = 0; bx < ILOTS; bx++) if (estUrbain(bx, by)) ilotsUrbains.push([bx, by]);
-    this.pietons = new Pietons(ilotsUrbains, this.aleaJour, 60);
+    this.reseau = RESEAU;
+    this.feux = new Feux(RESEAU, 77, carrefourUrbain);
+    // Plus de circulation en ville qu'à la campagne, et des tracteurs sur les routes de campagne.
+    this.trafic = new Trafic(RESEAU, this.aleaJour, 48, this.feux, { ville: carrefourUrbain, tracteurs: true });
+    // Les piétons font le tour des pâtés de la ville (ceux qui ont un trottoir tout autour).
+    const tours = [];
+    for (let by = 0; by < N; by++) for (let bx = 0; bx < N; bx++) {
+      const b = RESEAU.bords(bx, by);
+      if (!estUrbain(bx, by) || !(b.haut && b.bas && b.gauche && b.droite)) continue;
+      const c = RESEAU.cellule(bx, by);
+      tours.push({ x0: c.x + 8, y0: c.y + 8, cote: CELLULE - 16 });
+    }
+    this.pietons = new Pietons(tours, this.aleaJour, 64);
     this.semerDuJour();
     this.preparerDefis();
 
@@ -159,9 +210,8 @@ export class Ville {
     this.voiture = new Voiture({ physique, couleur: o.voiture.couleur, nom: 'moi', joueur: true });
     this.voiture.looks = o.voiture.looks || [];
     this.voiture.braquageMin = 0.6;   // on peut se dégager d'un mur en braquant
-    const garage = this.portes.find((g) => g.id === 'garage');
-    // Au départ, la voiture sort du garage et prend la voie de droite, vers l'est.
-    this.voiture.placer(garage.x + garage.w / 2, garage.y + garage.h + 72, 0);
+    // Au départ, la voiture sort du garage sur le boulevard, voie de droite.
+    this.placerDevant(this.portes.find((g) => g.id === 'garage'));
     this.ignorer = 'garage';
     this.camera = { x: this.voiture.x, y: this.voiture.y };
     this.temps = 0;
@@ -180,30 +230,60 @@ export class Ville {
   // --- Plan de la ville ----------------------------------------------------------
 
   construire() {
-    for (let by = 0; by < ILOTS; by++) for (let bx = 0; bx < ILOTS; bx++) {
-      const o = origineIlot(bx, by);
-      // Tout ce qu'on dessine pour ce pâté tient dans sa boîte (bord et mobilier compris).
-      this.zone = { x0: o.x - 72, y0: o.y - 120, x1: o.x + TAILLE_ILOT + 72, y1: o.y + TAILLE_ILOT + 40 };
-      const bat = BATIMENTS.find((b) => b.ilot[0] === bx && b.ilot[1] === by);
-      const type = PLAN[by][bx];
-      if (CAMPAGNE.includes(type)) {
-        ({ C: ilotChamp, F: ilotFerme, P: ilotPre, V: ilotVerger, B: ilotBois, E: ilotEtang, H: ilotHameau, S: ilotStation, W: ilotEoliennes })[type](this, o, bx, by);
-        continue;
+    for (const p of RESEAU.parcelles) {
+      const type = typePate(p.x0, p.y0);
+      const r = RESEAU.rectParcelle(p);
+      // Tout ce qu'on dessine pour cette parcelle tient dans sa boîte (bord et mobilier compris).
+      this.zone = { x0: r.x - 60, y0: r.y - 120, x1: r.x + r.w + 60, y1: r.y + r.h + 40 };
+      if (CAMPAGNE.includes(type)) { remplirParcelle(this, p, type, RESEAU); continue; }
+      if (type === 'L') { this.parcDuLac(r); continue; }
+      if (type === 'p') { this.parc(r, p.x0 * 7 + p.y0); continue; }
+      const [bx, by] = p.blocs[0];
+      this.cour(RESEAU.origine(bx, by), bx * 5 + by);
+      for (const [lx, ly] of lotsDuPate(bx, by)) {
+        const o = origineLot(lx, ly);
+        const t = typeLot(lx, ly);
+        const bat = BATIMENTS.find((x) => x.lot[0] === lx && x.lot[1] === ly);
+        const bas = ly % 2 === 1;   // lot du bas : face à la rue du bas
+        if (bat) this.ilotBatiment(o, bat);
+        else if (t === 'd') this.ilotArene(o);
+        else if (t === 'k') this.ilotParking(o);
+        else if (t === 'z') this.ilotZone(o, ly);
+        else if (t === 'i') this.ilotImmeubles(o, lx, ly);
+        else this.ilotMaisons(o, lx, ly, bas);
+        this.trottoirs(o, bat, t, { haut: !bas, bas, gauche: lx % 2 === 0, droite: lx % 2 === 1 });
       }
-      if (bat) this.ilotBatiment(o, bat);
-      else if (type === 'p') this.ilotParc(o);
-      else if (type === 'd') this.ilotArene(o);
-      else if (type === 'k') this.ilotParking(o);
-      else if (type === 'q') this.ilotPort(o, bx);
-      else if (type === 'i') this.ilotImmeubles(o, bx, by);
-      else this.ilotMaisons(o, bx, by);
-      this.trottoirs(o, bat, type);
+    }
+    // Terre-pleins des boulevards : on ne les franchit pas.
+    const R = RESEAU;
+    for (let k = 0; k <= R.N; k++) {
+      if (R.voies(k) < 2) continue;
+      for (let s = 0; s < R.N; s++) {
+        const a = R.X[s] + R.L[s] + 20, l = R.X[s + 1] - 20 - a, m = R.X[k] + R.L[k] / 2 - 8;
+        if (R.H[k][s]) this.ajouter({ type: 'rect', x: a, y: m, w: l, h: 16, terrePlein: true });
+        if (R.V[k][s]) this.ajouter({ type: 'rect', x: m, y: a, w: 16, h: l, terrePlein: true });
+      }
     }
     this.indexer();
   }
 
+  /** Place la voiture sur la route devant une porte, voie de droite (vers l'ouest : on sort côté nord). */
+  placerDevant(p) {
+    const by = RESEAU.blocA(p.y);
+    const k = by + 1;
+    this.voiture.placer(p.x + p.w / 2, RESEAU.voie(2, k, 0), Math.PI);
+    this.voiture.vx = 0; this.voiture.vy = 0;
+    this.attente = true;
+    // Personne pile devant la porte : la circulation proche repart plus loin sur sa route.
+    for (const t of this.trafic?.voitures || []) {
+      if (Math.hypot(t.x - this.voiture.x, t.y - this.voiture.y) > 180) continue;
+      if (t.dir % 2 === 0) t.x += (t.x < this.voiture.x ? -1 : 1) * 260; else t.y += (t.y < this.voiture.y ? -1 : 1) * 260;
+      t.v = 0;
+    }
+  }
+
   ajouter(ob) { this.obstacles.push(ob); return ob; }
-  dessin(y, f) { this.statiques.push({ y, dessin: f, b: this.zone }); }
+  dessin(y, f, b = this.zone) { this.statiques.push({ y, dessin: f, b }); }
 
   /** Pelouse d'un îlot (sous tout le reste). */
   pelouse(o, couleur = '#84c669') {
@@ -241,7 +321,7 @@ export class Ville {
     this.dessin(o.y + 40, (c) => fleurs(c, o.x + 60, o.y + 20, bat.id.length));
   }
 
-  ilotMaisons(o, bx, by) {
+  ilotMaisons(o, bx, by, surRue = true) {
     this.pelouse(o);
     // Deux maisons en bas (porte sur le trottoir), jardins et arbres derrière.
     for (let i = 0; i < 2; i++) {
@@ -251,7 +331,7 @@ export class Ville {
       const x = o.x + 8 + i * 80, y = o.y + TAILLE_ILOT - 6 - 64;
       const m = this.ajouter({ type: 'rect', x, y, w: 64, h: 64 });
       this.dessin(m.y + m.h, (c) => maisonModerne(c, m.x, m.y, m.w, toit, facade));
-      this.maisons.push({ x: x + 32, y: o.y + TAILLE_ILOT + 8 });
+      if (surRue) this.maisons.push({ x: x + 32, y: o.y + TAILLE_ILOT + 8 });   // on livre depuis la rue
       this.arbre(x + (r < 0.5 ? 14 : 50), o.y + 40, r < 0.3 ? 4 : r < 0.6 ? 16 : 28);
       this.dessin(o.y + 50, (c) => fleurs(c, x + 20, o.y + 52, i + bx));
     }
@@ -281,28 +361,120 @@ export class Ville {
     }
   }
 
-  ilotParc(o) {
-    this.pelouse(o);
-    const a = this.alea;
-    const bassin = this.ajouter({ type: 'rect', x: o.x + 40, y: o.y + 48, w: 80, h: 48, eau: true });
-    this.dessin(0, (c) => {
-      // Allées de gravier en croix, bassin bordé de pierre.
-      c.fillStyle = '#ead9ab'; c.fillRect(o.x + 72, o.y, 16, TAILLE_ILOT); c.fillRect(o.x, o.y + 120, TAILLE_ILOT, 14);
-      c.fillStyle = CONTOUR; c.fillRect(bassin.x - 3, bassin.y - 3, bassin.w + 6, bassin.h + 6);
-      c.fillStyle = '#c0cbdc'; c.fillRect(bassin.x - 2, bassin.y - 2, bassin.w + 4, bassin.h + 4);
-      c.fillStyle = '#75e3ff'; c.fillRect(bassin.x, bassin.y, bassin.w, bassin.h);
-      c.fillStyle = '#d9f7ff'; c.fillRect(bassin.x + 10, bassin.y + 12, 12, 2); c.fillRect(bassin.x + 46, bassin.y + 30, 14, 2);
+  /**
+   * Parc de ville (un ou deux pâtés) : pelouse, allées de gravier en croix,
+   * fontaine au milieu, arbres, bancs et massifs. r : la cellule (bord compris).
+   */
+  parc(r, graine) {
+    const i = { x: r.x + 16, y: r.y + 16, w: r.w - 32, h: r.h - 32 };
+    const cx = i.x + i.w / 2, cy = i.y + i.h / 2;
+    this.dessin(-1, (c) => {
+      c.fillStyle = '#7fc464'; c.fillRect(i.x, i.y, i.w, i.h);
+      for (let k = 0; k < Math.round(i.w * i.h / 4000); k++) tuileTiny(c, this.tiny, 'town', k % 3 === 0 ? 2 : 1, i.x + 6 + hash2(graine, k, 3) * (i.w - 22), i.y + 6 + hash2(k, graine, 5) * (i.h - 22));
+      // Allées en croix et tour de la fontaine.
+      c.fillStyle = '#ead9ab';
+      c.fillRect(i.x, cy - 8, i.w, 16); c.fillRect(cx - 8, i.y, 16, i.h);
+      c.fillRect(cx - 34, cy - 30, 68, 60);
     });
-    for (let i = 0; i < 12; i++) {
-      const x = o.x + 12 + a() * (TAILLE_ILOT - 24), y = o.y + 18 + a() * (TAILLE_ILOT - 28);
-      if (x > bassin.x - 14 && x < bassin.x + bassin.w + 14 && y > bassin.y - 8 && y < bassin.y + bassin.h + 20) continue;
-      if (Math.abs(x - (o.x + 80)) < 18 || Math.abs(y - (o.y + 127)) < 18) continue;
-      this.arbre(x, y, [4, 16, 28, 3, 27][Math.floor(a() * 5)]);
+    this.ajouter({ type: 'rect', x: cx - 20, y: cy - 16, w: 40, h: 30, eau: true });
+    this.dessin(cy + 14, (c) => {
+      c.fillStyle = CONTOUR; c.fillRect(cx - 21, cy - 17, 42, 32);
+      c.fillStyle = '#c0cbdc'; c.fillRect(cx - 20, cy - 16, 40, 30);
+      c.fillStyle = '#75e3ff'; c.fillRect(cx - 16, cy - 12, 32, 22);
+      c.fillStyle = '#d9f7ff'; c.fillRect(cx - 2, cy - 22, 4, 14); c.fillRect(cx - 6, cy - 12, 12, 2);
+    });
+    // Arbres le long des bords, loin des allées et de la fontaine.
+    const a = creerAlea(graine * 31 + 7);
+    for (let k = 0; k < Math.round(i.w * i.h / 1500); k++) {
+      const x = i.x + 12 + a() * (i.w - 24), y = i.y + 20 + a() * (i.h - 28);
+      if (Math.abs(x - cx) < 22 || Math.abs(y - cy) < 22) continue;
+      if (Math.abs(x - cx) < 46 && Math.abs(y - cy) < 42) continue;
+      this.arbre(x, y, [4, 16, 28, 3, 27, 15][Math.floor(a() * 6)]);
     }
-    for (const dx of [36, 124]) {
-      this.ajouter({ type: 'cercle', x: o.x + dx, y: o.y + 113, r: 6 });
-      this.dessin(o.y + 118, (c) => banc(c, o.x + dx, o.y + 118));
+    for (const [dx, dy] of [[-56, -14], [56, -14], [-56, 28], [56, 28]]) {
+      this.ajouter({ type: 'cercle', x: cx + dx, y: cy + dy - 5, r: 6 });
+      this.dessin(cy + dy, (c) => banc(c, cx + dx, cy + dy));
     }
+    this.dessin(i.y + 30, (c) => { fleurs(c, i.x + 20, i.y + 14, graine); fleurs(c, i.x + i.w - 40, i.y + i.h - 30, graine + 1); });
+    this.lampes.push({ x: cx - 30, y: cy - 60 }, { x: cx + 30, y: cy + 4 });
+  }
+
+  /**
+   * Le parc du lac : un grand lac aux rives douces au milieu d'un parc de
+   * quatre pâtés, une plage, un ponton à pédalos, une allée qui en fait le
+   * tour, des arbres et des bancs. Le lac est solide (on ne roule pas dans l'eau).
+   */
+  parcDuLac(r) {
+    const i = { x: r.x + 16, y: r.y + 16, w: r.w - 32, h: r.h - 32 };
+    const cx = i.x + i.w / 2, cy = i.y + i.h / 2 + 8;
+    const rx = i.w / 2 - 78, ry = i.h / 2 - 82;
+    // Bandes horizontales de 8 px : un ovale en escalier, à la manière des tuiles.
+    const bandes = [];
+    for (let y = -ry; y < ry; y += 8) {
+      const t = (y + 4) / ry;
+      const demi = Math.round((rx * Math.sqrt(Math.max(0, 1 - t * t))) / 8) * 8;
+      if (demi > 0) bandes.push({ y: cy + y, demi });
+    }
+    this.dessin(-1, (c) => {
+      c.fillStyle = '#7fc464'; c.fillRect(i.x, i.y, i.w, i.h);
+      for (let k = 0; k < 40; k++) tuileTiny(c, this.tiny, 'town', k % 3 === 0 ? 2 : 1, i.x + 6 + hash2(k, 3, 11) * (i.w - 22), i.y + 6 + hash2(5, k, 13) * (i.h - 22));
+      // L'allée qui fait le tour du lac, puis la rive de sable, puis l'eau.
+      for (const b of bandes) { c.fillStyle = '#ead9ab'; c.fillRect(cx - b.demi - 30, b.y - 6, (b.demi + 30) * 2, 20); }
+      c.fillStyle = '#ead9ab'; c.fillRect(cx - 8, i.y, 16, cy - ry - i.y); c.fillRect(i.x, cy - 8, i.w, 16);
+      c.fillStyle = '#7fc464';
+      for (const b of bandes) c.fillRect(cx - b.demi - 14, b.y - 2, (b.demi + 14) * 2, 12);
+      for (const b of bandes) { c.fillStyle = '#f3dca2'; c.fillRect(cx - b.demi - 6, b.y, (b.demi + 6) * 2, 8); }
+      for (const b of bandes) { c.fillStyle = '#75e3ff'; c.fillRect(cx - b.demi, b.y, b.demi * 2, 8); }
+      c.fillStyle = '#5fd0f0';
+      for (let k = 0; k < 14; k++) c.fillRect(cx - rx * 0.7 + hash2(k, 1, 17) * rx * 1.4, cy - ry * 0.6 + hash2(1, k, 19) * ry * 1.2, 10, 2);
+      c.fillStyle = '#d9f7ff';
+      for (let k = 0; k < 10; k++) c.fillRect(cx - rx * 0.6 + hash2(k, 2, 23) * rx * 1.2, cy - ry * 0.5 + hash2(2, k, 29) * ry, 6, 1);
+      // Nénuphars près de la rive est.
+      for (let k = 0; k < 5; k++) {
+        const nx = cx + rx * 0.55 + hash2(k, 4, 31) * 20, ny = cy - 20 + k * 12;
+        c.fillStyle = CONTOUR; c.fillRect(nx - 5, ny - 3, 10, 7);
+        c.fillStyle = '#3fa34d'; c.fillRect(nx - 4, ny - 2, 8, 5);
+        if (k % 2) { c.fillStyle = '#e86ca6'; c.fillRect(nx - 1, ny - 1, 2, 2); }
+      }
+    });
+    for (const b of bandes) this.ajouter({ type: 'rect', x: cx - b.demi, y: b.y, w: b.demi * 2, h: 8, eau: true });
+    this.eaux.push({ x: cx - rx, y: cy - ry, w: rx * 2, h: ry * 2 });
+    this.canards.push({ x: cx - 30, y: cy - 10, phase: 1 }, { x: cx + 40, y: cy + 30, phase: 4 });
+    // Ponton à pédalos au sud du lac.
+    const py = cy + ry - 10;
+    this.dessin(py + 30, (c) => {
+      c.fillStyle = CONTOUR; c.fillRect(cx - 9, py - 2, 18, 34);
+      c.fillStyle = '#c98a55'; c.fillRect(cx - 8, py - 1, 16, 32);
+      c.fillStyle = '#a86e40'; for (let k = 0; k < 32; k += 5) c.fillRect(cx - 8, py - 1 + k, 16, 1);
+      for (const [dx, coul] of [[-26, '#e4432d'], [22, '#f2c14e']]) {
+        c.fillStyle = CONTOUR; c.fillRect(cx + dx - 1, py + 3, 14, 12);
+        c.fillStyle = coul; c.fillRect(cx + dx, py + 4, 12, 10);
+        c.fillStyle = '#f4f6fb'; c.fillRect(cx + dx + 3, py + 6, 6, 4);
+      }
+    });
+    // Arbres tout autour, hors de l'allée ; bancs face à l'eau.
+    const a = creerAlea(991);
+    for (let k = 0; k < 70; k++) {
+      const x = i.x + 12 + a() * (i.w - 24), y = i.y + 18 + a() * (i.h - 26);
+      const dx = (x - cx) / (rx + 46), dy = (y - cy) / (ry + 44);
+      if (dx * dx + dy * dy < 1) continue;
+      if (Math.abs(x - cx) < 20 || Math.abs(y - cy) < 20) continue;
+      this.arbre(x, y, [4, 16, 28, 16, 3, 15][Math.floor(a() * 6)]);
+    }
+    for (const [dx, dy] of [[-rx - 26, -30], [rx + 26, -30], [-rx - 26, 40], [rx + 26, 40]]) {
+      this.ajouter({ type: 'cercle', x: cx + dx, y: cy + dy - 5, r: 6 });
+      this.dessin(cy + dy, (c) => banc(c, cx + dx, cy + dy));
+    }
+    // Un marchand de glaces sur l'allée nord.
+    const gx = cx + 40, gy = cy - ry - 20;
+    this.ajouter({ type: 'rect', x: gx - 12, y: gy - 14, w: 24, h: 14 });
+    this.dessin(gy, (c) => {
+      c.fillStyle = CONTOUR; c.fillRect(gx - 13, gy - 24, 26, 24);
+      c.fillStyle = '#f4f6fb'; c.fillRect(gx - 12, gy - 14, 24, 13);
+      c.fillStyle = '#e86ca6'; for (let k = 0; k < 24; k += 6) c.fillRect(gx - 12 + k, gy - 23, 3, 8);
+      c.fillStyle = '#f4f6fb'; for (let k = 3; k < 24; k += 6) c.fillRect(gx - 12 + k, gy - 23, 3, 8);
+    });
+    this.gens.push({ x: gx + 20, y: gy + 2, tenue: tenue(17), dir: 'face' }, { x: cx - 60, y: cy + ry + 26, tenue: tenue(23), dir: 'dos' });
   }
 
   /** Arène de drift : un grand parking vide, des cônes autour. */
@@ -332,19 +504,23 @@ export class Ville {
     }
   }
 
-  /** Port : entrepôt, conteneurs en rangées, allées entre eux. */
-  ilotPort(o, bx) {
-    this.dessin(-1, (c) => { c.fillStyle = '#c0cbdc'; c.fillRect(o.x, o.y, TAILLE_ILOT, TAILLE_ILOT); });
+  /** Zone d'activités, en bordure de ville : entrepôts, conteneurs, camionnettes. */
+  ilotZone(o, by) {
+    this.dessin(-1, (c) => {
+      c.fillStyle = '#b8c0cf'; c.fillRect(o.x, o.y, TAILLE_ILOT, TAILLE_ILOT);
+      c.fillStyle = '#e8e4d6'; for (let x = o.x + 10; x < o.x + TAILLE_ILOT - 10; x += 30) c.fillRect(x, o.y + TAILLE_ILOT - 8, 16, 2);
+    });
     const couleurs = ['#e4432d', '#2f6fdb', '#3fa34d', '#f39c33'];
-    if (bx % 2 === 0) {
+    const entrepot = by % 2 === 0;
+    if (entrepot) {
       const m = this.ajouter({ type: 'rect', x: o.x + 8, y: o.y + 6, w: TAILLE_ILOT - 16, h: hauteurBatiment(1) });
-      this.dessin(m.y + m.h, (c) => batimentModerne(c, m.x, m.y, m.w, 1, { facade: '#aab4c8', toit: '#8b9bb4', garage: true }));
+      this.dessin(m.y + m.h, (c) => batimentModerne(c, m.x, m.y, m.w, 1, { facade: '#aab4c8', toit: '#8b9bb4', garage: true, enseigne: '#5c6278', nom: 'ENTREPÔT' }));
     }
-    const y0 = bx % 2 === 0 ? o.y + 100 : o.y + 20;
+    const y0 = entrepot ? o.y + 100 : o.y + 20;
     for (let i = 0; i < 4; i++) {
-      for (let j = 0; j < (bx % 2 === 0 ? 1 : 2); j++) {
+      for (let j = 0; j < (entrepot ? 1 : 2); j++) {
         const x = o.x + 8 + i * 38, y = y0 + j * 64;
-        const coul = couleurs[(i + j + bx) % 4];
+        const coul = couleurs[(i + j + by) % 4];
         const r = this.ajouter({ type: 'rect', x, y, w: 32, h: 44 });
         this.dessin(r.y + r.h, (c) => conteneur(c, r.x, r.y, coul));
       }
@@ -360,7 +536,21 @@ export class Ville {
   }
 
   /** Mobilier du trottoir : lampadaires, poubelles, bornes ; jamais devant une porte. */
-  trottoirs(o, bat, type) {
+  /** La cour au milieu d'un pâté de ville : pelouse, allées, quelques arbres. */
+  cour(o, g) {
+    const w = LOT * 2 + COUR;
+    this.dessin(-2, (c) => {
+      c.fillStyle = '#8fcf6f'; c.fillRect(o.x, o.y, w, w);
+      c.fillStyle = '#ead9ab'; c.fillRect(o.x + LOT + 8, o.y, COUR - 16, w); c.fillRect(o.x, o.y + LOT + 8, w, COUR - 16);
+    });
+    for (const [dx, dy] of [[LOT + COUR / 2 - 30, LOT + COUR / 2 + 6], [LOT + COUR / 2 + 30, LOT + COUR / 2 + 6]]) {
+      if (hash2(g, dx, 7) < 0.3) continue;
+      this.arbre(o.x + dx, o.y + dy, [16, 28, 4][Math.floor(hash2(g, dy, dx) * 3)]);
+    }
+  }
+
+  /** Mobilier du trottoir sur les côtés du lot qui donnent sur la rue (cotes). */
+  trottoirs(o, bat, type, cotesRue = { haut: true, bas: true, gauche: true, droite: true }) {
     const a = this.alea;
     const cotes = [
       (s) => ({ x: o.x + s, y: o.y - 3 }),                       // trottoir du haut
@@ -368,7 +558,9 @@ export class Ville {
       (s) => ({ x: o.x - 8, y: o.y + s }),
       (s) => ({ x: o.x + TAILLE_ILOT + 8, y: o.y + s }),
     ];
+    const ouverts = [cotesRue.haut, cotesRue.bas, cotesRue.gauche, cotesRue.droite];
     cotes.forEach((pos, ci) => {
+      if (!ouverts[ci]) return;
       // Les coins restent libres pour les feux et les passages piétons.
       for (let s = 48; s < TAILLE_ILOT - 32; s += 32) {
         if (type === 'd') continue;   // l'arène reste ouverte de tous côtés
@@ -420,27 +612,31 @@ export class Ville {
 
   semerDuJour() {
     const a = this.aleaJour;
+    const R = RESEAU;
     this.bonus = [];
-    for (let k = 0; k <= ILOTS; k++) {
-      const milieu = k * PAS_RUE + LARGEUR_RUE / 2;
-      for (let s = 80; s < TAILLE_VILLE - 80; s += 140 + a() * 160) {
-        if ((s % PAS_RUE) < LARGEUR_RUE + 8) continue;   // pas dans les carrefours
-        const horizontal = a() < 0.5;
-        if (a() < 0.15) { this.bonus.push({ type: 'disque', x: horizontal ? s : milieu, y: horizontal ? milieu : s, pris: false }); continue; }
-        for (let i = 0; i < 3; i++) {
-          const d = s + i * 22;
-          this.bonus.push({ type: 'piece', x: horizontal ? d : milieu, y: horizontal ? milieu : d, pris: false });
-        }
+    // Pièces et disquettes sur les voies, au milieu des tronçons (jamais dans un carrefour).
+    for (let k = 0; k <= R.N; k++) for (let t = 0; t < R.N; t++) {
+      for (const horizontal of [true, false]) {
+        if (!(horizontal ? R.H[k][t] : R.V[k][t]) || a() < 0.45) continue;
+        const debut = R.X[t] + R.L[t] + 40, fin = R.X[t + 1] - 40;
+        const dir = horizontal ? (a() < 0.5 ? 0 : 2) : (a() < 0.5 ? 1 : 3);
+        const travers = R.voie(dir, k, Math.floor(a() * R.voies(k)));
+        const s0 = debut + a() * Math.max(0, fin - debut - 50);
+        const point = (d) => (horizontal ? { x: d, y: travers } : { x: travers, y: d });
+        if (a() < 0.18) { this.bonus.push({ type: 'disque', ...point(s0), pris: false }); continue; }
+        for (let i = 0; i < 3; i++) this.bonus.push({ type: 'piece', ...point(s0 + i * 22), pris: false });
       }
     }
+    // Fans : huit sur les trottoirs de la ville, trois au bord des routes de campagne.
     this.fans = [];
-    for (let i = 0, essais = 0; i < 11 && essais < 500; essais++) {
-      // Huit fans en ville, trois au bord des routes de campagne.
-      const bx = Math.floor(a() * ILOTS), by = Math.floor(a() * ILOTS);
-      if (i < 8 ? !estUrbain(bx, by) : estUrbain(bx, by) || typeIlot(bx, by) === 'E') continue;
+    for (let i = 0, essais = 0; i < 11 && essais < 800; essais++) {
+      const bx = Math.floor(a() * N), by = Math.floor(a() * N);
+      if (i < 8 ? !estUrbain(bx, by) : estUrbain(bx, by)) continue;
+      if (!R.bords(bx, by).bas || typeIlot(bx, by) === 'B') continue;
+      const cel = R.cellule(bx, by);
+      const x = cel.x + 30 + a() * (cel.w - 60), y = cel.y + cel.h - 2;
+      if (!this.libre(x, y - 4, 6)) continue;
       i++;
-      const o = origineIlot(bx, by);
-      const x = o.x + 20 + a() * (TAILLE_ILOT - 40), y = o.y + TAILLE_ILOT + 14;
       this.fans.push({ x, y, base: PERSONNAGES[Math.floor(a() * PERSONNAGES.length)], tenue: tenue(Math.floor(a() * 60)), content: 0, vu: false });
     }
   }
@@ -448,48 +644,50 @@ export class Ville {
   // --- Défis -----------------------------------------------------------------------------
 
   preparerDefis() {
-    // Carrefour (kx, ky) du vieux centre (décalé de C0) ou de la grande carte.
-    const c = (kx, ky) => centreCarrefour(kx + C0, ky + C0);
-    const g = centreCarrefour;
-    const P0 = C0 * PAS_RUE;
+    const c = centreCarrefour;
+    const R = RESEAU;
+    // Point sur la voie de droite d'un tronçon : ligne k, entre les carrefours s et s + 1.
+    const surVoie = (horizontal, k, s, dir, f = 0.5) => {
+      const d = R.X[s] + R.L[s] + f * (R.X[s + 1] - R.X[s] - R.L[s]);
+      return horizontal ? { x: d, y: R.voie(dir, k, 0) } : { x: R.voie(dir, k, 0), y: d };
+    };
     this.defis = [
-      { id: 'sprint-nord', type: 'sprint', nom: 'Sprint du Nord', ...c(1, 1), etapes: [c(5, 1), c(5, 3), c(3, 0)] },
-      { id: 'sprint-port', type: 'sprint', nom: 'Sprint du Port', ...c(4, 4), etapes: [c(0, 5), c(6, 5), c(6, 4)] },
-      { id: 'sprint-centre', type: 'sprint', nom: 'Tour du Centre', ...c(2, 5), etapes: [c(1, 2), c(4, 2), c(4, 5)] },
-      { id: 'livraison', type: 'livraison', nom: 'Livraison express', x: P0 + 3 * PAS_RUE + LARGEUR_RUE + 96, y: P0 + 4 * PAS_RUE + LARGEUR_RUE / 2 },
-      { id: 'livraison-2', type: 'livraison', nom: 'Colis du port', x: P0 + 1 * PAS_RUE + LARGEUR_RUE + 96, y: P0 + 5 * PAS_RUE + LARGEUR_RUE / 2 },
+      { id: 'sprint-nord', type: 'sprint', nom: 'Sprint du Nord', ...c(4, 4), etapes: [c(7, 4), c(7, 3), c(3, 3)] },
+      { id: 'sprint-port', type: 'sprint', nom: 'Le grand périphérique', ...c(5, 7), etapes: [c(3, 7), c(3, 3), c(7, 3), c(7, 7)] },
+      { id: 'sprint-centre', type: 'sprint', nom: 'Tour du Centre', ...c(4, 6), etapes: [c(4, 4), c(6, 4), c(6, 6)] },
+      { id: 'livraison', type: 'livraison', nom: 'Livraison express', ...surVoie(true, 5, 4, 0) },
+      { id: 'livraison-2', type: 'livraison', nom: 'Colis de la zone', ...surVoie(false, 7, 3, 1) },
       { id: 'drift', type: 'drift', nom: 'Arène de drift', x: this.arene.x + 80, y: this.arene.y + 136 },
       // À la campagne.
-      { id: 'rallye', type: 'sprint', nom: 'Rallye des moissons', ...g(2, 2), etapes: [g(2, 12), g(12, 12), g(12, 9)] },
-      { id: 'tour-lac', type: 'sprint', nom: 'Tour du lac', ...g(3, 10), etapes: [g(3, 12), g(11, 12), g(11, 10)] },
-      { id: 'oeufs', type: 'livraison', nom: 'Œufs frais', vers: 'ferme', x: g(11, 3).x, y: g(11, 3).y + LARGEUR_RUE / 2 + 120 },
+      { id: 'rallye', type: 'sprint', nom: 'Rallye des moissons', ...c(3, 1), etapes: [c(1, 1), c(1, 9), c(5, 9)] },
+      { id: 'tour-lac', type: 'sprint', nom: 'Tour du parc du lac', ...c(5, 6), etapes: [c(7, 6), c(7, 7), c(5, 7)] },
+      { id: 'oeufs', type: 'livraison', vers: 'ferme', nom: 'Œufs frais', ...surVoie(false, 7, 1, 1) },
     ];
     for (const d of this.defis) d.fait = false;
-    // Radars de vitesse sur de longues lignes droites (trois en ville, deux à la campagne).
+    // Radars de vitesse sur de longues lignes droites : boulevards et routes de campagne.
     this.radars = [
-      { id: 'radar-a', x: P0 + 1 * PAS_RUE + LARGEUR_RUE + 96, y: P0 + 3 * PAS_RUE + 72 },
-      { id: 'radar-b', x: P0 + 5 * PAS_RUE + 72, y: P0 + 2 * PAS_RUE + LARGEUR_RUE + 96 },
-      { id: 'radar-c', x: P0 + 3 * PAS_RUE + LARGEUR_RUE + 96, y: P0 + 1 * PAS_RUE + 24 },
-      { id: 'radar-champs', x: 6 * PAS_RUE + LARGEUR_RUE + 96, y: 1 * PAS_RUE + 72 },
-      { id: 'radar-bois', x: 13 * PAS_RUE + 24, y: 6 * PAS_RUE + LARGEUR_RUE + 96 },
+      { id: 'radar-a', ...surVoie(true, 5, 3, 0) },
+      { id: 'radar-b', ...surVoie(false, 5, 6, 1) },
+      { id: 'radar-c', ...surVoie(true, 3, 4, 2) },
+      { id: 'radar-champs', ...surVoie(true, 1, 3, 0) },
+      { id: 'radar-bois', ...surVoie(false, 9, 4, 3) },
     ].map((r) => ({ ...r, attente: 0 }));
     // Caméras de feu rouge (en ville seulement).
-    this.cameras = [[2, 2], [3, 3], [4, 2], [1, 4], [5, 5]].map(([kx, ky]) => ({ kx: kx + C0, ky: ky + C0 }));
+    this.cameras = [[4, 4], [5, 5], [6, 4], [4, 6], [5, 3], [7, 5], [3, 5]].map(([kx, ky]) => ({ kx, ky }));
     // Affiches Piston : toujours aux mêmes endroits, cachées dans les coins tranquilles ;
     // sept en ville, cinq à la campagne.
     const a = creerAlea(GRAINE_PLAN + 1);
     this.affiches = [];
     let essais = 0;
-    const zones = ['p', 'q', 'm', 'i', 'k', 'C', 'F', 'P', 'V', 'B', 'H', 'S', 'W'];
-    while (this.affiches.length < AFFICHES && essais++ < 4000) {
-      const bx = Math.floor(a() * ILOTS), by = Math.floor(a() * ILOTS);
-      if (!zones.includes(PLAN[by][bx])) continue;
+    while (this.affiches.length < AFFICHES && essais++ < 6000) {
+      const bx = Math.floor(a() * N), by = Math.floor(a() * N);
       const enVille = estUrbain(bx, by);
       const nVille = this.affiches.filter((f) => f.ville).length;
       if (enVille ? nVille >= 7 : this.affiches.length - nVille >= AFFICHES - 7) continue;
-      if (this.affiches.some((f) => f.bx === bx && f.by === by)) continue;
-      const o = origineIlot(bx, by);
-      const x = o.x + 12 + a() * (TAILLE_ILOT - 24), y = o.y + 12 + a() * (TAILLE_ILOT - 24);
+      if (typeIlot(bx, by) === 'B' && a() < 0.7) continue;   // un peu moins souvent dans la forêt
+      const cel = RESEAU.cellule(bx, by);
+      const x = cel.x + 24 + a() * (cel.w - 48), y = cel.y + 24 + a() * (cel.h - 48);
+      if (this.affiches.some((f) => Math.hypot(f.x - x, f.y - y) < 300)) continue;
       if (!this.libre(x, y, 12)) continue;
       this.affiches.push({ id: `affiche-${this.affiches.length + 1}`, x, y, bx, by, ville: enVille });
     }
@@ -593,7 +791,7 @@ export class Ville {
 
   maj(dt, entrees) {
     if (this.fini || this.entree) return;
-    this.temps += dt;
+    if (!this.attente) this.temps += dt;   // l'heure ne file pas tant qu'on n'a pas démarré
     const v = this.voiture;
     v.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
     const deux = entrees.gauche && entrees.droite;
@@ -610,6 +808,11 @@ export class Ville {
     } else this.coince = 0;
     v.recul = this.reculAuto > 0 || (deux && (v.vitesse < 8 || this.tenuDeux > 0.6) && this.tenuDeux > 0.25);
     v.frein = deux && !v.recul ? 1 : 0;
+    // À la sortie d'un bâtiment, la voiture attend qu'on touche l'écran pour démarrer.
+    if (this.attente) {
+      if (entrees.gauche || entrees.droite) this.attente = false;
+      else { v.frein = 1; v.recul = false; }
+    }
     this.contact = false;
     v.maj(dt, true);
     // Dans un champ : la terre freine et secoue un peu.
@@ -768,7 +971,7 @@ export class Ville {
     this.entree = null;
     if (!p) return;
     // En sortant, on reprend la voie de droite de la rue, dans le sens de la circulation.
-    this.voiture.placer(p.x + p.w / 2, p.y + p.h + 72, 0);
+    this.placerDevant(p);
   }
 
   message(texteMsg, couleur, ancre) {
@@ -826,57 +1029,68 @@ export class Ville {
     }
   }
 
-  /** Sol : pelouse, rues (bitume), trottoirs en ville, bas-côtés d'herbe à la campagne. */
+  /** Sol : pelouse, routes (bitume), trottoirs en ville, bas-côtés d'herbe à la campagne. */
   peindreSol(c, x0, y0, x1, y1) {
-    c.fillStyle = '#84c669'; c.fillRect(x0, y0, MORCEAU, MORCEAU);
-    const BITUME = '#52607c', TROTTOIR = '#d4d9e3';
-    for (let gy = Math.max(0, Math.floor(y0 / T)); gy < Math.min(CASES, Math.ceil(y1 / T)); gy++) {
-      for (let gx = Math.max(0, Math.floor(x0 / T)); gx < Math.min(CASES, Math.ceil(x1 / T)); gx++) {
-        const mx = gx % PERIODE, my = gy % PERIODE;
-        const rue = mx < CASES_RUE || my < CASES_RUE;
+    c.fillStyle = '#84c669'; c.fillRect(x0, y0, x1 - x0, y1 - y0);
+    const R = RESEAU;
+    for (let gy = Math.max(0, Math.floor(y0 / T)); gy < Math.min(R.cases, Math.ceil(y1 / T)); gy++) {
+      for (let gx = Math.max(0, Math.floor(x0 / T)); gx < Math.min(R.cases, Math.ceil(x1 / T)); gx++) {
+        const k = R.classer(gx, gy);
+        if (!k || k.type === 'terre') continue;
         const x = gx * T, y = gy * T;
-        if (rue) { c.fillStyle = BITUME; c.fillRect(x, y, T, T); continue; }
-        const bord = mx === CASES_RUE || mx === PERIODE - 1 || my === CASES_RUE || my === PERIODE - 1;
-        if (!bord) continue;
-        const bx = Math.floor((gx - CASES_RUE) / PERIODE), by = Math.floor((gy - CASES_RUE) / PERIODE);
-        if (estUrbain(bx, by)) {
-          c.fillStyle = TROTTOIR; c.fillRect(x, y, T, T);
+        if (k.type === 'route') { c.fillStyle = '#52607c'; c.fillRect(x, y, T, T); continue; }
+        if (estUrbain(k.bx, k.by)) {
+          c.fillStyle = '#d4d9e3'; c.fillRect(x, y, T, T);
           c.fillStyle = '#c4cad6'; c.fillRect(x + T - 1, y, 1, T); c.fillRect(x, y + T - 1, T, 1);
-        } else if (typeIlot(bx, by) !== 'E') {
-          // Bas-côté : herbe un peu plus sombre et terre tassée le long du bitume.
+          // Bordure de trottoir, côté route.
+          c.fillStyle = '#8b9bb4';
+          if (k.gauche) c.fillRect(x, y, 2, T);
+          if (k.droite) c.fillRect(x + T - 2, y, 2, T);
+          if (k.haut) c.fillRect(x, y, T, 2);
+          if (k.bas) c.fillRect(x, y + T - 2, T, 2);
+        } else {
+          // Bas-côté : herbe rase et terre tassée le long du bitume.
           c.fillStyle = '#76b35d'; c.fillRect(x, y, T, T);
           c.fillStyle = '#d9a46e';
-          if (mx === CASES_RUE) c.fillRect(x, y, 3, T);
-          if (mx === PERIODE - 1) c.fillRect(x + T - 3, y, 3, T);
-          if (my === CASES_RUE) c.fillRect(x, y, T, 3);
-          if (my === PERIODE - 1) c.fillRect(x, y + T - 3, T, 3);
+          if (k.gauche) c.fillRect(x, y, 3, T);
+          if (k.droite) c.fillRect(x + T - 3, y, 3, T);
+          if (k.haut) c.fillRect(x, y, T, 3);
+          if (k.bas) c.fillRect(x, y + T - 3, T, 3);
         }
       }
     }
   }
 
-  /** Marquages et ponts : par-dessus les pâtés (l'eau des étangs déborde sous les ponts). */
+  /** Marquages : lignes, terre-pleins, passages piétons, lignes de STOP ; zones d'entrée. */
   peindreRoutesDessus(c, x0, y0, x1, y1) {
-    const L = LARGEUR_RUE;
-    const kMin = (v) => Math.max(0, Math.floor((v - L) / PAS_RUE));
-    const kMax = (v) => Math.min(ILOTS, Math.floor(v / PAS_RUE) + 1);
-    // Tronçons horizontaux (rue ky, entre les carrefours kx et kx + 1) puis verticaux.
-    for (let ky = kMin(y0); ky <= kMax(y1); ky++) for (let kx = kMin(x0); kx < Math.min(ILOTS, kMax(x1) + 1); kx++) {
-      this.troncon(c, kx * PAS_RUE + L, ky * PAS_RUE, PAS_RUE - L, false, [kx, ky - 1], [kx, ky]);
+    const R = RESEAU;
+    for (let k = 0; k <= R.N; k++) for (let s = 0; s < R.N; s++) {
+      for (const horizontal of [true, false]) {
+        if (!(horizontal ? R.H[k][s] : R.V[k][s])) continue;
+        const a = R.X[s] + R.L[s], l = R.X[s + 1] - a, b = R.X[k], w = R.L[k];
+        const box = horizontal ? { x: a, y: b, w: l, h: w } : { x: b, y: a, w, h: l };
+        if (box.x > x1 || box.x + box.w < x0 || box.y > y1 || box.y + box.h < y0) continue;
+        const ville = horizontal ? (estUrbain(s, k - 1) || estUrbain(s, k)) : (estUrbain(k - 1, s) || estUrbain(k, s));
+        this.marquages(c, a, l, b, w, horizontal, ville);
+      }
     }
-    for (let kx = kMin(x0); kx <= kMax(x1); kx++) for (let ky = kMin(y0); ky < Math.min(ILOTS, kMax(y1) + 1); ky++) {
-      this.troncon(c, kx * PAS_RUE, ky * PAS_RUE + L, PAS_RUE - L, true, [kx - 1, ky], [kx, ky]);
-    }
-    // Passages piétons des carrefours de ville.
-    c.fillStyle = '#f4f6fb';
-    for (let kx = kMin(x0); kx <= kMax(x1); kx++) for (let ky = kMin(y0); ky <= kMax(y1); ky++) {
-      if (!carrefourUrbain(kx, ky)) continue;
-      const cx = kx * PAS_RUE, cy = ky * PAS_RUE;
-      for (let i = 4; i < L - 4; i += 12) {
-        if (ky < ILOTS && estUrbainCote(kx, ky, 'bas')) c.fillRect(cx + i, cy + L + 2, 7, 13);
-        if (ky > 0 && estUrbainCote(kx, ky, 'haut')) c.fillRect(cx + i, cy - 15, 7, 13);
-        if (kx < ILOTS && estUrbainCote(kx, ky, 'droite')) c.fillRect(cx + L + 2, cy + i, 13, 7);
-        if (kx > 0 && estUrbainCote(kx, ky, 'gauche')) c.fillRect(cx - 15, cy + i, 13, 7);
+    for (let kx = 0; kx <= R.N; kx++) for (let ky = 0; ky <= R.N; ky++) {
+      if (!R.croisement(kx, ky)) continue;
+      const q = R.carre(kx, ky);
+      if (q.x > x1 + 40 || q.x + q.w < x0 - 40 || q.y > y1 + 40 || q.y + q.h < y0 - 40) continue;
+      const [e, su, o, no] = R.branches(kx, ky);
+      c.fillStyle = '#f4f6fb';
+      if (carrefourUrbain(kx, ky)) {
+        // Passages piétons sur chaque branche, au ras du carrefour.
+        for (let i = 4; i < q.w - 4; i += 12) { if (no) c.fillRect(q.x + i, q.y - 15, 7, 13); if (su) c.fillRect(q.x + i, q.y + q.h + 2, 7, 13); }
+        for (let i = 4; i < q.h - 4; i += 12) { if (o) c.fillRect(q.x - 15, q.y + i, 13, 7); if (e) c.fillRect(q.x + q.w + 2, q.y + i, 13, 7); }
+      } else if (this.feux.prioriteHorizontale(kx, ky)) {
+        // STOP : ligne blanche sur la moitié qui arrive.
+        if (no) c.fillRect(q.x + 4, q.y - 6, q.w / 2 - 8, 4);
+        if (su) c.fillRect(q.x + q.w / 2 + 4, q.y + q.h + 2, q.w / 2 - 8, 4);
+      } else {
+        if (o) c.fillRect(q.x - 6, q.y + q.h / 2 + 4, 4, q.h / 2 - 8);
+        if (e) c.fillRect(q.x + q.w + 2, q.y + 4, 4, q.h / 2 - 8);
       }
     }
     // Zones d'entrée des bâtiments.
@@ -890,37 +1104,25 @@ export class Ville {
   }
 
   /**
-   * Un tronçon de rue entre deux carrefours : (x, y) son coin, l sa longueur,
-   * a et b les pâtés de chaque côté. En ville : bordures de trottoir et tirets ;
-   * à la campagne : lignes de rive blanches ; entre deux étangs : un pont.
+   * Marquages d'un tronçon (a : début le long de la route, l : longueur ; b, w : position
+   * et largeur en travers). Rue : tirets au milieu. Boulevard : terre-plein planté et
+   * tirets entre les deux voies de chaque sens. Campagne : lignes de rive.
    */
-  troncon(c, x, y, l, vertical, a, b) {
-    const L = LARGEUR_RUE;
-    const ua = estUrbain(...a), ub = estUrbain(...b);
-    const ea = typeIlot(...a) === 'E', eb = typeIlot(...b) === 'E';
-    const ville = ua || ub;
-    const rect = (px, py, w, h) => (vertical ? c.fillRect(x + py, y + px, h, w) : c.fillRect(x + px, y + py, w, h));
-    if (ville) {
-      c.fillStyle = '#8b9bb4';
-      if (ua && a[vertical ? 0 : 1] >= 0) rect(0, -2, l, 2);
-      if (ub && b[vertical ? 0 : 1] < ILOTS) rect(0, L, l, 2);
-    } else {
-      c.fillStyle = '#e8e4d6';
-      rect(0, 5, l, 2); rect(0, L - 7, l, 2);
-    }
-    // Ligne médiane en tirets (pas dans les 18 premiers px, pour les passages piétons).
+  marquages(c, a, l, b, w, horizontal, ville) {
+    const rect = (pa, pb, la, lb) => (horizontal ? c.fillRect(a + pa, b + pb, la, lb) : c.fillRect(b + pb, a + pa, lb, la));
+    const marge = 20;
     c.fillStyle = '#e8e4d6';
-    for (let s = 18; s < l - 12; s += 24) rect(s, L / 2 - 1, 12, 2);
-    // Pont : parapets de chaque côté, au-dessus de l'eau.
-    if (ea || eb) {
-      const d = Math.min(l, l);
-      if (vertical) {
-        if (ea) parapet(c, x - 6, y, d, true);
-        if (eb) parapet(c, x + L, y, d, true);
-      } else {
-        if (ea) parapet(c, x, y - 6, d);
-        if (eb) parapet(c, x, y + L, d);
-      }
+    if (!ville) { rect(0, 5, l, 2); rect(0, w - 7, l, 2); }
+    if (w >= 13 * T) {
+      for (let p = marge; p < l - marge - 8; p += 24) { rect(p, 47, 12, 2); rect(p, w - 49, 12, 2); }
+      // Terre-plein central : bordures, herbe et petits buissons.
+      const m = w / 2 - 8;
+      c.fillStyle = '#8b9bb4'; rect(marge, m, l - 2 * marge, 16);
+      c.fillStyle = '#7fc464'; rect(marge + 2, m + 2, l - 2 * marge - 4, 12);
+      c.fillStyle = '#5a9a4e';
+      for (let p = marge + 14; p < l - marge - 10; p += 40) rect(p, m + 4, 8, 8);
+    } else {
+      for (let p = 18; p < l - 12; p += 24) rect(p, w / 2 - 1, 12, 2);
     }
   }
 
@@ -929,20 +1131,19 @@ export class Ville {
     const canvas = document.createElement('canvas');
     canvas.width = n; canvas.height = n;
     const c = canvas.getContext('2d');
+    const R = RESEAU;
     const e = n / TAILLE_VILLE;
-    const COULEURS = { C: '#e3c36a', F: '#c2504d', P: '#8fcf6f', V: '#6fb85a', B: '#3f8a4a', E: '#75e3ff', H: '#d9b48a', S: '#e4432d', W: '#a8dc8c' };
-    c.fillStyle = '#84c669'; c.fillRect(0, 0, n, n);
-    for (let by = 0; by < ILOTS; by++) for (let bx = 0; bx < ILOTS; bx++) {
-      const t = PLAN[by][bx], o = origineIlot(bx, by);
-      c.fillStyle = COULEURS[t] || (t === 'p' ? '#8fcf6f' : t === 'q' ? '#aab4c8' : '#c9d3e6');
-      const m = t === 'E' ? T : 0;
-      c.fillRect((o.x - m) * e, (o.y - m) * e, (TAILLE_ILOT + 2 * m) * e, (TAILLE_ILOT + 2 * m) * e);
+    const VILLE_COUL = { m: '#d6c9b4', i: '#c9d3e6', p: '#8fcf6f', L: '#8fcf6f', z: '#aab4c8', k: '#aab4c8', d: '#8a6ad6', b: '#c9d3e6', '.': '#c9d3e6' };
+    const CAMP_COUL = { B: '#3f8a4a', F: '#d9b48a', C: '#e3c36a', P: '#8fcf6f', V: '#6fb85a', H: '#d6c9b4', W: '#a8dc8c', E: '#7fc464', S: '#e3c36a' };
+    for (let py = 0; py < n; py++) for (let px = 0; px < n; px++) {
+      const gx = Math.floor((px + 0.5) / e / T), gy = Math.floor((py + 0.5) / e / T);
+      const k = R.classer(gx, gy);
+      if (!k) continue;
+      if (k.type === 'route') c.fillStyle = '#52607c';
+      else { const t = typePate(k.bx, k.by); c.fillStyle = CAMP_COUL[t] || VILLE_COUL[t] || '#c9d3e6'; }
+      c.fillRect(px, py, 1, 1);
     }
-    c.fillStyle = '#52607c';
-    for (let k = 0; k <= ILOTS; k++) {
-      const m = k * PAS_RUE * e;
-      c.fillRect(m, 0, LARGEUR_RUE * e, n); c.fillRect(0, m, n, LARGEUR_RUE * e);
-    }
+    for (const ob of this.obstacles) if (ob.eau) { c.fillStyle = '#75e3ff'; c.fillRect(ob.x * e, ob.y * e, Math.max(1, ob.w * e), Math.max(1, ob.h * e)); }
     for (const ob of this.obstacles) if (ob.bat) {
       c.fillStyle = ob.bat.toit;
       c.fillRect(ob.x * e - 1, ob.y * e - 1, Math.max(3, ob.w * e + 2), Math.max(3, ob.h * e + 2));
@@ -1038,28 +1239,31 @@ export class Ville {
 
   /** Un feu sur poteau à chaque coin de carrefour, tourné vers la voie qui arrive. */
   dessinerFeux(ctx, visible) {
-    for (let kx = 0; kx <= ILOTS; kx++) for (let ky = 0; ky <= ILOTS; ky++) {
-      const x0 = kx * PAS_RUE, y0 = ky * PAS_RUE;
-      if (!visible(x0 + 48, y0 + 48, 120)) continue;
-      const L0 = LARGEUR_RUE;
+    const R = RESEAU;
+    for (let kx = 0; kx <= R.N; kx++) for (let ky = 0; ky <= R.N; ky++) {
+      if (!R.croisement(kx, ky)) continue;
+      const q = R.carre(kx, ky);
+      if (!visible(q.x + q.w / 2, q.y + q.h / 2, 140)) continue;
+      const [e, su, o, no] = R.branches(kx, ky);
+      // Les quatre coins : nord-ouest, nord-est, sud-est, sud-ouest (x, y, pâté du coin).
+      const NO = [q.x - 8, q.y - 2, kx - 1, ky - 1], NE = [q.x + q.w + 8, q.y - 2, kx, ky - 1];
+      const SE = [q.x + q.w + 8, q.y + q.h + 14, kx, ky], SO = [q.x - 8, q.y + q.h + 14, kx - 1, ky];
       if (!carrefourUrbain(kx, ky)) {
-        // À la campagne : la route est-ouest est prioritaire, un STOP sur l'autre.
-        if (ky > 0 && typeIlot(kx - 1, ky - 1) !== 'E') panneauStop(ctx, x0 - 8, y0 - 2);
-        if (ky < ILOTS && typeIlot(kx, ky) !== 'E') panneauStop(ctx, x0 + L0 + 8, y0 + L0 + 14);
+        // À la campagne : un STOP à droite de chaque route non prioritaire.
+        const pancarte = ([x, y, bx, by]) => { if (typeIlot(bx, by)) panneauStop(ctx, x, y); };
+        if (this.feux.prioriteHorizontale(kx, ky)) { if (no) pancarte(NO); if (su) pancarte(SE); } else { if (o) pancarte(SO); if (e) pancarte(NE); }
         continue;
       }
       const h = this.feux.etat(kx, ky, true, this.temps);
       const v = this.feux.etat(kx, ky, false, this.temps);
-      const L = LARGEUR_RUE;
       // Nord-ouest : ceux qui descendent ; nord-est : ceux qui vont à l'ouest ;
       // sud-est : ceux qui montent ; sud-ouest : ceux qui vont à l'est.
-      const coins = [[x0 - 8, y0 - 2, v, kx - 1, ky - 1], [x0 + L + 8, y0 - 2, h, kx, ky - 1], [x0 + L + 8, y0 + L + 14, v, kx, ky], [x0 - 8, y0 + L + 14, h, kx - 1, ky]];
-      for (const [x, y, e, bx, by] of coins) {
-        if (x < 0 || y < 0 || x > TAILLE_VILLE || y > TAILLE_VILLE || typeIlot(bx, by) === 'E') continue;   // pas de poteau dans le lac
-        feuTricolore(ctx, x, y, e);
+      for (const [[x, y, bx, by], etat, branche] of [[NO, v, no], [NE, h, e], [SE, v, su], [SO, h, o]]) {
+        if (!branche || !estUrbain(bx, by)) continue;
+        feuTricolore(ctx, x, y, etat);
       }
       if (this.cameras.some((c) => c.kx === kx && c.ky === ky)) {
-        const x = x0 + L + 8, y = y0 - 44;
+        const x = q.x + q.w + 8, y = q.y - 44;
         ctx.fillStyle = CONTOUR; ctx.fillRect(x - 6, y - 6, 12, 8);
         ctx.fillStyle = '#c0cbdc'; ctx.fillRect(x - 5, y - 5, 7, 6);
         ctx.fillStyle = '#e4432d'; ctx.fillRect(x + 3, y - 5, 2, 2);
@@ -1149,6 +1353,10 @@ export class Ville {
     ctx.fillRect(0, H - 26, W, 26);
     texte(ctx, '◀ gauche', 10, H - 13, 10, '#f4f1e8', 'left');
     texte(ctx, 'les deux : freiner / reculer', W / 2, H - 13, 9, '#cfe0ff', 'center');
+    if (this.attente && Math.sin(this.temps * 6) > -0.4) {
+      ctx.fillStyle = 'rgba(15,23,42,0.85)'; ctx.fillRect(W / 2 - 96, H - 108, 192, 26);
+      texte(ctx, 'Touche un côté pour démarrer', W / 2, H - 95, 10, '#ffe066', 'center');
+    }
     texte(ctx, 'droite ▶', W - 10, H - 13, 10, '#f4f1e8', 'right');
   }
 

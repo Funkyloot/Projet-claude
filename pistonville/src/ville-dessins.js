@@ -302,3 +302,32 @@ export function parapet(c, x, y, l, verticale = false) {
     c.fillStyle = '#8b9bb4'; for (let k = 0; k < l; k += 16) c.fillRect(x + 1, y + k, 4, 2);
   }
 }
+
+/** Église de village : nef au toit d'ardoise, clocher carré à flèche (x, y = coin haut-gauche ; 96 × 112). */
+export function eglise(c, x, y) {
+  c.fillStyle = 'rgba(38,24,46,0.25)'; c.fillRect(x + 4, y + 110, 96, 6);
+  // Nef.
+  c.fillStyle = CONTOUR; c.fillRect(x, y + 40, 64, 72);
+  c.fillStyle = '#5c6278'; c.fillRect(x + 1, y + 41, 62, 16);
+  c.fillStyle = '#6a7088'; c.fillRect(x + 1, y + 57, 62, 16);
+  c.fillStyle = CONTOUR; c.fillRect(x + 1, y + 56, 62, 1); c.fillRect(x + 1, y + 72, 62, 1);
+  c.fillStyle = '#e9e2cf'; c.fillRect(x + 1, y + 73, 62, 38);
+  c.fillStyle = '#d6cdb4'; c.fillRect(x + 1, y + 73, 62, 2);
+  for (const fx of [x + 8, x + 44]) { cadre(c, fx, y + 80, 10, 16, '#7ab3e0'); c.fillStyle = '#e4432d'; c.fillRect(fx + 2, y + 82, 6, 3); }
+  cadre(c, x + 24, y + 88, 16, 24, '#8a5a3b');
+  c.fillStyle = CONTOUR; c.fillRect(x + 31, y + 89, 2, 23);
+  // Clocher.
+  c.fillStyle = CONTOUR; c.fillRect(x + 64, y + 20, 32, 92);
+  c.fillStyle = '#e9e2cf'; c.fillRect(x + 65, y + 36, 30, 75);
+  c.fillStyle = '#d6cdb4'; c.fillRect(x + 89, y + 36, 6, 75);
+  cadre(c, x + 74, y + 48, 12, 14, '#2a2838');
+  c.fillStyle = '#f2c14e'; c.fillRect(x + 78, y + 52, 4, 6);
+  cadre(c, x + 74, y + 72, 12, 12, '#f4f6fb');
+  c.fillStyle = CONTOUR; c.fillRect(x + 79, y + 74, 1, 5); c.fillRect(x + 79, y + 78, 4, 1);
+  // Flèche et croix.
+  c.fillStyle = CONTOUR;
+  for (let k = 0; k < 16; k++) c.fillRect(x + 64 + k, y + 36 - k * 2 - 2, 32 - k * 2, 2);
+  c.fillStyle = '#5c6278';
+  for (let k = 0; k < 15; k++) c.fillRect(x + 65 + k, y + 36 - k * 2 - 1, 30 - k * 2, 1);
+  c.fillStyle = CONTOUR; c.fillRect(x + 79, y - 6, 2, 10); c.fillRect(x + 76, y - 3, 8, 2);
+}

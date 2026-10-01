@@ -32,12 +32,16 @@ doucement la voiture quand on ne touche à rien.
 
 ## Ce que contient cette version
 
-**Nouveau en 0.6** : une grande carte de 14 × 14 pâtés (environ 4 km de
-côté) : la ville au centre, son lac et ses ponts, et trois couronnes de
-campagne autour (champs, fermes, prés avec vaches et moutons, vergers, bois,
-étangs, hameaux, stations-service, éoliennes qui tournent). Routes de
-campagne avec STOP et tracteurs, deux sprints, une livraison à la ferme, deux
-radars et cinq affiches de plus à la campagne. La carte est peinte par
+**Nouveau en 0.6** : une grande carte d'environ 5 km de côté, organisée
+comme une vraie carte. La ville au centre, en grands pâtés de quatre lots
+avec une cour, entourée d'un boulevard périphérique et traversée par deux
+boulevards à 2 × 2 voies avec terre-plein ; le lac au fond d'un grand parc ;
+la zone d'activités en bordure. Autour, la campagne en grandes parcelles le
+long d'une boucle de routes départementales : champs découpés en cultures,
+deux fermes, un village avec église, place et marché, prés, vergers, parc
+éolien, étang, station-service ; la forêt au bord de la carte. Feux en ville,
+STOP à la campagne, tracteurs ; nouveaux défis, radars et affiches. La
+voiture attend qu'on touche l'écran pour démarrer. La carte est peinte par
 morceaux, à la demande, pour rester fluide sur téléphone. Les pilotes
 deviennent une vraie équipe : on les recrute (4 méthodes), on les entraîne,
 on les paie, on peut les renvoyer (une semaine d'indemnité). En course, une

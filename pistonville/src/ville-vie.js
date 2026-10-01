@@ -1,49 +1,42 @@
 /* ville-vie.js — ce qui bouge en ville : circulation, feux, piétons.
  *
- * Circulation à droite, une voie par sens (comme les simulateurs de trafic
- * en grille) : chaque voiture suit sa voie, s'arrête derrière celle de devant
- * et au feu rouge, et choisit au carrefour d'aller tout droit, à droite ou à
- * gauche. Les feux de chaque carrefour sont décalés pour que tout ne change
- * pas en même temps. À la campagne, pas de feux : la route est-ouest est
- * prioritaire, celle du nord-sud a un STOP (on marque l'arrêt, on attend que
- * le carrefour soit libre). Des tracteurs y roulent doucement. Les piétons
- * font le tour des pâtés de la ville sur les trottoirs et sautent de côté si
- * on leur fonce dessus.
+ * Circulation à droite sur le réseau de reseau.js : une voie par sens dans
+ * les rues et sur les routes de campagne, deux sur les boulevards. Chaque
+ * voiture suit sa voie, s'arrête derrière celle de devant et au feu rouge, et
+ * choisit au carrefour d'aller tout droit, à droite ou à gauche (à droite
+ * depuis la voie de droite, à gauche vers la voie de gauche). Les feux des
+ * carrefours de ville sont décalés pour que tout ne change pas en même temps.
+ * À la campagne, pas de feux : la route la plus large (ou l'est-ouest) est
+ * prioritaire, l'autre a un STOP (on marque l'arrêt, on attend que le
+ * carrefour soit libre). Des tracteurs y roulent doucement. Les piétons font
+ * le tour des pâtés de la ville sur les trottoirs et sautent de côté si on
+ * leur fonce dessus.
  */
 
 import { PERSONNAGES, DIRECTION, bulle, T } from './sprites.js';
 import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, tenue } from './tiny.js';
 import { tracteur } from './ville-dessins.js';
 import { hash2 } from './outils.js';
+import { DIRS } from './reseau.js';
 
-// À l'échelle des voitures (2 × 3 cases) : rue de 6 cases à deux voies, un
-// trottoir d'une case de chaque côté, des îlots de 10 cases.
-export const CASES_RUE = 6;
-export const CASES_ILOT = 10;
-export const PERIODE = CASES_RUE + 2 + CASES_ILOT;   // 18 cases
-export const PAS_RUE = PERIODE * T;           // 288 px d'un carrefour au suivant
-export const LARGEUR_RUE = CASES_RUE * T;     // 96 px
-const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];   // 0 est, 1 sud, 2 ouest, 3 nord
 const CYCLE = 9;
 const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 
-/** Coordonnée de la voie (circulation à droite) sur la rue d'indice k. */
-export function voie(dir, k) {
-  const base = k * PAS_RUE;
-  return [base + 72, base + 24, base + 24, base + 72][dir];
-}
-
 export class Feux {
-  /** urbain(kx, ky) : ce carrefour a-t-il des feux ? (sinon : STOP sur l'axe nord-sud) */
-  constructor(n, graine, urbain = () => true) {
-    this.n = n;
+  /** urbain(kx, ky) : ce carrefour est-il en ville (feux) ou à la campagne (STOP) ? */
+  constructor(reseau, graine, urbain) {
+    this.r = reseau;
     this.urbain = urbain;
     this.decalage = (kx, ky) => hash2(kx, ky, graine) * CYCLE;
   }
 
+  /** La route prioritaire d'un carrefour de campagne : la plus large, sinon l'est-ouest. */
+  prioriteHorizontale(kx, ky) { return this.r.L[ky] >= this.r.L[kx]; }
+
   /** 'vert' | 'orange' | 'rouge' pour l'axe horizontal (est-ouest) ou vertical ; 'stop' à la campagne. */
   etat(kx, ky, horizontal, t) {
-    if (!this.urbain(kx, ky)) return horizontal ? 'vert' : 'stop';
+    if (!this.r.croisement(kx, ky)) return 'vert';
+    if (!this.urbain(kx, ky)) return horizontal === this.prioriteHorizontale(kx, ky) ? 'vert' : 'stop';
     const c = (t + this.decalage(kx, ky)) % CYCLE;
     const h = c < 3.8 ? 'vert' : c < 4.5 ? 'orange' : 'rouge';
     const v = c < 4.5 ? 'rouge' : c < 8.3 ? 'vert' : 'orange';
@@ -52,65 +45,66 @@ export class Feux {
 }
 
 export class Trafic {
-  /** n : nombre de rues par sens − 1 (indices de carrefour 0..n). */
   /**
-   * o.centre : [k0, k1], carrefours du centre-ville où naissent les deux tiers
-   * des voitures ; o.tracteurs : des tracteurs naissent sur les routes de campagne.
+   * o.ville(kx, ky) : ce tronçon part-il d'un carrefour de ville ? (deux tiers des
+   * voitures y naissent) ; o.tracteurs : des tracteurs sur les routes de campagne.
    */
-  constructor(n, alea, nombre, feux, o = {}) {
-    this.n = n;
+  constructor(reseau, alea, nombre, feux, o = {}) {
+    this.r = reseau;
     this.feux = feux;
     this.alea = alea;
     this.voitures = [];
+    const r = reseau;
+    const troncons = [];
+    for (let k = 0; k <= r.N; k++) for (let s = 0; s < r.N; s++) {
+      if (r.H[k][s]) troncons.push({ horizontal: true, k, s, ville: o.ville?.(s, k) });
+      if (r.V[k][s]) troncons.push({ horizontal: false, k, s, ville: o.ville?.(k, s) });
+    }
     const couleurs = ['#c2504d', '#4f7ddb', '#f4f1e8', '#3fa34d', '#8a6ad6', '#2a2838', '#f39c33', '#4fc3d8'];
     for (let i = 0; i < nombre; i++) {
-      const dir = Math.floor(alea() * 4);
-      const enVille = o.centre && i % 3 !== 2;
-      const [a, b] = enVille ? o.centre : [0, n];
-      const k = a + Math.floor(alea() * (b - a + 1));
-      const seg = a + Math.floor(alea() * (b - a));
-      const s = seg * PAS_RUE + LARGEUR_RUE + 20 + alea() * (PAS_RUE - LARGEUR_RUE - 40);
-      const ix = dir % 2 === 0 ? seg : k, iy = dir % 2 === 0 ? k : seg;
-      const tracteur = o.tracteurs && !enVille && !feux.urbain(ix, iy) && alea() < 0.45;
-      const v = { dir, vmax: tracteur ? 26 + alea() * 8 : 55 + alea() * 30, v: 0, couleur: couleurs[i % couleurs.length], choix: null, klaxon: 0, bloque: 0, tracteur };
-      if (dir % 2 === 0) { v.x = s; v.y = voie(dir, k); } else { v.x = voie(dir, k); v.y = s; }
+      const enVille = i % 3 !== 2;
+      const liste = troncons.filter((t) => !!t.ville === enVille);
+      const t = (liste.length ? liste : troncons)[Math.floor(alea() * (liste.length || troncons.length))];
+      const dir = t.horizontal ? (alea() < 0.5 ? 0 : 2) : (alea() < 0.5 ? 1 : 3);
+      const n = Math.floor(alea() * r.voies(t.k));
+      // Le long du tronçon, entre les deux carrefours (loin de chacun).
+      const debut = r.X[t.s] + r.L[t.s] + 30, fin = r.X[t.s + 1] - 30;
+      const pos = debut + alea() * Math.max(0, fin - debut);
+      const tracteur = o.tracteurs && !t.ville && alea() < 0.4;
+      const v = { dir, k: t.k, n, vmax: tracteur ? 26 + alea() * 8 : 55 + alea() * 30, v: 0, couleur: couleurs[i % couleurs.length], choix: null, klaxon: 0, bloque: 0, tracteur };
+      if (t.horizontal) { v.x = pos; v.y = r.voie(dir, t.k, n); } else { v.x = r.voie(dir, t.k, n); v.y = pos; }
       v.angle = Math.atan2(DIRS[dir][1], DIRS[dir][0]);
       this.voitures.push(v);
     }
   }
 
-  dansCarrefour(x, y) {
-    const ix = Math.floor(x / PAS_RUE), iy = Math.floor(y / PAS_RUE);
-    return x - ix * PAS_RUE < LARGEUR_RUE && y - iy * PAS_RUE < LARGEUR_RUE ? { kx: ix, ky: iy } : null;
-  }
+  dansCarrefour(x, y) { return this.r.dansCarrefour(x, y); }
 
   maj(dt, t, joueur) {
+    const r = this.r;
     for (const c of this.voitures) {
       const [dx, dy] = DIRS[c.dir];
-      const dedans = this.dansCarrefour(c.x, c.y);
+      const dedans = r.dansCarrefour(c.x, c.y);
       let cible = c.vmax;
 
-      // Feu rouge : on s'arrête à la ligne, avant d'entrer dans le carrefour.
       if (!dedans) {
         c.choix = null;
-        const avant = dx ? c.x + dx * 23 : c.y + dy * 23;
-        const pos = dx ? c.x : c.y;
-        const prochain = dx > 0 || dy > 0 ? (Math.floor(pos / PAS_RUE) + 1) * PAS_RUE : Math.floor(pos / PAS_RUE) * PAS_RUE + LARGEUR_RUE;
-        const dist = (dx || dy) > 0 ? prochain - avant : avant - prochain;
-        const kx = dx ? Math.round((prochain - (dx > 0 ? 0 : LARGEUR_RUE)) / PAS_RUE) : Math.floor(c.x / PAS_RUE);
-        const ky = dy ? Math.round((prochain - (dy > 0 ? 0 : LARGEUR_RUE)) / PAS_RUE) : Math.floor(c.y / PAS_RUE);
-        const etat = this.feux.etat(kx, ky, !!dx, t);
+        // Feu ou STOP du prochain carrefour : on s'arrête à la ligne, avant d'y entrer.
+        const p = r.prochain(c.dir, c.k, c.x, c.y);
+        const avant = (dx ? c.x + dx * 23 : c.y + dy * 23);
+        const dist = (dx || dy) > 0 ? p.bord - avant : avant - p.bord;
+        const etat = this.feux.etat(p.kx, p.ky, !!dx, t);
         if (etat === 'stop') {
-          // STOP : on marque l'arrêt une seconde, puis on attend que le carrefour soit libre.
           if (dist < 22 && dist > -3) {
             c.arret = (c.arret || 0) + dt;
-            if (c.arret < 1 || !this.carrefourLibre(kx, ky, c, joueur)) cible = 0;
+            if (c.arret < 1 || !this.carrefourLibre(p.kx, p.ky, c, joueur)) cible = 0;
           } else if (dist < 60 && dist > 0 && !c.arret) cible = Math.min(cible, (dist - 18) * 2);
           else if (dist > 60) c.arret = 0;
         } else if (dist < 22 && dist > -3 && etat !== 'vert') cible = 0;
         else if (dist < 60 && dist > 0 && etat !== 'vert') cible = Math.min(cible, (dist - 18) * 2);
-      } else if (!c.choix) {
+      } else if (c.choix === null) {
         c.choix = this.choisir(c, dedans);
+        c.arret = 0;
       }
 
       // Quelqu'un devant (voiture ou joueur) : on freine.
@@ -130,15 +124,15 @@ export class Trafic {
       c.x += dx * c.v * dt;
       c.y += dy * c.v * dt;
 
-      // Virage : quand on atteint la voie de la nouvelle direction.
-      if (dedans && c.choix !== null && c.choix !== c.dir) {
-        const nd = c.choix;
+      // Virage : quand on atteint la voie visée de la nouvelle route.
+      if (dedans && c.choix && c.choix.dir !== c.dir) {
+        const { dir: nd, n } = c.choix;
         if (nd % 2 === 1) {
-          const tx = voie(nd, dedans.kx);
-          if ((dx > 0 && c.x >= tx) || (dx < 0 && c.x <= tx)) { c.x = tx; c.dir = nd; }
+          const tx = r.voie(nd, dedans.kx, n);
+          if ((dx > 0 && c.x >= tx) || (dx < 0 && c.x <= tx)) { c.x = tx; c.dir = nd; c.k = dedans.kx; c.n = n; }
         } else {
-          const ty = voie(nd, dedans.ky);
-          if ((dy > 0 && c.y >= ty) || (dy < 0 && c.y <= ty)) { c.y = ty; c.dir = nd; }
+          const ty = r.voie(nd, dedans.ky, n);
+          if ((dy > 0 && c.y >= ty) || (dy < 0 && c.y <= ty)) { c.y = ty; c.dir = nd; c.k = dedans.ky; c.n = n; }
         }
       }
       const vise = Math.atan2(DIRS[c.dir][1], DIRS[c.dir][0]);
@@ -151,21 +145,35 @@ export class Trafic {
 
   /** Personne dans le carrefour ni sur le point d'y entrer par la route prioritaire. */
   carrefourLibre(kx, ky, moi, joueur) {
-    const x0 = kx * PAS_RUE, y0 = ky * PAS_RUE, L = LARGEUR_RUE;
-    const occupe = (x, y) => x > x0 - 90 && x < x0 + L + 90 && y > y0 - 6 && y < y0 + L + 6;
-    for (const o of this.voitures) if (o !== moi && occupe(o.x, o.y) && o.dir % 2 === 0) return false;
-    for (const o of this.voitures) if (o !== moi && o.x > x0 && o.x < x0 + L && o.y > y0 && o.y < y0 + L) return false;
-    return !occupe(joueur.x, joueur.y);
+    const q = this.r.carre(kx, ky);
+    const horizontale = this.feux.prioriteHorizontale(kx, ky);
+    const approche = (x, y) => (horizontale
+      ? x > q.x - 90 && x < q.x + q.w + 90 && y > q.y - 6 && y < q.y + q.h + 6
+      : y > q.y - 90 && y < q.y + q.h + 90 && x > q.x - 6 && x < q.x + q.w + 6);
+    for (const o of this.voitures) {
+      if (o === moi) continue;
+      if (o.x > q.x && o.x < q.x + q.w && o.y > q.y && o.y < q.y + q.h) return false;
+      if (approche(o.x, o.y) && (o.dir % 2 === 0) === horizontale) return false;
+    }
+    return !approche(joueur.x, joueur.y);
   }
 
-  /** Tout droit, à droite ou à gauche, jamais demi-tour ni hors de la ville. */
+  /** Tout droit, à droite ou à gauche, selon les branches du carrefour ; jamais demi-tour s'il y a le choix. */
   choisir(c, { kx, ky }) {
-    const possible = (d) => (d === 0 ? kx < this.n : d === 1 ? ky < this.n : d === 2 ? kx > 0 : ky > 0);
-    const options = [[c.dir, 5], [(c.dir + 1) % 4, 3], [(c.dir + 3) % 4, 2]].filter(([d]) => possible(d));
-    if (!options.length) return (c.dir + 2) % 4;
-    let r = this.alea() * options.reduce((s, [, p]) => s + p, 0);
-    for (const [d, p] of options) { r -= p; if (r <= 0) return d; }
-    return options[0][0];
+    const b = this.r.branches(kx, ky);
+    const droite = (c.dir + 1) % 4, gauche = (c.dir + 3) % 4;
+    const options = [[c.dir, 5], [droite, 3], [gauche, 2]].filter(([d]) => b[d]);
+    let nd = (c.dir + 2) % 4;
+    if (options.length) {
+      let x = this.alea() * options.reduce((s, [, p]) => s + p, 0);
+      nd = options[0][0];
+      for (const [d, p] of options) { x -= p; if (x <= 0) { nd = d; break; } }
+    }
+    const kNouveau = nd % 2 === 1 ? kx : ky;
+    const voies = this.r.voies(kNouveau);
+    // À droite : voie de droite ; à gauche : voie de gauche ; tout droit : on garde sa voie.
+    const n = nd === droite ? 0 : nd === gauche ? voies - 1 : Math.min(c.n || 0, voies - 1);
+    return { dir: nd, n };
   }
 
   dessiner(ctx, camX, camY, W, H) {
@@ -186,13 +194,11 @@ export class Trafic {
 
 /** Piétons : ils font le tour des pâtés de maisons, sur le trottoir. */
 export class Pietons {
-  /** ilots : liste des pâtés [bx, by] dont on fait le tour (ceux de la ville). */
-  constructor(ilots, alea, nombre) {
+  /** tours : les trottoirs dont on fait le tour, { x0, y0, cote } (coin haut-gauche et côté du carré). */
+  constructor(tours, alea, nombre) {
     this.liste = [];
     for (let i = 0; i < nombre; i++) {
-      const [bx, by] = ilots[Math.floor(alea() * ilots.length)];
-      const x0 = (bx * PERIODE + CASES_RUE + 1) * T - 8, y0 = (by * PERIODE + CASES_RUE + 1) * T - 8;
-      const cote = CASES_ILOT * T + 16;
+      const { x0, y0, cote } = tours[Math.floor(alea() * tours.length)];
       this.liste.push({
         x0, y0, cote, s: alea() * cote * 4, sens: alea() < 0.5 ? 1 : -1, v: 14 + alea() * 10,
         base: PERSONNAGES[Math.floor(alea() * PERSONNAGES.length)], tenue: tenue(Math.floor(alea() * 60)), saut: 0, ecart: 0, bulle: null, puni: 0,
