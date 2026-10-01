@@ -1,0 +1,27 @@
+/* catalogue.js — la liste des packs de contenu, dans l'ordre de chargement.
+ *
+ * Une mise à jour = un nouveau dossier à côté de `base/` (véhicules, Grands
+ * Prix, équipes : seulement les ajouts) et une ligne ici. Aucun autre fichier
+ * du jeu ne change. Un identifiant publié ne disparaît jamais : on le masque
+ * avec `masque: true` pour garder les sauvegardes valides.
+ */
+
+import vehiculesBase from './base/vehicules.js';
+import grandsPrixBase from './base/grands-prix.js';
+import equipesBase from './base/equipes.js';
+
+const packs = [
+  { id: 'base', vehicules: vehiculesBase, grandsPrix: grandsPrixBase, equipes: equipesBase },
+];
+
+function fusionner(cle) {
+  const parId = new Map();
+  for (const pack of packs) {
+    for (const element of pack[cle] || []) parId.set(element.id, element);
+  }
+  return [...parId.values()].filter((e) => !e.masque);
+}
+
+export const VEHICULES = fusionner('vehicules');
+export const GRANDS_PRIX = fusionner('grandsPrix');
+export const EQUIPES = fusionner('equipes');
