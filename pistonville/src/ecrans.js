@@ -15,7 +15,7 @@ import {
   piece, montureDe, peutSortir, prixPiece, promoDuJour, PRIX_CAFE, ORDRE_PALIERS, PALIERS,
   objectifsActifs, objectifsFaits, totalObjectifs, estimerChances, rivalDe, sponsorActif, sponsorDispo,
   saisonDe, jourDeSaison, JOURS_SAISON, SAISONS_CARRIERE, pieceNiveau, coutNiveauPiece, NIVEAU_PIECE_MAX,
-  tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, INSTALLATIONS, exporter, importer, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
+  tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, exporter, importer, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
 } from './partie.js';
 import { idPersonnage } from './sprites.js';
 import {
@@ -56,7 +56,7 @@ export class Interface {
 
 // --- Petits morceaux réutilisés -------------------------------------------------------
 
-function barre(partie) {
+export function barre(partie) {
   const lic = partie.licence ? `Licence ${partie.licence}` : 'Sans licence';
   const besoin = expPourRang(partie.rang);
   return `<header class="barre">
@@ -113,7 +113,7 @@ function texteBonus(pc) {
   return morceaux.join(' · ');
 }
 
-function carteVoiture(v, { compacte = false } = {}) {
+export function carteVoiture(v, { compacte = false } = {}) {
   const stats = Object.entries(v.stats).map(([k, val]) => barreStat(NOMS_STATS[k], val, COULEURS_STATS[k])).join('');
   const image = v.uid
     ? `<img class="dessus" src="${apercuVoiture(v.couleur, v.looks)}" alt="">`
@@ -225,7 +225,8 @@ export function ecranAide(app, retour) {
       <section class="panneau">
         <h2 class="titre-panneau">Comment jouer</h2>
         <div class="contenu texte">
-          <p><b>Le jour</b>, au garage : construis ou achète une voiture, monte des pièces, fais des recherches au labo, inscris-toi aux Grands Prix. Une balade en ville par jour : pièces d'or, disquettes de recherche, fans, et des boutiques.</p>
+          <p><b>Le jour</b>, au garage : construis tes bâtiments sur le terrain (onglet Construire), recrute et affecte ton équipe (onglet Équipe), construis ou achète tes voitures et monte des pièces (onglet Voitures), inscris-toi aux Grands Prix (onglet Courses). Une balade en ville par jour.</p>
+          <p>Touche un bâtiment pour le gérer. Le décor rend ses voisins plus efficaces ; trois bâtiments précis qui se touchent forment un combo. Le personnel est payé chaque semaine.</p>
           <p><b>Le soir</b>, la course : la voiture accélère toute seule, tu ne fais que tourner.</p>
           <table class="touches">
             <tr><th>Tourner</th><td>Toucher la moitié gauche ou droite · flèches ← → · Q / D</td></tr>
@@ -246,57 +247,7 @@ export function ecranAide(app, retour) {
 
 // --- Garage ------------------------------------------------------------------------------
 
-export function ecranGarage(app) {
-  const p = app.partie;
-  const v = voitureActive(p);
-  const nouvelles = (p.nouvelles || []).map((n) => `<div class="nouvelle ${n.evenement ? 'evenement' : ''}"><b>${e(n.titre)}</b><span>${e(n.texte)}</span></div>`).join('');
-  const sansVoiture = !v;
-  const sortie = peutSortir(p);
-  const obj = objectifsActifs(p, 1)[0];
-  const bandeObjectif = obj
-    ? `<button class="objectif-bande" data-action="objectifs"><small>OBJECTIF</small><b>${e(obj.titre)}</b>
-        <span class="jauge"><i style="width:${Math.round((obj.actuel / obj.but) * 100)}%;background:#3fa34d"></i></span><em>${texteRecompense(obj.recompense)}</em></button>`
-    : '';
-  return {
-    classe: 'garage',
-    html: `${barre(p)}${bandeObjectif}
-    ${nouvelles ? `<div class="nouvelles" data-action="lu">${nouvelles}<small>Toucher pour fermer</small></div>` : ''}
-    <div class="bas">
-      ${sansVoiture
-        ? `<section class="panneau"><h2 class="titre-panneau">Bienvenue au Garage Piston</h2>
-            <div class="contenu texte"><p>Le garage est vide. <b>Construis</b> ta première voiture (moins chère, qualité tirée au sort) ou achète-la à la concession.</p></div></section>`
-        : `<section class="panneau">${carteVoiture(v, { compacte: true })}</section>`}
-      <nav class="grille-actions" aria-label="Menu du garage">
-        <button class="btn" data-action="atelier" ${sansVoiture ? 'disabled' : ''}>Atelier</button>
-        <button class="btn ${sansVoiture ? 'btn-principal' : ''}" data-action="boutique">Voitures</button>
-        <button class="btn" data-action="pieces">Pièces</button>
-        <button class="btn" data-action="labo">Labo</button>
-        <button class="btn btn-rouge" data-action="bureau">Courses</button>
-        <button class="btn btn-vert" data-action="ville" ${sansVoiture || !sortie ? 'disabled' : ''}>${sortie ? 'Sortir en ville' : 'Ville : demain'}</button>
-        <button class="btn" data-action="pilote">Pilote${p.pilotePoints ? ` <span class="badge">${p.pilotePoints}</span>` : ''}</button>
-        <button class="btn btn-sombre" data-action="jour">Jour suivant</button>
-      </nav>
-      <div class="petits-liens">
-        <button class="lien" data-action="aide">Comment jouer</button>
-        <button class="lien" data-action="titre">Menu principal</button>
-      </div>
-    </div>`,
-    actions: {
-      lu: () => { p.nouvelles = []; app.garage(); },
-      objectifs: () => app.montrer(ecranObjectifs(app)),
-      atelier: () => app.montrer(ecranAtelier(app)),
-      boutique: () => app.montrer(ecranBoutique(app)),
-      pieces: () => app.montrer(ecranPieces(app)),
-      labo: () => app.montrer(ecranLabo(app)),
-      bureau: () => app.montrer(ecranBureau(app)),
-      ville: () => app.sortirEnVille(),
-      pilote: () => app.montrer(ecranPilote(app)),
-      jour: () => app.jourSuivant(),
-      aide: () => app.montrer(ecranAide(app, 'garage')),
-      titre: () => app.titre(),
-    },
-  };
-}
+export { ecranGarage } from './ecrans-garage.js';
 
 // --- Atelier : réglages, pièces montées, peinture -------------------------------------------
 
@@ -501,7 +452,7 @@ export function ecranLabo(app, retour = () => app.garage()) {
   return {
     classe: 'garage plein',
     html: `${barre(p)}<div class="defile">
-      <h2 class="titre-section">Labo et installations</h2>
+      <h2 class="titre-section">Labo de recherche</h2>
       <section class="panneau">
         <h2 class="titre-panneau violet">Niveau ${p.labo}<small>Les points de recherche (PR) se gagnent en course, en ville et en montant de rang.</small></h2>
         <div class="contenu">
@@ -510,13 +461,6 @@ export function ecranLabo(app, retour = () => app.garage()) {
             ${max ? '' : `<button class="btn btn-mini btn-principal" data-action="chercher" ${p.recherche < cout ? 'disabled' : ''}>Rechercher</button>`}</div>
         </div>
       </section>
-      <section class="panneau"><h2 class="titre-panneau marron">Installations du garage<small>De gros chantiers pour les écuries qui réussissent.</small></h2>
-        <div class="contenu">${Object.entries(INSTALLATIONS).map(([id, x]) => {
-          const n = p.installations?.[id] || 0;
-          const cout = x.couts[n];
-          return `<div class="ligne stat-pilote"><div><b>${e(x.nom)} ${'◆'.repeat(n)}<span class="petit">${'◆'.repeat(x.couts.length - n)}</span></b><div class="petit">${e(x.texte)}</div></div>
-            ${cout ? `<button class="btn btn-mini btn-principal" data-action="installer" data-id="${id}" ${p.argent < cout ? 'disabled' : ''}>${formatArgent(cout)}</button>` : '<span class="etat">Au max</span>'}</div>`;
-        }).join('')}</div></section>
       <section class="panneau"><h2 class="titre-panneau sombre">Collection de pièces<small>${Object.keys(p.collection).length} / ${PIECES.length} découvertes</small></h2>
         <div class="contenu album">${PIECES.map((x) => (p.collection[x.id] ? `<span class="carte-piece rarete-${x.rarete}">${imgPiece(x)}${e(x.nom)}</span>` : `<span class="carte-piece inconnue">${imgPiece(x, 'silhouette')}?</span>`)).join('')}</div></section>
       <section class="panneau"><div class="contenu">${niveaux}</div></section>
@@ -527,14 +471,6 @@ export function ecranLabo(app, retour = () => app.garage()) {
         if (app.action('rechercher')) {
           app.son.niveau();
           app.montrer(ecranCelebration(app, 'Eurêka !', `Labo niveau ${p.labo} : de nouvelles pièces sont en vente.`, () => app.montrer(ecranLabo(app, retour))));
-          return;
-        }
-        app.montrer(ecranLabo(app, retour));
-      },
-      installer: (d) => {
-        if (app.action('construireInstallation', d.id)) {
-          app.son.niveau();
-          app.montrer(ecranCelebration(app, 'Chantier terminé !', `${INSTALLATIONS[d.id].nom} niveau ${p.installations[d.id]}.`, () => app.montrer(ecranLabo(app, retour))));
           return;
         }
         app.montrer(ecranLabo(app, retour));

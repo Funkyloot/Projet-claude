@@ -13,10 +13,11 @@ import piecesBase from './base/pieces.js';
 import objectifsBase from './base/objectifs.js';
 import sponsorsBase from './base/sponsors.js';
 import evenementsBase from './base/evenements.js';
+import batimentsBase from './base/batiments.js';
 
 const packs = [
   { id: 'base', vehicules: vehiculesBase, grandsPrix: grandsPrixBase, equipes: equipesBase, pieces: piecesBase,
-    objectifs: objectifsBase, sponsors: sponsorsBase, evenements: evenementsBase },
+    objectifs: objectifsBase, sponsors: sponsorsBase, evenements: evenementsBase, batiments: batimentsBase },
 ];
 
 function fusionner(cle) {
@@ -34,3 +35,4 @@ export const PIECES = fusionner('pieces');
 export const OBJECTIFS = fusionner('objectifs');
 export const SPONSORS = fusionner('sponsors');
 export const EVENEMENTS = fusionner('evenements');
+export const BATIMENTS = fusionner('batiments');

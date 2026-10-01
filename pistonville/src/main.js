@@ -20,9 +20,11 @@ import { Ville } from './ville.js';
 import { Son } from './son.js';
 import {
   Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranResultats, ecranFinGP,
-  ecranConstruction, ecranRang, texteRecompense, ecranCeremonie, ecranFinCarriere, ecranCadeau, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
+  ecranConstruction, ecranRang, texteRecompense, ecranCelebration, ecranCeremonie, ecranFinCarriere, ecranCadeau, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
 } from './ecrans.js';
 import * as P from './partie.js';
+import * as G from './garage.js';
+import { ecranPlacement, ecranFicheBatiment, ecranConstruire } from './ecrans-garage.js';
 
 const W = 320, H = 568;
 const PAS = 1 / 60;
@@ -104,7 +106,7 @@ class App {
       if (this.ville.entree && !this.ui.racine.innerHTML) this.entrerBatiment(this.ville.entree);
       if (this.ville.fini && !this.villeFinie) this.finBalade();
     } else if (this.scene) {
-      this.scene.maj(dt);
+      this.scene.maj(dt, this.partie);
       this.scene.dessiner(this.ctx, W, H, secondes, this.partie);
     }
     requestAnimationFrame((tt) => this.boucle(tt));
@@ -137,6 +139,29 @@ class App {
       return { x: ((ev.clientX - r.left) / r.width) * W, y: ((ev.clientY - r.top) / r.height) * H };
     };
     const dans = (p, z) => p.x >= z.x && p.x <= z.x + z.w && p.y >= z.y && p.y <= z.y + z.h;
+    // Garage : toucher un bâtiment, faire glisser pour défiler, choisir une case en construction.
+    const garageTactile = { id: null, y0: 0, y: 0, glisse: false };
+    this.canvas.addEventListener('pointerdown', (ev) => {
+      if (this.ecran !== 'garage') return;
+      const p = position(ev);
+      Object.assign(garageTactile, { id: ev.pointerId, y0: p.y, y: p.y, glisse: false });
+      this.canvas.setPointerCapture?.(ev.pointerId);
+    });
+    this.canvas.addEventListener('pointermove', (ev) => {
+      if (this.ecran !== 'garage' || garageTactile.id !== ev.pointerId) return;
+      const p = position(ev);
+      if (Math.abs(p.y - garageTactile.y0) > 8) garageTactile.glisse = true;
+      if (garageTactile.glisse) this.scene.defiler(garageTactile.y - p.y, this.partie, H - 290);
+      garageTactile.y = p.y;
+    });
+    this.canvas.addEventListener('pointerup', (ev) => {
+      if (this.ecran !== 'garage' || garageTactile.id !== ev.pointerId) return;
+      garageTactile.id = null;
+      if (!garageTactile.glisse) this.toucherGarage(position(ev));
+    });
+    this.canvas.addEventListener('wheel', (ev) => {
+      if (this.ecran === 'garage') { this.scene.defiler(ev.deltaY * 0.5, this.partie, H - 290); ev.preventDefault(); }
+    }, { passive: false });
     this.canvas.addEventListener('pointerdown', (ev) => {
       this.son.reveiller();
       if ((this.ecran !== 'course' && this.ecran !== 'ville') || this.pause) return;
@@ -210,7 +235,7 @@ class App {
     suivant();
   }
 
-  titre() { this.ecran = 'titre'; this.montrer(ecranTitre(this)); }
+  titre() { this.ecran = 'titre'; this.scene.placement = null; this.scene.selection = null; this.montrer(ecranTitre(this)); }
 
   nouvellePartie() {
     this.partie = P.nouvellePartie();
@@ -241,6 +266,7 @@ class App {
     this.ecran = 'garage';
     this.course = null;
     this.ville = null;
+    this.scene.placement = null;
     // Fin de saison : la cérémonie passe avant tout.
     if (this.partie.ceremonie) {
       const c = this.partie.ceremonie;
@@ -270,7 +296,10 @@ class App {
       inscrire: P.inscrire, candidater: P.deposerCandidature,
       acheterPiece: (p, [id, remise]) => P.acheterPiece(p, id, remise), monter: P.monter, demonter: P.demonter,
       vendrePiece: P.vendrePiece, rechercher: P.rechercher, tirerTombola: P.tirerTombola, boireCafe: P.boireCafe,
-      signerSponsor: P.signerSponsor, ameliorerPiece: P.ameliorerPiece, entrainerPilote: P.entrainerPilote, construireInstallation: P.construireInstallation,
+      signerSponsor: P.signerSponsor,
+      agrandirTerrain: G.agrandirTerrain, ameliorerBatiment: G.ameliorerBatiment, vendreBatiment: G.vendreBatiment,
+      affecter: (p, [s, b]) => G.affecter(p, s, b), recruter: G.recruter, embaucher: G.embaucher,
+      licencier: G.licencier, former: G.former, ameliorerPiece: P.ameliorerPiece, entrainerPilote: P.entrainerPilote,
     }[nom];
     const ok = f(this.partie, arg);
     if (ok) this.sauver();
@@ -473,6 +502,63 @@ class App {
     this.ecran = 'fin';
     if (place === 1) this.son.fanfare();
     this.montrer(ecranFinGP(this, { gp, general, place, gains, fans }));
+  }
+
+  // --- Garage : terrain, construction, personnel -------------------------------------
+
+  toucherGarage(pt) {
+    const sc = this.scene;
+    if (sc.placement) {
+      const c = sc.caseA(this.partie, pt.x, pt.y);
+      if (!c) return;
+      const d = G.batiment(sc.placement.id);
+      // La case touchée devient le centre du bâtiment (tant qu'il reste sur le terrain).
+      sc.placement.x = Math.max(0, Math.min(G.COLONNES_TERRAIN - d.l, c.x - Math.floor((d.l - 1) / 2)));
+      sc.placement.y = Math.max(0, Math.min(this.partie.terrain.lignes - d.h, c.y - Math.floor((d.h - 1) / 2)));
+      this.montrer(ecranPlacement(this, sc.placement, G.raisonPlacement(this.partie, sc.placement.id, sc.placement.x, sc.placement.y, sc.placement.sauf)));
+      return;
+    }
+    const b = sc.batimentA(this.partie, pt.x, pt.y);
+    if (b) {
+      sc.selection = b.uid;
+      this.son.clic();
+      this.montrer(ecranFicheBatiment(this, b.uid));
+    } else if (sc.selection) {
+      sc.selection = null;
+      this.garage();
+    }
+  }
+
+  modePlacement(pl) {
+    this.ecran = 'garage';
+    this.scene.selection = null;
+    this.scene.placement = { ...pl };
+    this.montrer(ecranPlacement(this, this.scene.placement, null));
+  }
+
+  annulerPlacement() {
+    const sauf = this.scene.placement?.sauf;
+    this.scene.placement = null;
+    if (sauf) { this.scene.selection = sauf; this.montrer(ecranFicheBatiment(this, sauf)); return; }
+    this.montrer(ecranConstruire(this));
+  }
+
+  validerPlacement() {
+    const pl = this.scene.placement;
+    if (!pl || pl.x === undefined) return;
+    const r = pl.sauf ? G.deplacerBatiment(this.partie, pl.sauf, pl.x, pl.y) : G.construireBatiment(this.partie, pl.id, pl.x, pl.y);
+    if (!r) { this.toast('Impossible ici.'); return; }
+    this.scene.placement = null;
+    this.son.caisse();
+    this.sauver();
+    const suite = () => { this.scene.selection = r.batiment.uid; this.montrer(ecranFicheBatiment(this, r.batiment.uid)); };
+    const annoncer = (liste) => {
+      if (!liste.length) { suite(); return; }
+      const [c, ...reste] = liste;
+      this.son.niveau();
+      this.montrer(ecranCelebration(this, `COMBO : ${c.nom} !`, c.texte, () => annoncer(reste)));
+    };
+    annoncer(r.combos);
   }
 
   annulerGP() {

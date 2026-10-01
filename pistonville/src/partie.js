@@ -11,6 +11,7 @@ import {
   QUALITES, tirerQualite, expPourRang, recompenseRang, evaluerCandidature, physique,
 } from './regles.js';
 import { creerAlea } from './outils.js';
+import * as G from './garage.js';
 
 const CLE = 'pistonville.partie.v1';
 const VERSION = 2;
@@ -71,7 +72,9 @@ export function nouvellePartie() {
     medailles: {},           // circuit → 1 bronze, 2 argent, 3 or
     cadeau: { date: null, n: 0 },
     heritage: 0,             // nombre de carrières terminées (Nouvelle partie+)
-    installations: {},       // id → niveau (soufflerie, banc, salle des fans, précision)
+    terrain: G.terrainDepart(),   // bâtiments et décor du garage
+    personnel: G.personnelDepart(),
+    candidats: null,         // dernier recrutement
     carriereFinie: false,
     aide: true,
     son: true,
@@ -126,6 +129,25 @@ function migrer(p) {
   p.saisonStats = { ...saisonVide(), ...p.saisonStats };
   p.piloteStats = { ...base.piloteStats, ...p.piloteStats };
   for (const i of p.inventaire) if (i.niveau === undefined) i.niveau = 0;
+  // v0.3 → v0.4 : les « installations » deviennent de vrais bâtiments posés sur le terrain.
+  if (p.installations) {
+    const corresp = { soufflerie: 'soufflerie', banc: 'banc', salle: 'tribune', precision: 'precision' };
+    for (const [ancien, n] of Object.entries(p.installations)) {
+      const id = corresp[ancien];
+      if (!id || !n) continue;
+      for (let y = 0; y < p.terrain.lignes; y++) {
+        let pose = false;
+        for (let x = 0; x < G.COLONNES_TERRAIN && !pose; x++) {
+          if (!G.raisonPlacement(p, id, x, y)) {
+            p.terrain.batiments.push({ uid: `b-${ancien}`, id, x, y, niveau: n, personnel: [] });
+            pose = true;
+          }
+        }
+        if (pose) break;
+      }
+    }
+    delete p.installations;
+  }
   for (const i of p.inventaire) p.collection[i.piece] = true;
   p.version = VERSION;
   return p;
@@ -164,6 +186,7 @@ export function decrireVoiture(partie, v) {
     stats[cle] = Math.max(1, Math.min(PLAFOND_CLASSE[m.classe] || 99, s));
   }
   const surfaces = { ...(m.surfaces || {}) };
+  for (const [k, val] of Object.entries(G.effets(partie).surfaces || {})) surfaces[k] = (surfaces[k] || 0) + val;
   const ps = partie.piloteStats || {};
   let nitros = 1, nitroDuree = BOOSTS.nitro.duree;
   const looks = new Set();
@@ -218,7 +241,7 @@ export function construire(partie, idModele, couleur) {
   const alea = creerAlea((Date.now() ^ (partie.jour * 7919)) >>> 0);
   // La soufflerie améliore les chances : on garde le meilleur de plusieurs tirages.
   let qualite = tirerQualite(alea);
-  for (let k = 0; k < (partie.installations?.soufflerie || 0); k++) qualite = Math.max(qualite, tirerQualite(alea));
+  for (let k = 0; k < G.effets(partie).tirages; k++) qualite = Math.max(qualite, tirerQualite(alea));
   if (qualite >= 2) partie.saisonStats.construction += 1;
   const id = ajouterVoiture(partie, idModele, { couleur: couleur || m.couleur, qualite });
   return { uid: id, qualite };
@@ -228,7 +251,7 @@ export function ameliorer(partie, stat) {
   const v = partie.garage.find((g) => g.uid === partie.voitureActive);
   if (!v) return false;
   const niveau = v.ameliorations[stat] || 0;
-  if (niveau >= REGLAGES_MAX + (partie.installations?.precision || 0)) return false;
+  if (niveau >= REGLAGES_MAX + G.effets(partie).reglages) return false;
   const cout = coutAmelioration(niveau);
   if (partie.argent < cout) return false;
   partie.argent -= cout;
@@ -247,7 +270,7 @@ export function peindre(partie, couleur) {
 export function coutReparation(partie) {
   const v = voitureActive(partie);
   if (!v) return 0;
-  return Math.round(v.usure * v.physique.durabiliteMax * COUT_REPARATION_POINT);
+  return Math.round(v.usure * v.physique.durabiliteMax * COUT_REPARATION_POINT * (1 - G.effets(partie).reparation));
 }
 
 export function reparer(partie) {
@@ -462,9 +485,10 @@ export function jourSuivant(partie) {
       nouvelles.push({ titre: 'Candidature refusée', texte: `${gp.nom} : il manque ${verdict.manques.join(', ')}.` });
     }
   }
-  // Banc d'essai : des points de recherche chaque matin.
-  const banc = partie.installations?.banc || 0;
-  if (banc) partie.recherche += banc;
+  // Le garage travaille : revenus, recherche, fatigue, paie du personnel.
+  const g = G.journeeGarage(partie, alea);
+  nouvelles.push(...g.nouvelles);
+  if (g.pilote) gagnerExpPilote(partie, g.pilote);
   const ev = evenementDuJour(partie, alea);
   if (ev) nouvelles.push(ev);
   partie.nouvelles = nouvelles;
@@ -554,7 +578,7 @@ export function enregistrerManche(partie, resultats, course) {
   const sp = sponsorActif(partie)?.effets || {};
   const prime = Math.round(gp.prix * (PART_PRIX[i] ?? 0.1) * (1 + (sp.prime || 0))) + (sp.argent || 0);
   const licence = POINTS_LICENCE[i] ?? 1;
-  const charisme = 0.05 * (partie.piloteStats?.charisme || 0) + 0.1 * (partie.installations?.salle || 0);
+  const charisme = 0.05 * (partie.piloteStats?.charisme || 0) + G.effets(partie).fans;
   const bonusVoiture = modele(partie.garage.find((g) => g.uid === partie.voitureActive)?.modele)?.fans || 0;
   const fans = Math.round(((FANS_PLACE[i] ?? 2) * gp.niveau + course.fans) * (1 + (sp.fans || 0) + charisme + bonusVoiture));
   const exp = Math.round((EXP_PLACE[i] ?? 8) * gp.niveau + course.depassements * EXP_DEPASSEMENT + course.drift);
@@ -687,25 +711,6 @@ export function verifierObjectifs(partie) {
 
 export const objectifsFaits = (partie) => Object.keys(partie.objectifs).length;
 export const totalObjectifs = () => OBJECTIFS.length;
-
-// --- Installations du garage (grosses dépenses de fin de partie) -------------------------------
-
-export const INSTALLATIONS = {
-  soufflerie: { nom: 'Soufflerie', texte: 'Constructions de meilleure qualité (un tirage de plus par niveau)', couts: [20000, 90000, 300000] },
-  banc: { nom: "Banc d'essai", texte: '+1 point de recherche chaque matin par niveau', couts: [15000, 70000, 250000] },
-  salle: { nom: 'Salle des fans', texte: '+10 % de fans en course par niveau', couts: [25000, 100000, 350000] },
-  precision: { nom: 'Atelier de précision', texte: '+1 cran de réglage par qualité et par niveau', couts: [30000, 120000, 400000] },
-};
-
-export function construireInstallation(partie, id) {
-  const inst = INSTALLATIONS[id];
-  const niv = partie.installations[id] || 0;
-  if (!inst || niv >= inst.couts.length || partie.argent < inst.couts[niv]) return false;
-  partie.argent -= inst.couts[niv];
-  partie.installations[id] = niv + 1;
-  partie.saisonStats.installations += 1;
-  return true;
-}
 
 // --- Médailles de circuit -------------------------------------------------------------------
 
@@ -841,6 +846,7 @@ export function nouvellePartiePlus(ancienne) {
   p.piloteNiv = ancienne.piloteNiv; p.piloteStats = { ...ancienne.piloteStats }; p.pilotePoints = ancienne.pilotePoints;
   p.pilote = ancienne.pilote;
   p.cadeau = { ...ancienne.cadeau };
+  p.terrain.combos = { ...ancienne.terrain?.combos };   // les combos découverts restent dans l'album
   return p;
 }
 

@@ -573,3 +573,82 @@ body {
 .code-sauvegarde { width: 100%; box-sizing: border-box; font-family: ui-monospace, monospace; font-size: calc(var(--u) * 9); word-break: break-all; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 4); padding: calc(var(--u) * 4); background: #fff; color: var(--encre); -webkit-user-select: text; user-select: text; resize: none; }
 .titre-ecran .lien { color: var(--creme-2); }
 .defile, .defile-ecran { touch-action: pan-y; -webkit-overflow-scrolling: touch; }
+
+/* --- v0.4 : garage à construire, onglets du bas, équipe --------------------- */
+
+/* L'accueil laisse passer les touchers vers le terrain (canevas). */
+#interface.accueil { pointer-events: none; background: none; justify-content: flex-start; }
+#interface.accueil > * { pointer-events: auto; }
+#interface.accueil > .espace { flex: 1; pointer-events: none; }
+.astuce { margin: 0 calc(var(--u) * 10) calc(var(--u) * 4); text-align: center; font-size: calc(var(--u) * 11); color: #fff; text-shadow: 0 calc(var(--u) * 1) 0 #000; pointer-events: none !important; }
+.objectif-bande.compacte { padding: calc(var(--u) * 3) calc(var(--u) * 8); }
+.objectif-bande.compacte b { font-size: calc(var(--u) * 12.3); }
+
+.actions-jour { display: grid; grid-template-columns: 1fr 1.6fr; gap: calc(var(--u) * 6); padding: 0 calc(var(--u) * 8) calc(var(--u) * 6); }
+.actions-jour .btn { min-height: calc(var(--u) * 38); }
+
+.onglets-bas {
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+  background: var(--encre); border-top: calc(var(--u) * 3) solid #0f172a;
+  padding: calc(var(--u) * 3) calc(var(--u) * 2) calc(var(--u) * 4);
+  flex: none;
+}
+.onglet-bas {
+  font-family: var(--police); background: none; border: 0; color: #9fb3d9; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: calc(var(--u) * 1);
+  min-height: calc(var(--u) * 42); font-size: calc(var(--u) * 11); border-radius: calc(var(--u) * 5);
+}
+.onglet-bas svg { width: calc(var(--u) * 20); height: calc(var(--u) * 20); fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.onglet-bas.actif { color: var(--jaune); background: rgba(242, 193, 78, 0.12); }
+.onglet-bas:focus-visible { outline: calc(var(--u) * 2) solid var(--jaune); }
+#interface.plein > .onglets-bas { margin-top: auto; }
+
+.carte-batiment {
+  font-family: var(--police); text-align: left; cursor: pointer; color: var(--encre);
+  display: grid; grid-template-columns: calc(var(--u) * 52) 1fr auto; align-items: center; gap: calc(var(--u) * 8);
+  background: var(--creme); border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 6);
+  padding: calc(var(--u) * 6); box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
+}
+.carte-batiment:disabled { opacity: 0.55; cursor: default; }
+.carte-batiment.verrou { filter: grayscale(0.7); }
+.carte-batiment img { width: 100%; max-height: calc(var(--u) * 52); object-fit: contain; image-rendering: pixelated; background: #b3b1c5; border-radius: calc(var(--u) * 4); }
+.cb-texte { display: flex; flex-direction: column; gap: calc(var(--u) * 1); min-width: 0; }
+.cb-texte b { font-size: calc(var(--u) * 14.5); }
+.cb-texte small { font-size: calc(var(--u) * 11); color: #4a5068; }
+.cb-prix { font-weight: 700; color: var(--rouge-vif); text-align: right; display: flex; flex-direction: column; font-size: calc(var(--u) * 13); }
+.cb-prix small { color: var(--gris); font-weight: 400; }
+.combo { display: flex; flex-direction: column; border-left: calc(var(--u) * 4) solid #c9bf9f; padding-left: calc(var(--u) * 6); }
+.combo.vu { border-color: var(--jaune); }
+.combo small { font-size: calc(var(--u) * 11); color: #4a5068; }
+
+.barre-placement {
+  margin: 0 calc(var(--u) * 8) calc(var(--u) * 8); background: var(--creme); color: var(--encre);
+  border: calc(var(--u) * 3) solid var(--encre); border-radius: calc(var(--u) * 6); padding: calc(var(--u) * 6) calc(var(--u) * 8);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 6); box-shadow: 0 calc(var(--u) * 4) 0 rgba(0, 0, 0, 0.4);
+}
+.barre-placement small { display: block; font-size: calc(var(--u) * 11.6); color: #4a5068; }
+.barre-placement .btn { flex: 1; min-height: calc(var(--u) * 36); }
+
+.fiche-batiment { margin: 0 calc(var(--u) * 8) calc(var(--u) * 8); max-height: 55%; overflow-y: auto; touch-action: pan-y; }
+.actions-fiche { justify-content: flex-start; }
+
+.avatar { width: calc(var(--u) * 20); height: calc(var(--u) * 20); image-rendering: pixelated; vertical-align: middle; }
+.avatar.grand { width: calc(var(--u) * 40); height: calc(var(--u) * 40); background: #fff6e0; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 6); flex: none; }
+.employe {
+  background: var(--creme); color: var(--encre); border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 6);
+  padding: calc(var(--u) * 6) calc(var(--u) * 8); display: flex; flex-direction: column; gap: calc(var(--u) * 4);
+  box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
+}
+.employe-tete { display: flex; gap: calc(var(--u) * 8); align-items: center; }
+.employe-tete > div { display: flex; flex-direction: column; min-width: 0; }
+.employe-tete small { font-size: calc(var(--u) * 11); color: #4a5068; }
+.stats-employe { display: flex; gap: calc(var(--u) * 8); flex-wrap: wrap; font-size: calc(var(--u) * 12); }
+.stats-employe .principale { color: var(--rouge-vif); }
+.potentiel { font-weight: 700; padding: 0 calc(var(--u) * 3); border-radius: calc(var(--u) * 2); color: #fff; }
+.potentiel.pS { background: #b7791f; } .potentiel.pA { background: var(--rouge-vif); } .potentiel.pB { background: #7a3fb0; }
+.potentiel.pC { background: var(--bleu); } .potentiel.pD { background: var(--gris); }
+.trait { color: var(--vert); font-weight: 700; }
+.jauge-mini { display: inline-block; width: calc(var(--u) * 50); height: calc(var(--u) * 5); background: #e6dcc4; border: calc(var(--u) * 1) solid var(--encre); vertical-align: middle; }
+.jauge-mini i { display: block; height: 100%; }
+.petit-titre { font-size: calc(var(--u) * 15.9); }
+.carte-batiment.sans-image { grid-template-columns: 1fr auto; }

@@ -1,4 +1,4 @@
-# Pistonville — notes de conception (v0.3)
+# Pistonville — notes de conception (v0.4)
 
 Ce que la recherche sur les jeux du genre (Kairosoft, jeux de course mobiles,
 littérature de game design) a apporté, et où c'est appliqué dans le code.
@@ -110,6 +110,44 @@ soir, les amendes des caméras de feu rouge, les fans perdus quand on fonce
 sur les piétons. Un point d'intérêt toutes les 60 à 120 secondes de route,
 comme le conseillent les guides de conception de mondes ouverts.
 
+## 10. Le garage à construire (v0.4)
+
+Ce que font les jeux de gestion de référence, et ce qu'on en garde :
+
+- **Terrain en cases** (Grand Prix Story 2 : terrain de 11 × 30 cases, bâtiments
+  de 1 × 1 à 2 × 2, permis d'agrandissement de plus en plus chers : 5 000 →
+  105 000 → 905 000). Ici : 8 colonnes, 6 rangées au départ, +2 rangées par
+  permis (8 000 → 400 000 G), jusqu'à 14.
+- **Bâtiments qui produisent** (GPS2 : distributeurs et cantine pour l'argent,
+  laboratoires pour la recherche, bureau d'études, soufflerie et piste d'essai
+  pour la conception, simulateurs par terrain). Ici : 15 bâtiments à niveaux.
+- **Décor qui booste les voisins** (GPS2 : 100 % au contact, puis 50, 25,
+  10 % ; Hot Springs Story : « les plantes autour augmentent la popularité » ;
+  Two Point Hospital : prestige des pièces et attractivité). Ici : 9 décors,
+  100 / 50 / 25 % selon la distance.
+- **Combos** (Mega Mall Story : trois boutiques précises qui se touchent en
+  ligne ; 31 combos à découvrir). Ici : 8 combos, cachés en « ??? » jusqu'à
+  leur découverte.
+- **Personnel** : métiers et stats (GPS : mécaniciens Tech / Appeal / Analysis,
+  payés chaque mois, montés de niveau avec les points de recherche, petits
+  gains en travaillant) ; méthodes de recrutement de plus en plus chères et
+  mieux remplies (Game Dev Story : bouche-à-oreille 50 K → agent d'Hollywood
+  3 500 K ; Hot Springs Story 2 : 5 000 → 500 000 G) ; potentiel S à D (GPS2 :
+  « Growth » A à E) ; traits (Two Point Hospital) ; énergie et salle de repos
+  qui ajoute 3 places (Hot Springs Story 2) ; salaire qui monte avec le niveau
+  (Game Dev Story : ×1,2 par niveau) ; moral, et démission si on ne paie pas.
+  Ici : 3 métiers, 4 méthodes, 8 traits, paie chaque semaine.
+- **Menus** : barre d'onglets en bas (3 à 5 entrées, dans la zone du pouce),
+  tout à un ou deux touchers, cibles tactiles de 44-48 px (Apple, Material
+  Design). Le terrain occupe le centre : on touche un bâtiment pour sa fiche,
+  on fait glisser pour défiler ; en construction, un fantôme vert ou rouge
+  montre où le bâtiment se pose, puis « Construire ici ».
+
+Équilibrage (simulation sur 10 saisons) : la paie devient une vraie dépense
+(environ 40 000 G par semaine pour 11 employés en fin de partie), les
+bâtiments de recherche concurrencent la formation du personnel pour les
+points de recherche, et le terrain s'agrandit vers la saison 4-5.
+
 ## Sources consultées
 
 - Kairosoft Games: Progression Mastered — entertainmentanalytical.blog
@@ -130,3 +168,10 @@ comme le conseillent les guides de conception de mondes ouverts.
 - Designing New Game Plus (Red Hare Games) ; Grand Prix Story reviews (JayIsGames, Gamezebo)
 - How Burnout Paradise made open-world racing irresistible (Traxion) ; Open World Design: Pacing (StraySpark)
 - Building a Traffic Simulator (Rob Righter)
+- Structures (Grand Prix Story 2), Staff (Grand Prix Story 1 et 2) — Kairosoft Wiki (kairosoft.wiki.gg)
+- Combos et compatibilité des étages (Mega Mall Story) — Kairosoft Wiki ; manuel de Mega Mall Story
+- Manuel et personnel de Hot Springs Story 2 — Kairosoft Wiki ; manuel de Burger Bistro Story
+- Game Dev Story : bureaux, recrutement, salaires — Kairosoft Wiki, GameFAQs
+- Two Point Hospital : moral, traits, prestige des pièces — TheGamer, GameFAQs
+- Theme Hospital : personnel et salaires — StrategyWiki
+- Bottom navigation (Material Design) ; tailles de cibles tactiles (Apple HIG 44 pt, Material 48 dp)
