@@ -1,6 +1,8 @@
-Kenney — RPG Urban Pack et Pixel Vehicle Pack
+Kenney — RPG Urban Pack, Pixel Vehicle Pack et série Tiny
 https://kenney.nl/assets/rpg-urban-pack
 https://kenney.nl/assets/pixel-vehicle-pack
+https://kenney.nl/assets/series:Tiny (Tiny Factory, Town, Dungeon, Ski, Battle, Farm ;
+tuiles de 16 px, dans assets/kenney/tiny-*/tilemap_packed.png)
 
 Licence : Creative Commons Zero (CC0 1.0 Universal)
 https://creativecommons.org/publicdomain/zero/1.0/
