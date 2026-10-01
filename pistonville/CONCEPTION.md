@@ -1,4 +1,4 @@
-# Pistonville — notes de conception (v0.2)
+# Pistonville — notes de conception (v0.3)
 
 Ce que la recherche sur les jeux du genre (Kairosoft, jeux de course mobiles,
 littérature de game design) a apporté, et où c'est appliqué dans le code.
@@ -57,6 +57,59 @@ confettis, caisse qui brille selon la rareté, secousse d'écran sur les chocs,
 sons courts synthétisés. Rien de tout cela ne change les règles : ça rend
 chaque gain lisible.
 
+## 7. Durée de vie (v0.3)
+
+Repère : *Grand Prix Story* se finit en ~11 h, ~24 h pour tout faire. Les
+jeux Kairosoft durent un nombre d'années fixé, notent le joueur à la fin,
+laissent continuer, et proposent de recommencer en gardant certains acquis.
+
+- **Carrière de 10 saisons** de 28 jours (~280 jours, ~10-12 h). Au-delà, on
+  peut continuer ; ou lancer une **Nouvelle carrière+** qui garde le labo,
+  l'album, les médailles, le pilote, et donne un héritage en argent.
+- **Cérémonie des Pistons d'Or** à chaque fin de saison : 5 prix, des
+  écuries rivales en lice, des exigences qui montent de saison en saison.
+- **Médailles de circuit** (bronze, argent, or au meilleur tour) sur
+  48 circuits : 144 médailles, la maîtrise se mesure.
+- **Pilote** qui monte de niveau ; à chaque niveau, un point à placer
+  (technique, sang-froid, charisme) : un style à soi.
+- **Niveaux de pièces** (+1 à +5), **plafond par classe** de voiture,
+  **installations du garage** : des dépenses ambitieuses pour la fin de partie,
+  sinon l'argent s'entasse et plus rien n'a de valeur (économie des jeux de
+  gestion : des « puits » à chaque étape).
+- **13 voitures** de D à S, **18 Grands Prix**.
+
+Équilibrage vérifié par simulation (`simu.mjs`, un joueur faible, moyen et
+fort sur 10 saisons) : elle a trouvé un **blocage** (une voiture B exigeait la
+licence B, qui exigeait une voiture B) et l'absence de voitures A et S, tous
+deux corrigés. Joueur moyen : licence C en saison 1, B en saison 2-3, A en
+saison 4-5, S en saison 6-7 ; environ la moitié des Pistons d'Or.
+
+## 8. Donner envie de revenir
+
+- **Boucles ouvertes** (effet Zeigarnik) : l'écran titre résume ce qui
+  attend (Grand Prix en cours, candidatures, objectif à moitié fait, points
+  de pilote à placer).
+- **Cadeau du jour** sur 7 jours, au vrai calendrier, **sans série à
+  perdre** : manquer un jour ne remet rien à zéro. Le modèle Octalysis range
+  la peur de perdre dans les leviers « chapeau noir » qui épuisent les
+  joueurs ; on reste du côté « chapeau blanc » (progrès, création,
+  possession).
+- Objectifs, médailles, album, affiches de la ville : toujours une case vide
+  à remplir.
+
+## 9. La ville (v0.3)
+
+Plus grande (6 × 6 pâtés, centre, résidentiel, parcs, port) et vivante :
+circulation à droite avec feux décalés, voitures qui s'arrêtent derrière les
+autres et klaxonnent, piétons, coucher de soleil, lampadaires. Comme dans
+*Burnout Paradise*, on lance un défi en roulant dessus : sprints à points de
+contrôle, livraisons de colis fragiles, arène de drift avec médailles, radars
+de vitesse (records), affiches cachées. Les contraintes : le temps (une heure
+de jeu), les constats d'accrochage qui abîment la voiture avant la course du
+soir, les amendes des caméras de feu rouge, les fans perdus quand on fonce
+sur les piétons. Un point d'intérêt toutes les 60 à 120 secondes de route,
+comme le conseillent les guides de conception de mondes ouverts.
+
 ## Sources consultées
 
 - Kairosoft Games: Progression Mastered — entertainmentanalytical.blog
@@ -69,3 +122,11 @@ chaque gain lisible.
 - Smashy Road — fiches et analyses de jeu
 - First-Time User Experience in Mobile Games — Udonis, Supersonic
 - Self-Determination Theory (Ryan, Rigby, Przybylski 2006)
+- Endgame — Kairosoft Wiki (kairosoft.wiki.gg) ; Grand Prix Story, durées — dekudeals
+- Mobile Game Retention (AppFollow) ; Retention benchmarks D1/D7/D30
+- Octalysis Framework (Yu-kai Chou) ; Hooked (Nir Eyal) ; How Hooked Model Shapes Game Habits (Adrian Crook)
+- The Zeigarnik Effect and Quest Logs (Psychology of Games) ; Why we play again (guul.games)
+- Economy Design in Simulation Games (Althera Games) ; game economy sinks and faucets
+- Designing New Game Plus (Red Hare Games) ; Grand Prix Story reviews (JayIsGames, Gamezebo)
+- How Burnout Paradise made open-world racing irresistible (Traxion) ; Open World Design: Pacing (StraySpark)
+- Building a Traffic Simulator (Rob Righter)

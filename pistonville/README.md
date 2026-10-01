@@ -1,4 +1,4 @@
-# Pistonville — version d'essai 0.2
+# Pistonville — version d'essai 0.3
 
 Jeu mobile de gestion d'écurie et de course en pixel art, inspiré de
 *Grand Prix Story* (Kairosoft) et des jeux de poursuite mobiles où l'on tourne
@@ -25,6 +25,15 @@ L'aide au pilotage (activée par défaut, réglable dans la pause) recentre
 doucement la voiture quand on ne touche à rien.
 
 ## Ce que contient cette version
+
+**Nouveau en 0.3** : icônes pixel pour chaque pièce, pièces améliorables
+(+1 à +5), ville 6 × 6 animée (circulation, feux, piétons, coucher de soleil)
+avec défis (sprints, livraisons, arène de drift, radars, affiches cachées) et
+contraintes (constats, amendes, piétons), carrière de 10 saisons avec
+cérémonie des Pistons d'Or, médailles de circuit, pilote à faire progresser,
+installations du garage, cadeau du jour sans pénalité, fin de carrière avec
+palmarès et Nouvelle carrière+, 13 voitures, 18 Grands Prix et 48 circuits.
+
 
 - **Garage animé** : la voiture active et ses pièces sur les ponts, les
   mécaniciens circulent dans les allées, étagère des trophées.

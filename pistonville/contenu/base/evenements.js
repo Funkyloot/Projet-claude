@@ -9,7 +9,7 @@
 export default [
   {
     id: 'journal', poids: 3, si: (p) => p.fans >= 20,
-    effet: (p) => { const n = 10 + Math.round(p.fans * 0.05); p.fans += n; return { titre: 'Le Pistonville Matin', texte: `Un article sur ton équipe ! +${n} fans.` }; },
+    effet: (p) => { const n = 10 + Math.min(150, Math.round(p.fans * 0.02)); p.fans += n; return { titre: 'Le Pistonville Matin', texte: `Un article sur ton équipe ! +${n} fans.` }; },
   },
   {
     id: 'colis', poids: 2, si: () => true,

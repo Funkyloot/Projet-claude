@@ -1,4 +1,4 @@
-/* grands-prix.js — les 12 Grands Prix et 30 circuits du lancement.
+/* grands-prix.js — les 18 Grands Prix et 48 circuits du lancement.
  *
  * Un circuit n'est jamais dessiné à la main : il est décrit par une graine et
  * ses réglages, et le générateur (src/circuit.js) le recrée à l'identique.
@@ -38,6 +38,16 @@ export default [
     ],
   },
 
+  {
+    id: 'derby-quartier', nom: 'Derby du Quartier', palier: 'ouvert', niveau: 1,
+    prix: 8000, adversaires: 5,
+    manches: [
+      c('Rue des Écoles', 1401, 'ville', 'asphalte', 2, 2400),
+      c('Square des Lilas', 1402, 'parc', 'asphalte', 2, 2600),
+      c('Chantier de la Gare', 1403, 'chantier', 'terre', 2, 2700),
+    ],
+  },
+
   // --- Palier régional -----------------------------------------------------
   {
     id: 'coupe-faubourgs', nom: 'Coupe des Faubourgs', palier: 'regional', niveau: 2,
@@ -64,6 +74,17 @@ export default [
     manches: [
       c('Vignobles', 2301, 'parc', 'terre', 2, 3200),
       c('Col des Pins', 2302, 'parc', 'asphalte', 2, 3400),
+    ],
+  },
+
+  {
+    id: 'rallye-vignes', nom: 'Rallye des Vignes', palier: 'regional', niveau: 2,
+    prix: 16000, adversaires: 7,
+    conditions: { points: 45, podiums: 4, classe: 'C' },
+    manches: [
+      c('Chemin des Caves', 2401, 'parc', 'terre', 2, 3100),
+      c('Pressoir', 2402, 'chantier', 'terre', 2, 3300),
+      c('Grand Cru', 2403, 'parc', 'paves', 2, 3400),
     ],
   },
 
@@ -96,6 +117,26 @@ export default [
     ],
   },
 
+  {
+    id: 'coupe-port-franc', nom: 'Coupe du Port Franc', palier: 'national', niveau: 3,
+    prix: 38000, adversaires: 9,
+    conditions: { points: 110, podiums: 5, victoires: 2, classe: 'B' },
+    manches: [
+      c('Docks Nord', 3401, 'port', 'mouille', 3, 3500),
+      c('Grues et Conteneurs', 3402, 'port', 'asphalte', 3, 3600),
+      c('Phare de la Jetée', 3403, 'port', 'mouille', 3, 3700),
+    ],
+  },
+  {
+    id: 'endurance-cols', nom: 'Endurance des Cols', palier: 'national', niveau: 3,
+    prix: 42000, adversaires: 9,
+    conditions: { points: 130, podiums: 6, victoires: 3, classe: 'B' },
+    manches: [
+      c('Col du Loup', 3501, 'parc', 'asphalte', 4, 3600),
+      c('Descente des Sapins', 3502, 'parc', 'glace', 4, 3800),
+    ],
+  },
+
   // --- Palier continental --------------------------------------------------
   {
     id: 'gp-capitales', nom: 'Grand Prix des Capitales', palier: 'continental', niveau: 4,
@@ -118,6 +159,17 @@ export default [
     ],
   },
 
+  {
+    id: 'tour-iles', nom: 'Tour des Îles', palier: 'continental', niveau: 4,
+    prix: 75000, adversaires: 9,
+    conditions: { points: 200, victoires: 4, classe: 'A' },
+    manches: [
+      c('Île aux Palmiers', 4301, 'plage', 'sable', 3, 4000),
+      c('Lagon Bleu', 4302, 'plage', 'asphalte', 3, 4100),
+      c('Volcan', 4303, 'chantier', 'terre', 3, 4300),
+    ],
+  },
+
   // --- Palier mondial ------------------------------------------------------
   {
     id: 'gp-mondial', nom: 'Grand Prix Mondial', palier: 'mondial', niveau: 5,
@@ -130,6 +182,17 @@ export default [
       c('Grand Désert', 5104, 'plage', 'sable', 4, 4400),
       c('Autodrome International', 5105, 'parc', 'asphalte', 5, 4600),
       c('Finale de Pistonville', 5106, 'ville', 'asphalte', 5, 4800),
+    ],
+  },
+  {
+    id: 'super-coupe', nom: 'Super Coupe des Champions', palier: 'mondial', niveau: 5,
+    prix: 250000, adversaires: 9,
+    conditions: { points: 400, victoires: 12, classe: 'S' },
+    manches: [
+      c('Arène des Légendes', 5201, 'ville', 'asphalte', 4, 4400),
+      c('Toundra', 5202, 'parc', 'glace', 4, 4500),
+      c('Mirage', 5203, 'plage', 'sable', 4, 4600),
+      c('Couronne de Pistonville', 5204, 'ville', 'paves', 5, 4800),
     ],
   },
 ];

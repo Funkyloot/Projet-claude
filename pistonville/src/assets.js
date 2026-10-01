@@ -18,7 +18,7 @@ function chargerImage(chemin) {
   });
 }
 
-export const PROFILS = ['rounded_yellow', 'sedan_blue', 'sports_green', 'sports_red', 'sports_race', 'formula'];
+export const PROFILS = ['rounded_yellow', 'sedan_blue', 'sports_green', 'sports_red', 'sports_race', 'formula', 'kart', 'buggy', 'suv', 'convertible', 'sports_convertible', 'sports_yellow', 'sedan_vintage'];
 
 export async function chargerAssets() {
   const police = new FontFace('Jersey 10', `url(${urlAsset('assets/police/Jersey10.woff2')})`);

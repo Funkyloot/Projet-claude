@@ -14,7 +14,10 @@ import {
   voitureActive, decrireVoiture, statutGP, coutReparation, fraisDossier, peutAcheter, licenceAuMoins, modele,
   piece, montureDe, peutSortir, prixPiece, promoDuJour, PRIX_CAFE, ORDRE_PALIERS, PALIERS,
   objectifsActifs, objectifsFaits, totalObjectifs, estimerChances, rivalDe, sponsorActif, sponsorDispo,
+  saisonDe, jourDeSaison, JOURS_SAISON, SAISONS_CARRIERE, pieceNiveau, coutNiveauPiece, NIVEAU_PIECE_MAX,
+  tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, INSTALLATIONS, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
 } from './partie.js';
+import { idPersonnage } from './sprites.js';
 import {
   coutAmelioration, evaluerCandidature, SURFACES, kmh, CLASSES, EMPLACEMENTS, RARETES, COUT_RECHERCHE,
   QUALITES, PEINTURES, COUT_PEINTURE, expPourRang,
@@ -23,6 +26,7 @@ import { formatArgent, formatTemps, ordinal } from './outils.js';
 import { urlAsset } from './assets.js';
 import { THEMES } from './rendu-circuit.js';
 import { spriteVoiture } from './sprites.js';
+import { imgPiece } from './icones.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -57,7 +61,7 @@ function barre(partie) {
   const besoin = expPourRang(partie.rang);
   return `<header class="barre">
     <div class="barre-ligne">
-      <span class="jour">JOUR ${partie.jour}</span>
+      <span class="jour">S${saisonDe(partie)} · J${jourDeSaison(partie)}/${JOURS_SAISON}</span>
       <span class="rang" title="Rang de l'équipe">RANG ${partie.rang}
         <span class="jauge-exp"><i style="width:${Math.round((partie.exp / besoin) * 100)}%"></i></span></span>
       <span class="argent">${formatArgent(partie.argent)}</span>
@@ -146,11 +150,11 @@ export function ecranTitre(app) {
       <div class="logo"><span>PISTON</span><span>VILLE</span></div>
       <p class="accroche">Ton garage, ton équipe, tes Grands Prix.</p>
       <div class="pile">
-        ${reprise ? '<button class="btn btn-principal" data-action="continuer">Continuer la partie</button>' : ''}
+        ${reprise ? `<button class="btn btn-principal reprise" data-action="continuer">Continuer la partie<small>${resumeReprise(app.partieSauvee)}</small></button>` : ''}
         <button class="btn ${reprise ? '' : 'btn-principal'}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
       </div>
-      <p class="credits">Version d'essai 0.2 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
+      <p class="credits">Version d'essai 0.3 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
     </div>`,
     actions: {
       continuer: () => app.continuer(),
@@ -158,6 +162,18 @@ export function ecranTitre(app) {
       aide: () => app.montrer(ecranAide(app, 'titre')),
     },
   };
+}
+
+/** Ce qui attend le joueur quand il revient : les boucles ouvertes. */
+function resumeReprise(p) {
+  const morceaux = [`Saison ${saisonDe(p)}, jour ${jourDeSaison(p)}`];
+  if (p.gp) morceaux.push(`Grand Prix en cours : manche ${p.gp.manche + 1}`);
+  const attente = Object.values(p.candidatures || {}).filter((c) => c.etat === 'attente').length;
+  if (attente) morceaux.push(`${attente} candidature${attente > 1 ? 's' : ''} en attente`);
+  const obj = objectifsActifs(p, 1)[0];
+  if (obj) morceaux.push(`Objectif : ${obj.titre} (${obj.actuel}/${obj.but})`);
+  if (p.pilotePoints) morceaux.push(`${p.pilotePoints} point${p.pilotePoints > 1 ? 's' : ''} de pilote à répartir`);
+  return morceaux.map(e).join(' · ');
 }
 
 export function ecranAide(app, retour) {
@@ -215,7 +231,8 @@ export function ecranGarage(app) {
         <button class="btn" data-action="labo">Labo</button>
         <button class="btn btn-rouge" data-action="bureau">Courses</button>
         <button class="btn btn-vert" data-action="ville" ${sansVoiture || !sortie ? 'disabled' : ''}>${sortie ? 'Sortir en ville' : 'Ville : demain'}</button>
-        <button class="btn btn-sombre large" data-action="jour">Jour suivant</button>
+        <button class="btn" data-action="pilote">Pilote${p.pilotePoints ? ` <span class="badge">${p.pilotePoints}</span>` : ''}</button>
+        <button class="btn btn-sombre" data-action="jour">Jour suivant</button>
       </nav>
       <div class="petits-liens">
         <button class="lien" data-action="aide">Comment jouer</button>
@@ -231,6 +248,7 @@ export function ecranGarage(app) {
       labo: () => app.montrer(ecranLabo(app)),
       bureau: () => app.montrer(ecranBureau(app)),
       ville: () => app.sortirEnVille(),
+      pilote: () => app.montrer(ecranPilote(app)),
       jour: () => app.jourSuivant(),
       aide: () => app.montrer(ecranAide(app, 'garage')),
       titre: () => app.titre(),
@@ -246,16 +264,16 @@ export function ecranAtelier(app) {
   const lignes = Object.keys(v.stats).map((k) => {
     const niveau = v.ameliorations[k] || 0;
     const cout = coutAmelioration(niveau);
-    const max = v.stats[k] >= 99;
+    const max = niveau >= REGLAGES_MAX || v.stats[k] >= PLAFOND_CLASSE[v.classe];
     return `<div class="ligne">
       ${barreStat(NOMS_STATS[k], v.stats[k], COULEURS_STATS[k])}
-      <button class="btn btn-mini" data-action="ameliorer" data-stat="${k}" ${max || p.argent < cout ? 'disabled' : ''}>+5 · ${formatArgent(cout)}</button>
+      ${max ? `<span class="etat">${niveau >= REGLAGES_MAX ? 'Réglé au max' : `Plafond classe ${v.classe}`}</span>` : `<button class="btn btn-mini" data-action="ameliorer" data-stat="${k}" ${p.argent < cout ? 'disabled' : ''}>+5 · ${formatArgent(cout)}</button>`}
     </div>`;
   }).join('');
   const emplacements = Object.entries(EMPLACEMENTS).map(([cle, nom]) => {
     const monte = v.pieces.find((x) => x.emplacement === cle);
     return `<button class="emplacement ${monte ? `rarete-${monte.rarete}` : 'vide'}" data-action="monter" data-emplacement="${cle}">
-      <small>${nom}</small><b>${monte ? e(monte.nom) : '— vide —'}</b></button>`;
+      ${imgPiece(monte || cle, monte ? '' : 'fantome')}<span><small>${nom}</small><b>${monte ? `${e(monte.nom)}${monte.niveau ? ` +${monte.niveau}` : ''}` : '— vide —'}</b></span></button>`;
   }).join('');
   const rep = coutReparation(p);
   const autres = p.garage.filter((g) => g.uid !== v.uid);
@@ -306,7 +324,10 @@ export function ecranMontage(app, emplacement) {
     return decrireVoiture(p, copie);
   };
   const ligne = (inv) => {
-    const pc = piece(inv.piece);
+    const base = piece(inv.piece);
+    const niv = inv.niveau || 0;
+    const pc = pieceNiveau(base, niv);
+    const cout = niv < NIVEAU_PIECE_MAX ? coutNiveauPiece(base, niv) : null;
     const apres = essai(inv.uid);
     const ailleurs = montureDe(p, inv.uid);
     const ici = inv.uid === actuelle;
@@ -315,8 +336,10 @@ export function ecranMontage(app, emplacement) {
       return d ? `<span class="${d > 0 ? 'ok' : 'ko'}">${COURTS[k]} ${d > 0 ? '+' : ''}${d}</span>` : '';
     }).join('');
     return `<div class="piece rarete-${pc.rarete}">
-      <div class="piece-tete"><b>${e(pc.nom)}</b><span class="rarete">${RARETES[pc.rarete].nom}</span></div>
+      <div class="piece-tete">${imgPiece(pc)}<b>${e(pc.nom)}${niv ? ` <span class="niveau-piece">+${niv}</span>` : ''}</b><span class="rarete">${RARETES[pc.rarete].nom}</span></div>
       <div class="petit">${texteBonus(pc)}</div>
+      <div class="ligne"><span class="etoiles-niveau">${'◆'.repeat(niv)}<span>${'◆'.repeat(NIVEAU_PIECE_MAX - niv)}</span></span>
+        ${cout ? `<button class="btn btn-mini btn-principal" data-action="niveau" data-uid="${inv.uid}" ${p.argent < cout.argent || p.recherche < cout.recherche ? 'disabled' : ''}>Améliorer +${niv + 1} · ${formatArgent(cout.argent)} · ${cout.recherche} PR</button>` : '<span class="etat">Niveau max</span>'}</div>
       <div class="ligne"><span class="effet">${ici ? '<span class="etat">Montée</span>' : effet || '<span class="petit">aucun changement</span>'}${ailleurs && !ici ? ' <span class="petit">(sur une autre voiture)</span>' : ''}</span>
         <span>${ici ? '' : `<button class="btn btn-mini btn-vert" data-action="poser" data-uid="${inv.uid}">Monter</button>`}
         <button class="btn btn-mini" data-action="vendre" data-uid="${inv.uid}">Vendre ${formatArgent(Math.round(pc.prix * 0.4))}</button></span></div>
@@ -335,6 +358,10 @@ export function ecranMontage(app, emplacement) {
     </div>`,
     actions: {
       poser: (d) => { if (app.action('monter', d.uid)) { app.son.disque(); app.toast('Pièce montée !'); } app.montrer(ecranAtelier(app)); },
+      niveau: (d) => {
+        if (app.action('ameliorerPiece', d.uid)) { app.son.niveau(); app.toast('Pièce améliorée !'); }
+        app.montrer(ecranMontage(app, emplacement));
+      },
       vendre: (d) => { const g = app.action('vendrePiece', d.uid); if (g) app.toast(`Vendue : +${formatArgent(g)}`); app.montrer(ecranMontage(app, emplacement)); },
       enlever: () => { app.action('demonter', emplacement); app.montrer(ecranAtelier(app)); },
       pieces: () => app.montrer(ecranPieces(app, { onglet: emplacement, retour: () => app.montrer(ecranMontage(app, emplacement)) })),
@@ -356,7 +383,7 @@ export function ecranPieces(app, o = {}) {
     const prix = prixPiece(pc, remise);
     const possede = p.inventaire.filter((i) => i.piece === pc.id).length;
     return `<div class="piece rarete-${pc.rarete} ${verrou ? 'verrou' : ''}">
-      <div class="piece-tete"><b>${e(pc.nom)}</b><span class="rarete">${RARETES[pc.rarete].nom}</span></div>
+      <div class="piece-tete">${imgPiece(pc)}<b>${e(pc.nom)}</b><span class="rarete">${RARETES[pc.rarete].nom}</span></div>
       <div class="petit">${texteBonus(pc)}${possede ? ` · en stock : ${possede}` : ''}</div>
       <div class="ligne">${remise ? '<span class="promo">PROMO −30 %</span>' : '<span></span>'}
         ${verrou
@@ -400,7 +427,7 @@ function ecranAchatPiece(app, inv, retour) {
       <section class="panneau revele rarete-${pc.rarete}">
         <h2 class="titre-panneau">Nouvelle pièce !</h2>
         <div class="contenu texte centre">
-          <div class="caisse-ouverte"></div>
+          ${imgPiece(pc, 'grande')}
           <p class="gros">${e(pc.nom)}</p>
           <p class="rarete">${RARETES[pc.rarete].nom}</p>
           <p class="petit">${texteBonus(pc)}</p>
@@ -432,7 +459,7 @@ export function ecranLabo(app, retour = () => app.garage()) {
   return {
     classe: 'garage plein',
     html: `${barre(p)}<div class="defile">
-      <h2 class="titre-section">Labo de recherche</h2>
+      <h2 class="titre-section">Labo et installations</h2>
       <section class="panneau">
         <h2 class="titre-panneau violet">Niveau ${p.labo}<small>Les points de recherche (PR) se gagnent en course, en ville et en montant de rang.</small></h2>
         <div class="contenu">
@@ -441,8 +468,15 @@ export function ecranLabo(app, retour = () => app.garage()) {
             ${max ? '' : `<button class="btn btn-mini btn-principal" data-action="chercher" ${p.recherche < cout ? 'disabled' : ''}>Rechercher</button>`}</div>
         </div>
       </section>
+      <section class="panneau"><h2 class="titre-panneau marron">Installations du garage<small>De gros chantiers pour les écuries qui réussissent.</small></h2>
+        <div class="contenu">${Object.entries(INSTALLATIONS).map(([id, x]) => {
+          const n = p.installations?.[id] || 0;
+          const cout = x.couts[n];
+          return `<div class="ligne stat-pilote"><div><b>${e(x.nom)} ${'◆'.repeat(n)}<span class="petit">${'◆'.repeat(x.couts.length - n)}</span></b><div class="petit">${e(x.texte)}</div></div>
+            ${cout ? `<button class="btn btn-mini btn-principal" data-action="installer" data-id="${id}" ${p.argent < cout ? 'disabled' : ''}>${formatArgent(cout)}</button>` : '<span class="etat">Au max</span>'}</div>`;
+        }).join('')}</div></section>
       <section class="panneau"><h2 class="titre-panneau sombre">Collection de pièces<small>${Object.keys(p.collection).length} / ${PIECES.length} découvertes</small></h2>
-        <div class="contenu album">${PIECES.map((x) => (p.collection[x.id] ? `<span class="carte-piece rarete-${x.rarete}">${e(x.nom)}</span>` : '<span class="carte-piece inconnue">?</span>')).join('')}</div></section>
+        <div class="contenu album">${PIECES.map((x) => (p.collection[x.id] ? `<span class="carte-piece rarete-${x.rarete}">${imgPiece(x)}${e(x.nom)}</span>` : `<span class="carte-piece inconnue">${imgPiece(x, 'silhouette')}?</span>`)).join('')}</div></section>
       <section class="panneau"><div class="contenu">${niveaux}</div></section>
     </div>
     <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
@@ -451,6 +485,14 @@ export function ecranLabo(app, retour = () => app.garage()) {
         if (app.action('rechercher')) {
           app.son.niveau();
           app.montrer(ecranCelebration(app, 'Eurêka !', `Labo niveau ${p.labo} : de nouvelles pièces sont en vente.`, () => app.montrer(ecranLabo(app, retour))));
+          return;
+        }
+        app.montrer(ecranLabo(app, retour));
+      },
+      installer: (d) => {
+        if (app.action('construireInstallation', d.id)) {
+          app.son.niveau();
+          app.montrer(ecranCelebration(app, 'Chantier terminé !', `${INSTALLATIONS[d.id].nom} niveau ${p.installations[d.id]}.`, () => app.montrer(ecranLabo(app, retour))));
           return;
         }
         app.montrer(ecranLabo(app, retour));
@@ -620,7 +662,7 @@ export function ecranTombola(app, retour) {
           app.montrer({
             classe: 'fond-sombre',
             html: `<div class="ecran"><section class="panneau revele rarete-${rare}"><h2 class="titre-panneau">${rare === 'super' ? 'SUPER LOT !' : 'Gagné !'}</h2>
-              <div class="contenu texte centre"><div class="caisse-ouverte"></div><p class="gros">${e(titre)}</p>
+              <div class="contenu texte centre">${lot.type === 'piece' ? imgPiece(lot.piece, 'grande') : '<div class="caisse-ouverte"></div>'}<p class="gros">${e(titre)}</p>
               ${lot.type === 'piece' ? `<p class="rarete">${RARETES[rare].nom}</p><p class="petit">${texteBonus(lot.piece)}</p>` : ''}</div></section>
               <button class="btn btn-principal" data-action="encore">Continuer</button></div>`,
             actions: { encore: () => app.montrer(ecranTombola(app, retour)) },
@@ -678,17 +720,20 @@ export function ecranCafe(app, retour) {
 }
 
 export function ecranFinBalade(app, g, suite) {
+  const journal = (g.journal || []).map((l) => `<li>${e(l)}</li>`).join('');
   return {
     classe: 'fond-sombre',
-    html: `<div class="ecran">
+    html: `<div class="ecran defile-ecran">
       <section class="panneau tele">
         <h2 class="titre-panneau">19:00 · Fin de la balade</h2>
         <div class="contenu gains">
-          <div><small>Argent ramassé</small><b data-compte="${g.argent}" data-avant="+" data-apres=" G">0</b></div>
+          <div><small>Argent (net)</small><b data-compte="${Math.abs(g.argent)}" data-avant="${g.argent < 0 ? '−' : '+'}" data-apres=" G">0</b></div>
           <div><small>Recherche</small><b data-compte="${g.recherche}" data-avant="+" data-apres=" PR">0</b></div>
-          <div><small>Fans</small><b data-compte="${g.fans}" data-avant="+">0</b></div>
+          <div><small>Fans</small><b data-compte="${Math.abs(g.fans)}" data-avant="${g.fans < 0 ? '−' : '+'}">0</b></div>
           <div><small>EXP</small><b data-compte="${g.exp}" data-avant="+">0</b></div>
         </div>
+        ${g.amendes ? `<p class="petit-clair contenu">Amendes et constats : −${formatArgent(g.amendes)}${g.usure ? ` · voiture abîmée (−${Math.round(g.usure * 100)} % d'état)` : ''}</p>` : ''}
+        ${journal ? `<ul class="journal contenu">${journal}</ul>` : ''}
       </section>
       <button class="btn btn-principal" data-action="suite">Retour au garage</button>
     </div>`,
@@ -713,6 +758,15 @@ export function ecranObjectifs(app) {
     html: `${barre(p)}<div class="defile">
       <h2 class="titre-section">Objectifs</h2>
       <p class="petit clair">${objectifsFaits(p)} sur ${totalObjectifs()} atteints. Chaque objectif est récompensé dès qu'il est rempli.</p>
+      <section class="panneau"><h2 class="titre-panneau sombre">Carrière<small>Saison ${saisonDe(p)} sur ${SAISONS_CARRIERE}</small></h2>
+        <div class="contenu gains-clairs">
+          <div><small>Médailles de circuit</small><b>${totalMedailles(p)} / ${GRANDS_PRIX.reduce((s, g) => s + g.manches.length * 3, 0)}</b></div>
+          <div><small>Pistons d'Or</small><b>${p.palmares.length}</b></div>
+          <div><small>Affiches Piston</small><b>${Object.keys(p.memoireVille?.affiches || {}).length} / 8</b></div>
+          <div><small>Album de pièces</small><b>${Object.keys(p.collection).length} / ${PIECES.length}</b></div>
+          <div><small>Score de carrière</small><b>${scoreCarriere(p).toLocaleString('fr-FR')}</b></div>
+          <div><small>Grands Prix gagnés</small><b>${Object.values(p.trophees).filter((x) => x === 1).length} / ${GRANDS_PRIX.length}</b></div>
+        </div></section>
       <section class="panneau"><div class="contenu">${lignes || '<p>Tout est accompli. Légende !</p>'}</div></section>
     </div>
     <div class="pied"><button class="btn" data-action="retour">Retour au garage</button></div>`,
@@ -762,7 +816,8 @@ function ligneGP(app, gp) {
   const v = voitureActive(p);
   const statut = statutGP(p, gp);
   const trophee = p.trophees[gp.id];
-  const infos = `${gp.manches.length} manches · 1er prix ${formatArgent(gp.prix)} · niveau ${'●'.repeat(gp.niveau)}${trophee ? ` · meilleur : ${ordinal(trophee)}` : ''}`;
+  const med = gp.manches.reduce((s, _, i) => s + (p.medailles[`${gp.id}#${i}`] || 0), 0);
+  const infos = `${gp.manches.length} manches · 1er prix ${formatArgent(gp.prix)} · niveau ${'●'.repeat(gp.niveau)}${trophee ? ` · meilleur : ${ordinal(trophee)}` : ''} · médailles ${med}/${gp.manches.length * 3}`;
   const coupe = trophee ? `<i class="coupe c${Math.min(trophee, 4)}" title="Meilleure place : ${ordinal(trophee)}"></i>` : '';
   let action = '';
   if (gp.palier === 'ouvert') {
@@ -846,6 +901,8 @@ export function ecranBriefing(app, gp, manche, apercu) {
               <dt>Tours</dt><dd>${def.tours}</dd>
               <dt>Longueur</dt><dd>${Math.round(def.longueur / 16)} cases</dd>
               <dt>Adversaires</dt><dd>${gp.adversaires}</dd>
+              <dt>Record</dt><dd>${(() => { const cle = `${gp.id}#${manche}`; const r = app.partie.meilleursTours[cle]; const m = app.partie.medailles[cle] || 0; return `${r ? `${r.toFixed(1)} s` : '—'} ${m ? `<span class="medaille m${m}">${NOMS_MEDAILLES[m]}</span>` : ''}`; })()}</dd>
+              <dt>Médailles</dt><dd class="petit">${tempsMedailles(def).map((t, i) => `<span class="medaille m${i + 1}">${t} s</span>`).join(' ')}</dd>
               <dt>Rival</dt><dd class="ko">${e(rivalDe(gp).nom)}</dd>
               <dt>Chances</dt><dd>${pastilleChances(app, gp)}</dd>
             </dl>
@@ -904,7 +961,7 @@ export function ecranResultats(app, r) {
   const besoin = expPourRang(p.rang);
   const butin = g.butin
     ? `<section class="panneau revele rarete-${g.butin.piece.rarete} retarde"><h2 class="titre-panneau">Caisse de pièces !</h2>
-        <div class="contenu texte centre"><div class="caisse-ouverte"></div><p class="gros">${e(g.butin.piece.nom)}</p>${g.butin.nouvelle ? '<p class="nouveau">NOUVEAU !</p>' : ''}<p class="rarete">${RARETES[g.butin.piece.rarete].nom}</p><p class="petit">${texteBonus(g.butin.piece)}</p></div></section>`
+        <div class="contenu texte centre">${imgPiece(g.butin.piece, 'grande')}<p class="gros">${e(g.butin.piece.nom)}</p>${g.butin.nouvelle ? '<p class="nouveau">NOUVEAU !</p>' : ''}<p class="rarete">${RARETES[g.butin.piece.rarete].nom}</p><p class="petit">${texteBonus(g.butin.piece)}</p></div></section>`
     : '';
   return {
     classe: 'fond-sombre',
@@ -925,6 +982,9 @@ export function ecranResultats(app, r) {
           <div class="jauge grande"><i class="remplir" style="--w:${Math.round((p.exp / besoin) * 100)}%;background:#f2c14e"></i></div>
           <p class="petit-clair">${r.depassements} dépassement${r.depassements > 1 ? 's' : ''} · ${r.drift} EXP bonus (drift, départ, rival)${g.sponsor ? ` · sponsor ${e(g.sponsor)}` : ''}</p>
           ${g.premiere ? '<p class="premiere">PREMIÈRE VICTOIRE SUR CE CIRCUIT · +10 PR</p>' : ''}
+          ${g.meilleurTour ? `<p class="petit-clair">Meilleur tour : ${g.meilleurTour.toFixed(1)} s${g.medaille?.record ? ' · RECORD' : ''}</p>` : ''}
+          ${g.medaille?.nouvelle ? `<p class="premiere medaille-gagnee m${g.medaille.niveau}">MÉDAILLE ${NOMS_MEDAILLES[g.medaille.niveau].toUpperCase()} ! +${g.medaille.recherche} PR</p>` : ''}
+          ${g.niveauxPilote?.length ? `<p class="premiere">${e(app.partie.pilote)} passe niveau ${g.niveauxPilote.at(-1)} ! Point à répartir</p>` : ''}
         </div>
       </section>
       ${butin}
@@ -968,4 +1028,126 @@ export function ecranFinGP(app, f) {
 export function ecranRang(app, m, suite) {
   return ecranCelebration(app, `RANG ${m.rang} !`, "L'équipe monte en grade.", suite,
     `<div class="recompenses"><span>+${formatArgent(m.argent)}</span><span>+${m.recherche} PR</span><span>+${m.tickets} ticket</span></div>`);
+}
+
+// --- Pilote ----------------------------------------------------------------------------------------
+
+function portrait(app, taille = 3) {
+  const planche = app.assets?.urbain;
+  if (!planche) return '';
+  const c = document.createElement('canvas');
+  c.width = 16 * taille; c.height = 16 * taille;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const id = idPersonnage(104, 1, 0);
+  ctx.drawImage(planche, (id % 27) * 16, Math.floor(id / 27) * 16, 16, 16, 0, 0, 16 * taille, 16 * taille);
+  return `<img class="portrait" src="${c.toDataURL()}" alt="">`;
+}
+
+export function ecranPilote(app) {
+  const p = app.partie;
+  const besoin = expPilote(p.piloteNiv);
+  const lignes = Object.entries(STATS_PILOTE).map(([k, st]) => `<div class="ligne stat-pilote">
+      <div><b>${st.nom} · ${p.piloteStats[k]}</b><div class="petit">${st.texte}</div></div>
+      <button class="btn btn-mini btn-principal" data-action="point" data-stat="${k}" ${p.pilotePoints ? '' : 'disabled'}>+1</button></div>`).join('');
+  return {
+    classe: 'garage plein',
+    html: `${barre(p)}<div class="defile">
+      <h2 class="titre-section">Pilote</h2>
+      <section class="panneau">
+        <div class="contenu fiche-pilote">${portrait(app)}<div>
+          <b class="gros">${e(p.pilote)}</b>
+          <div>Niveau ${p.piloteNiv}${p.pilotePoints ? ` · <span class="ok">${p.pilotePoints} point${p.pilotePoints > 1 ? 's' : ''} à répartir</span>` : ''}</div>
+          <div class="jauge grande"><i style="width:${Math.round((p.piloteExp / besoin) * 100)}%;background:#7a5ac8"></i></div>
+          <div class="petit">${p.piloteExp} / ${besoin} EXP · gagnée en course</div>
+        </div></div>
+      </section>
+      <section class="panneau"><h2 class="titre-panneau violet">Entraînement<small>Chaque niveau donne un point. À toi de choisir ton style.</small></h2>
+        <div class="contenu">${lignes}</div></section>
+      ${p.palmares.length ? `<section class="panneau"><h2 class="titre-panneau">Pistons d'Or</h2><div class="contenu petit">${p.palmares.map((x) => `Saison ${x.saison} · ${e(x.prix)}`).join('<br>')}</div></section>` : ''}
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour au garage</button></div>`,
+    actions: {
+      point: (d) => { if (app.action('entrainerPilote', d.stat)) app.son.niveau(); app.montrer(ecranPilote(app)); },
+      retour: () => app.garage(),
+    },
+  };
+}
+
+// --- Cérémonie des Pistons d'Or -------------------------------------------------------------------
+
+export function ecranCeremonie(app, c, suite) {
+  const lignes = c.prix.map((x, i) => `<div class="prix-or ${x.ok ? 'gagne' : ''}" style="--i:${i}">
+      <div class="statuette ${x.ok ? '' : 'grise'}"></div>
+      <div class="prix-texte"><b>${e(x.nom)}</b>
+        <span class="petit">En lice : Garage Piston, ${e(x.nomines.join(', '))}</span>
+        <span class="laureat">${x.ok ? 'Lauréat : GARAGE PISTON !' : `Lauréat : ${e(x.laureat)}`}</span>
+        <span class="petit">${e(x.detail)}${x.ok ? ` · ${texteGain(x.gain)}` : ''}</span></div>
+    </div>`).join('');
+  const gagnes = c.prix.filter((x) => x.ok).length;
+  return {
+    classe: 'fond-sombre',
+    html: `<div class="ecran defile-ecran ceremonie">
+      ${gagnes ? `<div class="confettis">${Array.from({ length: 24 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>` : ''}
+      <div class="bandeau petit-bandeau">PISTONS D'OR</div>
+      <p class="accroche">Cérémonie de fin de saison ${c.saison}</p>
+      <section class="panneau"><div class="contenu">${lignes}</div></section>
+      <p class="accroche">${gagnes === 0 ? 'Pas de statuette cette année… la saison prochaine sera la bonne !' : `${gagnes} Piston${gagnes > 1 ? 's' : ''} d'Or pour le garage !`}</p>
+      <button class="btn btn-principal" data-action="suite">Saison ${c.saison + 1} : c'est parti !</button>
+    </div>`,
+    actions: { suite },
+    apres: () => { if (gagnes) app.son.fanfare(); },
+  };
+}
+
+function texteGain(g) {
+  if (g.piece) return `pièce ${g.piece}`;
+  return [g.argent && `+${formatArgent(g.argent)}`, g.recherche && `+${g.recherche} PR`, g.tickets && `+${g.tickets} tickets`, g.exp && `+${g.exp} EXP`].filter(Boolean).join(' ');
+}
+
+export function ecranFinCarriere(app, r, actions) {
+  const p = app.partie;
+  const palmares = lirePalmares().map((x, i) => `<tr class="${x.score === r.score ? 'moi' : ''}"><td>${i + 1}</td><td>${e(x.pilote)}${x.heritage ? ` (carrière ${x.heritage + 1})` : ''}</td><td class="num">${x.score.toLocaleString('fr-FR')}</td></tr>`).join('');
+  return {
+    classe: 'fond-sombre',
+    html: `<div class="ecran defile-ecran">
+      <div class="confettis">${Array.from({ length: 24 }, (_, i) => `<i style="--i:${i}"></i>`).join('')}</div>
+      <div class="bandeau petit-bandeau">FIN DE CARRIÈRE</div>
+      <p class="accroche">${SAISONS_CARRIERE} saisons au Garage Piston. Merci, ${e(p.pilote)} !</p>
+      <section class="panneau tele"><div class="contenu gains">
+        <div><small>Score</small><b data-compte="${r.score}">0</b></div>
+        <div><small>Classement</small><b>${r.rangPalmares}e</b></div>
+        <div><small>Grands Prix gagnés</small><b>${Object.values(p.trophees).filter((x) => x === 1).length}</b></div>
+        <div><small>Pistons d'Or</small><b>${p.palmares.length}</b></div>
+      </div></section>
+      <section class="panneau"><h2 class="titre-panneau">Palmarès</h2><div class="contenu"><table class="classement">${palmares}</table></div></section>
+      <div class="pile">
+        <button class="btn btn-principal" data-action="plus">Nouvelle carrière+ (on garde labo, album, médailles, pilote)</button>
+        <button class="btn" data-action="continuer">Continuer cette partie</button>
+      </div>
+    </div>`,
+    actions,
+    apres: (racine) => animerCompteurs(racine, 1600),
+  };
+}
+
+// --- Cadeau du jour --------------------------------------------------------------------------------
+
+export function ecranCadeau(app, c, suite) {
+  const cases = CADEAUX.map((x, i) => `<div class="case-cadeau ${i < c.jour ? 'pris' : i === c.jour ? 'aujourdhui' : ''}">
+      <small>Jour ${i + 1}</small><b>${x.piece ? 'Pièce rare' : texteGain(x)}</b></div>`).join('');
+  return {
+    classe: 'fond-sombre',
+    html: `<div class="ecran">
+      <section class="panneau">
+        <h2 class="titre-panneau rose">Cadeau du jour<small>Un cadeau chaque jour où tu passes au garage. Rien n'est perdu si tu sautes un jour.</small></h2>
+        <div class="contenu cadeaux">${cases}</div>
+        <div class="contenu texte centre">${c.piece ? imgPiece(c.piece, 'grande') : '<div class="caisse-ouverte"></div>'}
+          <p class="gros">${c.piece ? e(c.piece.nom) : texteGain(c.cadeau)}</p></div>
+      </section>
+      <button class="btn btn-principal" data-action="suite">Merci !</button>
+    </div>`,
+    actions: { suite },
+    apres: () => app.son.caisse(),
+  };
 }

@@ -20,7 +20,7 @@ import { Ville } from './ville.js';
 import { Son } from './son.js';
 import {
   Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranResultats, ecranFinGP,
-  ecranConstruction, ecranRang, texteRecompense, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
+  ecranConstruction, ecranRang, texteRecompense, ecranCeremonie, ecranFinCarriere, ecranCadeau, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
 } from './ecrans.js';
 import * as P from './partie.js';
 
@@ -216,20 +216,50 @@ class App {
     this.partie = P.nouvellePartie();
     this.son.actif = this.partie.son;
     this.sauver();
-    this.garage();
+    this.cadeauPuis(() => this.garage());
   }
 
   continuer() {
     this.partie = this.partieSauvee;
     // Une course interrompue (onglet fermé) se reprend au briefing.
-    if (this.partie.gp) { this.briefing(this.partie.gp.id, true); return; }
-    this.garage();
+    this.cadeauPuis(() => {
+      if (this.partie.gp) { this.briefing(this.partie.gp.id, true); return; }
+      this.garage();
+    });
+  }
+
+  /** Cadeau du jour (vrai calendrier), puis la suite. */
+  cadeauPuis(suite) {
+    const c = P.cadeauDuJour(this.partie);
+    if (!c) { suite(); return; }
+    this.sauver();
+    this.ecran = 'garage';
+    this.montrer(ecranCadeau(this, c, suite));
   }
 
   garage() {
     this.ecran = 'garage';
     this.course = null;
     this.ville = null;
+    // Fin de saison : la cérémonie passe avant tout.
+    if (this.partie.ceremonie) {
+      const c = this.partie.ceremonie;
+      this.montrer(ecranCeremonie(this, c, () => {
+        const rangs = P.recevoirCeremonie(this.partie);
+        this.sauver();
+        this.apresRangs(rangs, () => this.garage());
+      }));
+      return;
+    }
+    if (this.partie.finCarriere) {
+      const r = P.terminerCarriere(this.partie);
+      this.sauver();
+      this.montrer(ecranFinCarriere(this, r, {
+        plus: () => { this.partie = P.nouvellePartiePlus(this.partie); this.sauver(); this.garage(); },
+        continuer: () => this.garage(),
+      }));
+      return;
+    }
     this.montrer(ecranGarage(this));
   }
 
@@ -240,7 +270,7 @@ class App {
       inscrire: P.inscrire, candidater: P.deposerCandidature,
       acheterPiece: (p, [id, remise]) => P.acheterPiece(p, id, remise), monter: P.monter, demonter: P.demonter,
       vendrePiece: P.vendrePiece, rechercher: P.rechercher, tirerTombola: P.tirerTombola, boireCafe: P.boireCafe,
-      signerSponsor: P.signerSponsor,
+      signerSponsor: P.signerSponsor, ameliorerPiece: P.ameliorerPiece, entrainerPilote: P.entrainerPilote, construireInstallation: P.construireInstallation,
     }[nom];
     const ok = f(this.partie, arg);
     if (ok) this.sauver();
@@ -292,7 +322,7 @@ class App {
     if (!P.peutSortir(this.partie)) return;
     const v = P.voitureActive(this.partie);
     if (!v) return;
-    this.ville = new Ville({ planche: this.assets.urbain, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7 });
+    this.ville = new Ville({ planche: this.assets.urbain, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille });
     this.villeFinie = false;
     this.pause = false;
     this.accu = 0;

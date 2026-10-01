@@ -277,6 +277,17 @@ export class Course {
     const ds = sit.s - v.s;
     if (ds < -L / 2) {
       v.tour++;
+      if (v.joueur) {
+        // Chrono au tour : le premier passage de la ligne lance le chrono.
+        if (this.debutTour !== undefined) {
+          const tour = this.temps - this.debutTour;
+          if (!this.meilleurTour || tour < this.meilleurTour) {
+            if (this.meilleurTour) this.message(`MEILLEUR TOUR ${tour.toFixed(1)} s`, 1.2, '#7dd3fc');
+            this.meilleurTour = tour;
+          }
+        }
+        this.debutTour = this.temps;
+      }
       if (v.joueur && v.tour === this.tours - 1 && this.tours > 1 && !this.annonceDernierTour) {
         this.annonceDernierTour = true;
         this.message('DERNIER TOUR !', 1.6, '#f2c14e');
@@ -536,7 +547,7 @@ export class Course {
     return {
       fans: this.fans, depassements: this.depassements, drift: this.drift,
       ramasses: { ...this.ramasses },
-      pieces: this.piecesOr, driftMax: this.driftMax, departParfait: this.departReussi,
+      pieces: this.piecesOr, driftMax: this.driftMax, departParfait: this.departReussi, meilleurTour: this.meilleurTour,
       usure: 1 - this.joueur.durabilite / this.joueur.p.durabiliteMax,
     };
   }
