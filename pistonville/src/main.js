@@ -24,6 +24,7 @@ import {
 } from './ecrans.js';
 import * as P from './partie.js';
 import * as G from './garage.js';
+import * as Nuage from './nuage.js';
 import { ecranPlacement, ecranFicheBatiment, ecranConstruire } from './ecrans-garage.js';
 
 const W = 320, H = 568;
@@ -67,6 +68,32 @@ class App {
     this.dernier = performance.now();
     this.accu = 0;
     requestAnimationFrame((t) => this.boucle(t));
+    this.brancherSauvegardes();
+    // La copie du serveur (s'il y en a une) gagne si elle est plus récente.
+    const distante = await Nuage.lire();
+    if (distante && (!this.partieSauvee || (distante.horodatage || 0) > (this.partieSauvee.horodatage || 0))) {
+      const p = P.restaurer(distante);
+      if (p) {
+        this.partieSauvee = p;
+        if (this.ecran === 'titre') { this.partie = p; this.son.actif = p.son; this.titre(); }
+      }
+    }
+  }
+
+  /**
+   * Sauvegardes de secours : quand le jeu passe en arrière-plan ou se ferme
+   * (téléphone verrouillé, appli quittée), et toutes les 15 s au garage.
+   */
+  brancherSauvegardes() {
+    const auSecours = () => {
+      if (!this.partie || this.ecran === 'titre') return;
+      P.sauver(this.partie);
+      this.partieSauvee = this.partie;
+      Nuage.ecrireMaintenant(this.partie);
+    };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') auSecours(); });
+    window.addEventListener('pagehide', auSecours);
+    setInterval(() => { if (this.ecran === 'garage' && this.partie === this.partieSauvee) this.sauver(); }, 15000);
   }
 
   redimensionner() {
@@ -211,6 +238,7 @@ class App {
     for (const o of P.verifierObjectifs(this.partie)) this.annoncerObjectif(o);
     P.sauver(this.partie);
     this.partieSauvee = this.partie;
+    Nuage.ecrire(this.partie);
   }
 
   /** Bandeau « Objectif atteint » en haut de l'écran, sans bloquer le jeu. */
@@ -390,7 +418,14 @@ class App {
     // Partir courir depuis la ville termine la balade (les gains sont gardés).
     if (this.ville && !this.villeFinie) { this.villeFinie = true; P.finBalade(this.partie, this.ville.bilan()); }
     this.ville = null;
-    if (!reprise || !this.partie.gp) P.commencerGP(this.partie, gpId);
+    // Une manche par soir : la course termine la journée.
+    if (!P.peutCourir(this.partie)) {
+      this.toast('Une seule course par soir : la prochaine, c’est demain soir.');
+      this.garage();
+      return;
+    }
+    // Le Grand Prix déjà commencé reprend là où il en était.
+    if (!(this.partie.gp && this.partie.gp.id === gpId)) P.commencerGP(this.partie, gpId);
     this.sauver();
     const gp = P.grandPrix(gpId);
     const manche = this.partie.gp.manche;
@@ -481,13 +516,26 @@ class App {
   }
 
   noms() {
-    const noms = { joueur: { nom: this.partie.pilote, ecurie: 'Garage Piston', couleur: P.voitureActive(this.partie).couleur } };
-    for (const a of this.adversaires) noms[a.equipe] = { nom: a.nom, ecurie: a.ecurie, couleur: a.couleur };
+    const noms = { joueur: { nom: this.partie.pilote, ecurie: 'Garage Piston', couleur: P.voitureActive(this.partie)?.couleur || '#f2c14e' } };
+    // Recalculées depuis le Grand Prix : marche aussi après une reprise de partie.
+    const gp = this.partie.gp && P.grandPrix(this.partie.gp.id);
+    for (const a of (gp ? P.adversaires(gp) : this.adversaires || [])) noms[a.equipe] = { nom: a.nom, ecurie: a.ecurie, couleur: a.couleur };
     return noms;
   }
 
+  /** Après une manche (pas la dernière) : la soirée est finie, on passe au lendemain matin. */
   mancheSuivante() {
     this.course = null;
+    const gp = P.grandPrix(this.partie.gp.id);
+    P.jourSuivant(this.partie);
+    this.partie.nouvelles.unshift({ titre: gp.nom, texte: `Manche ${this.partie.gp.manche + 1} sur ${gp.manches.length} : ce soir ! Prépare la voiture dans la journée.` });
+    this.sauver();
+    this.garage();
+  }
+
+  /** Bouton du garage : courir la manche suivante du Grand Prix en cours. */
+  courirCeSoir() {
+    if (!this.partie.gp) return;
     this.briefing(this.partie.gp.id, true);
   }
 

@@ -481,8 +481,21 @@ export class Ville {
     this.temps += dt;
     const v = this.voiture;
     v.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
-    v.frein = entrees.gauche && entrees.droite ? 1 : 0;
-    if (v.frein) v.direction = 0;
+    const deux = entrees.gauche && entrees.droite;
+    // Les deux côtés : on freine, puis on recule tant qu'on garde les doigts posés.
+    if (deux) {
+      v.direction = 0;
+      this.tenuDeux = (this.tenuDeux || 0) + dt;
+    } else this.tenuDeux = 0;
+    // Coincé contre un mur ou une voiture : petite marche arrière automatique.
+    if (this.reculAuto > 0) this.reculAuto -= dt;
+    else if (!deux && this.contact && v.vitesse < 12 && this.temps > 1) {
+      this.coince = (this.coince || 0) + dt;
+      if (this.coince > 0.5) { this.reculAuto = 0.9; this.coince = 0; this.message('Marche arrière', '#cfe0ff', v); }
+    } else this.coince = 0;
+    v.recul = this.reculAuto > 0 || (deux && (v.vitesse < 8 || this.tenuDeux > 0.6) && this.tenuDeux > 0.25);
+    v.frein = deux && !v.recul ? 1 : 0;
+    this.contact = false;
     v.maj(dt, true);
     this.trafic.maj(dt, this.temps, v);
     this.chocs(v);
@@ -518,6 +531,7 @@ export class Ville {
         const c = ob.type === 'rect' ? contreRect(v, ob) : contreCercle(v, ob);
         if (!c) continue;
         v.x += c.nx * c.prof; v.y += c.ny * c.prof;
+        this.contact = true;
         const choc = -(v.vx * c.nx + v.vy * c.ny);
         if (choc <= 0) continue;
         v.vx += c.nx * choc * 1.3; v.vy += c.ny * choc * 1.3;
@@ -534,6 +548,7 @@ export class Ville {
       const c = recouvrement(v, t);
       if (!c) continue;
       v.x -= c.nx * c.prof; v.y -= c.ny * c.prof;
+      this.contact = true;
       const choc = (v.vx * c.nx + v.vy * c.ny);
       if (choc <= 0) continue;
       v.vx -= c.nx * choc * 1.4; v.vy -= c.ny * choc * 1.4;
@@ -875,7 +890,7 @@ export class Ville {
     ctx.fillStyle = 'rgba(31,42,68,0.55)';
     ctx.fillRect(0, H - 26, W, 26);
     texte(ctx, '◀ gauche', 10, H - 13, 10, '#f4f1e8', 'left');
-    texte(ctx, 'les deux : freiner', W / 2, H - 13, 9, '#cfe0ff', 'center');
+    texte(ctx, 'les deux : freiner / reculer', W / 2, H - 13, 9, '#cfe0ff', 'center');
     texte(ctx, 'droite ▶', W - 10, H - 13, 10, '#f4f1e8', 'right');
   }
 

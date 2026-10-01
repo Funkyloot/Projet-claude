@@ -80,6 +80,8 @@ body {
   display: flex;
   flex-direction: column;
 }
+/* Caché = vraiment absent : sinon le calque vide avale les touchers de la course et de la ville. */
+#interface[hidden] { display: none !important; }
 #interface.fond-sombre { background: rgba(20, 16, 34, 0.84); }
 #interface.plein { background: rgba(20, 16, 34, 0.9); }
 
@@ -95,6 +97,12 @@ body {
   min-height: 0;
 }
 .defile-ecran { justify-content: flex-start; overflow-y: auto; }
+/* Tout écran peut défiler si son contenu dépasse (choix de couleur, aide…).
+   Centré quand il y a la place (marges automatiques), sans rien couper en haut sinon. */
+.ecran { overflow-y: auto; touch-action: pan-y; justify-content: flex-start; }
+.ecran > * { flex: none; }
+.ecran:not(.defile-ecran) > :first-child { margin-top: auto; }
+.ecran:not(.defile-ecran) > :last-child { margin-bottom: auto; }
 
 .pile { display: flex; flex-direction: column; gap: calc(var(--u) * 8); }
 
@@ -382,6 +390,8 @@ body {
 .teinte:disabled { opacity: 0.4; }
 .teinte-voiture { background: #e6dcc4; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 4); cursor: pointer; }
 .teinte-voiture img { width: calc(var(--u) * 50); image-rendering: pixelated; display: block; }
+.nuancier.grand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-items: center; }
+.nuancier.grand .teinte-voiture img { width: 100%; max-width: calc(var(--u) * 60); }
 
 .niveau-labo { border-bottom: calc(var(--u) * 1) dashed #c9bf9f; padding-bottom: calc(var(--u) * 5); display: flex; flex-direction: column; gap: calc(var(--u) * 3); }
 .niveau-labo:last-child { border: 0; }
@@ -660,6 +670,7 @@ body {
 .jauge-mini i { display: block; height: 100%; }
 .petit-titre { font-size: calc(var(--u) * 15.9); }
 .carte-batiment.sans-image { grid-template-columns: 1fr auto; }
+.gp-en-cours { margin: 0 calc(var(--u) * 8) calc(var(--u) * 6); min-height: calc(var(--u) * 36); }
 
 </style>
 </head>
@@ -1420,7 +1431,7 @@ body {
     const ombre = (c2) => [c2[0] * 0.78, c2[1] * 0.78, c2[2] * 0.82];
     const ok = tribunes(circuit);
     const nbPlaces = 6 + 4 * Math.min(niveau, 2);
-    const ecrire = (o2, c2) => {
+    const ecrire2 = (o2, c2) => {
       px[o2] = c2[0];
       px[o2 + 1] = c2[1];
       px[o2 + 2] = c2[2];
@@ -1436,7 +1447,7 @@ body {
         const type = cel[Math.floor(y / T) * GW + Math.floor(x / T)];
         const liste = R.grille.get(Math.floor(x / R.CEL) * 1e5 + Math.floor(y / R.CEL));
         if (!liste || !mesurer(R, liste, x, y, m) || m.d >= PUBLIC_FIN + 20) {
-          ecrire(o2, ton(solsEnv[type] || solsEnv[C.LIBRE], x, y));
+          ecrire2(o2, ton(solsEnv[type] || solsEnv[C.LIBRE], x, y));
           continue;
         }
         const { d: d2, s, cote, k } = m;
@@ -1447,41 +1458,41 @@ body {
           const sd = Math.min(s, L - s);
           if (sd < 6) {
             const damier = Math.floor((s + 6) / 3) + Math.floor((lat + DEMI) / 3) & 1;
-            ecrire(o2, damier ? BLANC : NOIR_PNEU);
+            ecrire2(o2, damier ? BLANC : NOIR_PNEU);
           } else if (s > L - 40 - 26 * nbPlaces && s < L - 20 && Math.abs((L - 30 - s) % 26) < 1.2 && Math.abs(Math.abs(lat) - 15) < 7) {
-            ecrire(o2, BLANC);
+            ecrire2(o2, BLANC);
           } else if (def.surface === "paves" && (x % 6 === 0 || (y + Math.floor(x / 6) % 2 * 3) % 6 === 0)) {
-            ecrire(o2, ombre(piste[0]));
+            ecrire2(o2, ombre(piste[0]));
           } else {
-            ecrire(o2, ton(piste, x, y));
+            ecrire2(o2, ton(piste, x, y));
           }
         } else if (d2 < DEMI) {
-          ecrire(o2, ak > 1 / 330 ? Math.floor(s / 8) & 1 ? ROUGE_VIBREUR : BLANC : BLANC);
+          ecrire2(o2, ak > 1 / 330 ? Math.floor(s / 8) & 1 ? ROUGE_VIBREUR : BLANC : BLANC);
         } else if (d2 < DEMI + VIBREUR) {
-          if (ak > 1 / 330) ecrire(o2, Math.floor(s / 8) & 1 ? ROUGE_VIBREUR : BLANC);
-          else ecrire(o2, ton(degagement, x, y));
+          if (ak > 1 / 330) ecrire2(o2, Math.floor(s / 8) & 1 ? ROUGE_VIBREUR : BLANC);
+          else ecrire2(o2, ton(degagement, x, y));
         } else if (d2 < BARRIERE - 8) {
           const bac = exterieurVirage && ak > 1 / 280 && d2 > DEMI + VIBREUR + 2;
-          ecrire(o2, ton(bac ? gravier : degagement, x, y));
+          ecrire2(o2, ton(bac ? gravier : degagement, x, y));
         } else if (d2 < BARRIERE - 1) {
           if (exterieurVirage && ak > 1 / 250) {
             const u = (s % 7 + 7) % 7 - 3.5, v = d2 - (BARRIERE - 4.5);
             const r2 = u * u + v * v;
-            ecrire(o2, r2 < 2.2 ? GRIS_PNEU : r2 < 12 ? NOIR_PNEU : ton(degagement, x, y));
-          } else ecrire(o2, ton(degagement, x, y));
+            ecrire2(o2, r2 < 2.2 ? GRIS_PNEU : r2 < 12 ? NOIR_PNEU : ton(degagement, x, y));
+          } else ecrire2(o2, ton(degagement, x, y));
         } else if (d2 < BARRIERE) {
-          ecrire(o2, BLANC);
+          ecrire2(o2, BLANC);
         } else if (d2 < BARRIERE + 2) {
-          ecrire(o2, sponsors[Math.floor(s / 36) % sponsors.length]);
+          ecrire2(o2, sponsors[Math.floor(s / 36) % sponsors.length]);
         } else if (d2 < BARRIERE + 3) {
-          ecrire(o2, CONTOUR);
+          ecrire2(o2, CONTOUR);
         } else if (cote === exterieur && ok[m.i] && d2 >= PUBLIC_DEBUT && d2 < PUBLIC_DEBUT + profondeurTribune) {
           const e3 = d2 - PUBLIC_DEBUT;
-          ecrire(o2, e3 > profondeurTribune - 4 ? TOIT_TRIBUNE : e3 % 12 < 1.5 ? GRADIN_BORD : GRADIN);
+          ecrire2(o2, e3 > profondeurTribune - 4 ? TOIT_TRIBUNE : e3 % 12 < 1.5 ? GRADIN_BORD : GRADIN);
         } else {
           const base = type === C.ABORDS ? solsEnv[C.ABORDS] : solsEnv[type] || solsEnv[C.LIBRE];
           const c2 = ton(base, x, y);
-          ecrire(o2, d2 < BARRIERE + 5 ? ombre(c2) : c2);
+          ecrire2(o2, d2 < BARRIERE + 5 ? ombre(c2) : c2);
         }
       }
     }
@@ -1992,6 +2003,7 @@ body {
       this.glisse = 0;
       this.tete = 0;
       this.calage = 0;
+      this.recul = false;
       this.tour = -1;
       this.s = 0;
       this.progres = 0;
@@ -2035,7 +2047,7 @@ body {
         this.angle += 7 * dt;
       } else {
         const efficacite = Math.max(this.braquageMin || 0, clamp(vitesse / 60, 0, 1)) * (1 - 0.18 * clamp(vitesse / this.p.vmax, 0, 1));
-        this.angle += this.direction * this.p.rotation * efficacite * dt;
+        this.angle += this.direction * (this.recul ? -1 : 1) * this.p.rotation * efficacite * dt;
       }
       const fx = Math.cos(this.angle), fy = Math.sin(this.angle);
       const lx = -fy, ly = fx;
@@ -2050,6 +2062,7 @@ body {
         if (this.nitro > 0) accel *= BOOSTS.nitro.accel;
         if (this.aura > 0) accel *= BOOSTS.aura.accel;
         if (this.calage > 0) avant += 0;
+        else if (this.recul) avant += Math.max(-140 * dt, Math.min(140 * dt, -55 - avant));
         else if (this.frein > 0) avant -= 280 * this.frein * dt;
         else if (avant < vmax) avant = Math.min(vmax, avant + accel * (1 - 0.55 * clamp(avant / vmax, 0, 1)) * dt);
         else avant -= 160 * dt;
@@ -2058,8 +2071,8 @@ body {
       const grip = this.p.adherence * this.adherenceSol * (this.horsPiste > 0 ? 0.75 : 1);
       lateral *= Math.exp(-grip * dt);
       this.glisse = Math.abs(lateral);
-      avant -= this.glisse * 0.35 * dt;
-      avant = Math.max(0, avant);
+      avant -= Math.sign(avant || 1) * this.glisse * 0.35 * dt;
+      avant = this.recul ? Math.max(-60, avant) : Math.max(0, avant);
       this.vx = fx * avant + lx * lateral;
       this.vy = fy * avant + ly * lateral;
       this.x += this.vx * dt;
@@ -4193,11 +4206,20 @@ body {
     }
   }
   function sauver(partie) {
+    partie.horodatage = Date.now();
     try {
       localStorage.setItem(CLE, JSON.stringify(partie));
     } catch {
     }
   }
+  function restaurer(brute) {
+    try {
+      return migrer(JSON.parse(JSON.stringify(brute)));
+    } catch {
+      return null;
+    }
+  }
+  var peutCourir = (partie) => partie.courseJour !== partie.jour;
   function exporter(partie) {
     const json = JSON.stringify(partie);
     return `PV1:${btoa(unescape(encodeURIComponent(json)))}`;
@@ -4611,6 +4633,7 @@ body {
     const gp = grandPrix(partie.gp.id);
     const moi = resultats.find((r) => r.id === "joueur");
     const i = moi.place - 1;
+    partie.courseJour = partie.jour;
     const sp = sponsorActif(partie)?.effets || {};
     const prime = Math.round(gp.prix * (PART_PRIX[i] ?? 0.1) * (1 + (sp.prime || 0))) + (sp.argent || 0);
     const licence2 = POINTS_LICENCE[i] ?? 1;
@@ -4937,14 +4960,23 @@ body {
       }
       return g;
     }
-    /** Case libre la plus proche devant un bâtiment (en dessous, sinon autour). */
-    porte(partie, b2, libre) {
+    /** Cases libres autour d'un bâtiment, celles de devant (en dessous) d'abord. */
+    portes(partie, b2, libre) {
       const d2 = batiment(b2.id);
       const essais = [];
-      for (let x = b2.x; x < b2.x + d2.l; x++) essais.push([x, b2.y + d2.h], [x, b2.y - 1]);
+      for (let x = b2.x; x < b2.x + d2.l; x++) essais.push([x, b2.y + d2.h]);
       for (let y = b2.y; y < b2.y + d2.h; y++) essais.push([b2.x - 1, y], [b2.x + d2.l, y]);
-      for (const [x, y] of essais) if (libre[y]?.[x]) return { x, y };
-      return null;
+      for (let x = b2.x; x < b2.x + d2.l; x++) essais.push([x, b2.y - 1]);
+      return essais.filter(([x, y]) => libre[y]?.[x]).map(([x, y]) => ({ x, y }));
+    }
+    caseLibreAuHasard(libre, pres = null, rayon = 99) {
+      const cases = [];
+      for (let y = 0; y < libre.length; y++) for (let x = 0; x < libre[0].length; x++) {
+        if (!libre[y][x]) continue;
+        if (pres && Math.abs(x - pres.x) + Math.abs(y - pres.y) > rayon) continue;
+        cases.push({ x, y });
+      }
+      return cases.length ? cases[Math.floor(Math.random() * cases.length)] : null;
     }
     chemin(libre, depart, arrivee) {
       const L = libre.length, C3 = libre[0].length;
@@ -5002,19 +5034,35 @@ body {
         }
       }
       const libre = this.grilleLibre(partie);
-      const repos = partie.terrain.batiments.find((b2) => b2.id === "repos");
+      const repos = partie.terrain.batiments.filter((b2) => b2.id === "repos");
+      const occupation = /* @__PURE__ */ new Map();
       for (const s of partie.personnel) {
         let m = this.marcheurs.get(s.uid);
-        const lieu = s.auRepos || !s.poste ? repos : partie.terrain.batiments.find((b2) => b2.uid === s.poste);
-        const cible = lieu ? this.porte(partie, lieu, libre) : null;
+        const poste = s.poste && partie.terrain.batiments.find((b2) => b2.uid === s.poste);
+        const salle = s.auRepos && repos.length ? repos[partie.personnel.indexOf(s) % repos.length] : null;
+        const lieu = salle || (!s.auRepos ? poste : null);
+        const rangDansLieu = lieu ? occupation.get(lieu.uid) || 0 : 0;
+        if (lieu) occupation.set(lieu.uid, rangDansLieu + 1);
+        const portes = lieu ? this.portes(partie, lieu, libre) : [];
+        const cible = portes.length ? portes[rangDansLieu % portes.length] : null;
         if (!m) {
-          const depart = cible || { x: 0, y: partie.terrain.lignes - 1 };
+          const depart = cible || this.caseLibreAuHasard(libre) || { x: 0, y: 0 };
           m = { x: depart.x, y: depart.y, chemin: [], vers: null, attente: Math.random() * 2, bulle: null, dir: DIRECTION.face };
           this.marcheurs.set(s.uid, m);
         }
-        if (cible && (!m.vers || m.vers.x !== cible.x || m.vers.y !== cible.y)) {
-          m.vers = cible;
-          m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, cible);
+        m.dedans = null;
+        if (cible) {
+          if (!m.vers || m.vers.x !== cible.x || m.vers.y !== cible.y) {
+            m.vers = cible;
+            m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, cible);
+          }
+        } else if (!m.chemin.length && m.attente <= 0) {
+          const but = this.caseLibreAuHasard(libre, m, 3);
+          if (but) {
+            m.vers = but;
+            m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, but);
+          }
+          m.attente = 2 + Math.random() * 4;
         }
         if (m.chemin.length) {
           const n = m.chemin[0];
@@ -5033,12 +5081,18 @@ body {
           m.marche = true;
         } else {
           m.marche = false;
-          m.dir = DIRECTION.dos;
+          if (lieu && cible) {
+            const d2 = batiment(lieu.id);
+            if (cible.y >= lieu.y + d2.h) m.dir = DIRECTION.dos;
+            else if (cible.y < lieu.y) m.dir = DIRECTION.face;
+            else m.dir = cible.x < lieu.x ? DIRECTION.droite : DIRECTION.gauche;
+            if (salle) m.dedans = { x: lieu.x + 0.1 + rangDansLieu % 3 * 0.55, y: lieu.y - 0.25 + d2.h - 1 };
+          }
           m.attente -= dt;
-          if (m.attente <= 0) {
+          if (m.attente <= 0 && lieu) {
             m.attente = 3 + Math.random() * 4;
             if (Math.random() < 0.4) {
-              const p2 = s.auRepos ? ["Zzz\u2026", "Pause !"] : PAROLES[s.metier];
+              const p2 = s.auRepos ? ["Zzz\u2026", "Pause !", "Caf\xE9 ?"] : PAROLES[s.metier];
               m.bulle = { texte: p2[Math.floor(Math.random() * p2.length)], vie: 1.5 };
             }
           }
@@ -5130,9 +5184,9 @@ body {
         ctx.fillStyle = e3.vie > 0.2 ? "#ffe066" : "#f39c33";
         ctx.fillRect(Math.round(e3.x), Math.round(e3.y), 2, 2);
       }
-      const persos = partie.personnel.map((s) => ({ s, m: this.marcheurs.get(s.uid) })).filter((x) => x.m).sort((a, b2) => a.m.y - b2.m.y);
-      for (const { s, m } of persos) {
-        const px = o2.x + m.x * CASE + 16, py = o2.y + m.y * CASE + 24;
+      const persos = partie.personnel.map((s) => ({ s, m: this.marcheurs.get(s.uid) })).filter((x) => x.m).map((x) => ({ ...x, pos: x.m.dedans || x.m })).sort((a, b2) => a.pos.y - b2.pos.y);
+      for (const { s, m, pos } of persos) {
+        const px = o2.x + pos.x * CASE + 16, py = o2.y + pos.y * CASE + 24;
         const pas = m.marche ? Math.floor(t * 6) % 2 + 1 : Math.floor(t * 3) % 4 === 0 ? 1 : 0;
         tuile(ctx, p2, idPersonnage(PERSONNAGES[s.apparence % PERSONNAGES.length], m.dir, pas), px - 8, py - 14);
         if (s.auRepos) {
@@ -5140,7 +5194,7 @@ body {
           ctx.fillRect(px + 5, py - 16, 3, 3);
         }
       }
-      for (const { m } of persos) if (m.bulle) bulle(ctx, o2.x + m.x * CASE + 16, o2.y + m.y * CASE + 8, m.bulle.texte);
+      for (const { m, pos } of persos) if (m.bulle) bulle(ctx, o2.x + pos.x * CASE + 16, o2.y + pos.y * CASE + 8, m.bulle.texte);
       for (const f of this.flottants) {
         texte(ctx, f.texte, o2.x + f.cx * CASE, o2.y + f.cy * CASE - 4 + f.y, 9, "#ffe066", "center");
       }
@@ -6046,8 +6100,23 @@ body {
       this.temps += dt;
       const v = this.voiture;
       v.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
-      v.frein = entrees.gauche && entrees.droite ? 1 : 0;
-      if (v.frein) v.direction = 0;
+      const deux = entrees.gauche && entrees.droite;
+      if (deux) {
+        v.direction = 0;
+        this.tenuDeux = (this.tenuDeux || 0) + dt;
+      } else this.tenuDeux = 0;
+      if (this.reculAuto > 0) this.reculAuto -= dt;
+      else if (!deux && this.contact && v.vitesse < 12 && this.temps > 1) {
+        this.coince = (this.coince || 0) + dt;
+        if (this.coince > 0.5) {
+          this.reculAuto = 0.9;
+          this.coince = 0;
+          this.message("Marche arri\xE8re", "#cfe0ff", v);
+        }
+      } else this.coince = 0;
+      v.recul = this.reculAuto > 0 || deux && (v.vitesse < 8 || this.tenuDeux > 0.6) && this.tenuDeux > 0.25;
+      v.frein = deux && !v.recul ? 1 : 0;
+      this.contact = false;
       v.maj(dt, true);
       this.trafic.maj(dt, this.temps, v);
       this.chocs(v);
@@ -6093,6 +6162,7 @@ body {
           if (!c2) continue;
           v.x += c2.nx * c2.prof;
           v.y += c2.ny * c2.prof;
+          this.contact = true;
           const choc = -(v.vx * c2.nx + v.vy * c2.ny);
           if (choc <= 0) continue;
           v.vx += c2.nx * choc * 1.3;
@@ -6111,6 +6181,7 @@ body {
         if (!c2) continue;
         v.x -= c2.nx * c2.prof;
         v.y -= c2.ny * c2.prof;
+        this.contact = true;
         const choc = v.vx * c2.nx + v.vy * c2.ny;
         if (choc <= 0) continue;
         v.vx -= c2.nx * choc * 1.4;
@@ -6497,7 +6568,7 @@ body {
       ctx.fillStyle = "rgba(31,42,68,0.55)";
       ctx.fillRect(0, H2 - 26, W2, 26);
       texte(ctx, "\u25C0 gauche", 10, H2 - 13, 10, "#f4f1e8", "left");
-      texte(ctx, "les deux : freiner", W2 / 2, H2 - 13, 9, "#cfe0ff", "center");
+      texte(ctx, "les deux : freiner / reculer", W2 / 2, H2 - 13, 9, "#cfe0ff", "center");
       texte(ctx, "droite \u25B6", W2 - 10, H2 - 13, 10, "#f4f1e8", "right");
     }
     /** Gains nets de la balade, à verser dans la partie. */
@@ -6947,9 +7018,9 @@ body {
     ["voitures", "Voitures", "M3 15 L5 9 H19 L21 15 V19 H3 Z M6 19 V21 M18 19 V21 M6 15 H8 M16 15 H18"],
     ["courses", "Courses", "M5 21 V3 M5 4 H19 L16 8 L19 12 H5"]
   ];
-  function ongletsBas(actif) {
+  function ongletsBas(actif2) {
     return `<nav class="onglets-bas" aria-label="Menu principal">${ONGLETS.map(([id, nom, d2]) => `
-    <button class="onglet-bas ${id === actif ? "actif" : ""}" data-action="onglet-${id}" aria-current="${id === actif ? "page" : "false"}">
+    <button class="onglet-bas ${id === actif2 ? "actif" : ""}" data-action="onglet-${id}" aria-current="${id === actif2 ? "page" : "false"}">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d2}"/></svg><span>${nom}</span></button>`).join("")}</nav>`;
   }
   function actionsOnglets(app2) {
@@ -6961,8 +7032,8 @@ body {
       "onglet-courses": () => app2.montrer(avecOnglets(app2, ecranBureau(app2, () => app2.garage()), "courses"))
     };
   }
-  function avecOnglets(app2, ecran, actif) {
-    const html = ecran.html.replace(/<div class="pied">[\s\S]*?<\/div>\s*$/, "") + ongletsBas(actif);
+  function avecOnglets(app2, ecran, actif2) {
+    const html = ecran.html.replace(/<div class="pied">[\s\S]*?<\/div>\s*$/, "") + ongletsBas(actif2);
     return { ...ecran, html, actions: { ...ecran.actions, ...actionsOnglets(app2) } };
   }
   function ecranGarage(app2) {
@@ -6979,6 +7050,7 @@ body {
     ${nouvelles ? `<div class="nouvelles" data-action="lu">${nouvelles}<small>Toucher pour fermer</small></div>` : ""}
     <div class="espace"></div>
     ${sansVoiture ? '<p class="astuce">Ton garage est vide : onglet <b>Voitures</b> pour construire ta premi\xE8re voiture.</p>' : '<p class="astuce">Touche un b\xE2timent pour le g\xE9rer \xB7 fais glisser pour voir tout le terrain</p>'}
+    ${p2.gp ? `<button class="btn btn-rouge gp-en-cours" data-action="courir" ${peutCourir(p2) ? "" : "disabled"}>${e(grandPrix(p2.gp.id).nom)} \xB7 manche ${p2.gp.manche + 1}/${grandPrix(p2.gp.id).manches.length} : ${peutCourir(p2) ? "courir ce soir \u25B6" : "demain soir"}</button>` : ""}
     <div class="actions-jour">
       <button class="btn btn-vert" data-action="ville" ${sortie ? "" : "disabled"}>${peutSortir(p2) ? "En ville" : "Ville : demain"}</button>
       <button class="btn btn-principal" data-action="jour">Jour suivant \u25B6</button>
@@ -6992,7 +7064,8 @@ body {
         },
         objectifs: () => app2.montrer(ecranObjectifs(app2)),
         ville: () => app2.sortirEnVille(),
-        jour: () => app2.jourSuivant()
+        jour: () => app2.jourSuivant(),
+        courir: () => app2.courirCeSoir()
       }
     };
   }
@@ -7402,7 +7475,7 @@ body {
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="lien" data-action="sauvegarde">Transf\xE9rer ma sauvegarde (PC \u2194 t\xE9l\xE9phone)</button>
       </div>
-      <p class="credits">Version d'essai 0.3 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
+      <p class="credits">Version d'essai 0.4.1 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
     </div>`,
       actions: {
         continuer: () => app2.continuer(),
@@ -8025,10 +8098,10 @@ body {
   }
   function ecranSponsors(app2, retour) {
     const p2 = app2.partie;
-    const actif = sponsorActif(p2);
+    const actif2 = sponsorActif(p2);
     const cartes = SPONSORS2.map((s) => {
       const dispo = sponsorDispo(p2, s);
-      const signe = actif?.id === s.id;
+      const signe = actif2?.id === s.id;
       return `<div class="sponsor ${dispo ? "" : "verrou"} ${signe ? "signe" : ""}" style="--sp:${s.couleur}">
       <div class="logo-sponsor">${e2(s.nom.split(" ").map((m) => m[0]).join("").slice(0, 3))}</div>
       <div class="sponsor-texte"><b>${e2(s.nom)}</b><span class="petit">${e2(s.texte)}</span></div>
@@ -8060,6 +8133,12 @@ body {
     const c2 = estimerChances(app2.partie, gp);
     return c2 ? `<span class="chances" style="background:${COULEURS_CHANCES[c2.niveau]}">${c2.nom}</span>` : "";
   }
+  function boutonCourir(p2, gp, v) {
+    if (p2.gp && p2.gp.id !== gp.id) return '<span class="etat">Autre Grand Prix en cours</span>';
+    if (!peutCourir(p2)) return '<span class="etat">Demain soir</span>';
+    const libelle = p2.gp ? `Manche ${p2.gp.manche + 1} ce soir` : "Courir ce soir";
+    return `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? "" : "disabled"}>${libelle}</button>`;
+  }
   function ligneGP(app2, gp) {
     const p2 = app2.partie;
     const v = voitureActive(p2);
@@ -8070,7 +8149,7 @@ body {
     const coupe = trophee ? `<i class="coupe c${Math.min(trophee, 4)}" title="Meilleure place : ${ordinal(trophee)}"></i>` : "";
     let action = "";
     if (gp.palier === "ouvert") {
-      if (statut === "inscrit") action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? "" : "disabled"}>Courir ce soir</button>`;
+      if (statut === "inscrit") action = boutonCourir(p2, gp, v);
       else action = `<button class="btn btn-mini" data-action="inscrire" data-id="${gp.id}" ${v ? "" : "disabled"}>${v ? "S'inscrire" : "Il faut une voiture"}</button>`;
       return `<div class="gp"><div class="gp-tete"><b>${coupe}${e2(gp.nom)}</b>${action}</div><div class="petit">${infos}</div><div class="criteres">${pastilleChances(app2, gp)}</div></div>`;
     }
@@ -8083,7 +8162,7 @@ body {
       cond.victoires && `<span class="${p2.victoires >= cond.victoires ? "ok" : "ko"}">${Math.min(p2.victoires, cond.victoires)}/${cond.victoires} victoire${cond.victoires > 1 ? "s" : ""}</span>`,
       cond.classe && `<span class="${v && CLASSES.indexOf(v.classe) >= CLASSES.indexOf(cond.classe) ? "ok" : "ko"}">classe ${cond.classe}+</span>`
     ].filter(Boolean).join("");
-    if (statut === "acceptee") action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? "" : "disabled"}>Courir ce soir</button>`;
+    if (statut === "acceptee") action = boutonCourir(p2, gp, v);
     else if (statut === "attente") action = '<span class="etat">R\xE9ponse demain</span>';
     else if (statut === "liste") action = `<span class="etat">Liste d'attente</span>`;
     else action = `<button class="btn btn-mini" data-action="candidater" data-id="${gp.id}" ${p2.argent < fraisDossier(gp) ? "disabled" : ""}>Candidater \xB7 ${formatArgent(fraisDossier(gp))}</button>`;
@@ -8251,7 +8330,7 @@ body {
       ${butin}
       <section class="panneau"><h2 class="titre-panneau">Arriv\xE9e</h2><div class="contenu"><table class="classement">${lignes}</table></div></section>
       <section class="panneau"><h2 class="titre-panneau">Classement du Grand Prix</h2><div class="contenu"><table class="classement">${general}</table></div></section>
-      <button class="btn btn-principal" data-action="suite">${g.fini ? "Fin du Grand Prix" : "Manche suivante"}</button>
+      <button class="btn btn-principal" data-action="suite">${g.fini ? "Fin du Grand Prix" : "Fin de la soir\xE9e (manche suivante demain)"}</button>
     </div>`,
       actions: { suite: () => app2.apresRangs(g.rangs, () => g.fini ? app2.finGP() : app2.mancheSuivante()) },
       apres: (racine) => {
@@ -8409,6 +8488,52 @@ body {
     };
   }
 
+  // pistonville/src/nuage.js
+  var URL_API = "api/sauvegarde";
+  var actif = typeof location !== "undefined" && /^https?:$/.test(location.protocol);
+  var minuteur = null;
+  var derniere = null;
+  async function lire() {
+    if (!actif) return null;
+    try {
+      const r = await fetch(URL_API, { cache: "no-store" });
+      if (r.status === 404) return null;
+      if (!r.ok) {
+        actif = false;
+        return null;
+      }
+      const p2 = await r.json();
+      return p2 && Array.isArray(p2.garage) ? p2 : null;
+    } catch {
+      actif = false;
+      return null;
+    }
+  }
+  function envoyer(json, garder = false) {
+    return fetch(URL_API, { method: "PUT", body: json, headers: { "Content-Type": "application/json" }, keepalive: garder && json.length < 6e4 }).then((r) => {
+      if (r.status === 404 || r.status === 405 || r.status === 501) actif = false;
+    }).catch(() => {
+    });
+  }
+  function ecrire(partie) {
+    if (!actif) return;
+    derniere = JSON.stringify(partie);
+    clearTimeout(minuteur);
+    minuteur = setTimeout(() => {
+      envoyer(derniere);
+      derniere = null;
+    }, 1500);
+  }
+  function ecrireMaintenant(partie) {
+    if (!actif) return;
+    clearTimeout(minuteur);
+    const json = JSON.stringify(partie);
+    derniere = null;
+    if (navigator.sendBeacon && json.length < 6e4) {
+      navigator.sendBeacon(URL_API, new Blob([json], { type: "application/json" }));
+    } else envoyer(json, true);
+  }
+
   // pistonville/src/main.js
   var W = 320;
   var H = 568;
@@ -8449,6 +8574,38 @@ body {
       this.dernier = performance.now();
       this.accu = 0;
       requestAnimationFrame((t) => this.boucle(t));
+      this.brancherSauvegardes();
+      const distante = await lire();
+      if (distante && (!this.partieSauvee || (distante.horodatage || 0) > (this.partieSauvee.horodatage || 0))) {
+        const p2 = restaurer(distante);
+        if (p2) {
+          this.partieSauvee = p2;
+          if (this.ecran === "titre") {
+            this.partie = p2;
+            this.son.actif = p2.son;
+            this.titre();
+          }
+        }
+      }
+    }
+    /**
+     * Sauvegardes de secours : quand le jeu passe en arrière-plan ou se ferme
+     * (téléphone verrouillé, appli quittée), et toutes les 15 s au garage.
+     */
+    brancherSauvegardes() {
+      const auSecours = () => {
+        if (!this.partie || this.ecran === "titre") return;
+        sauver(this.partie);
+        this.partieSauvee = this.partie;
+        ecrireMaintenant(this.partie);
+      };
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") auSecours();
+      });
+      window.addEventListener("pagehide", auSecours);
+      setInterval(() => {
+        if (this.ecran === "garage" && this.partie === this.partieSauvee) this.sauver();
+      }, 15e3);
     }
     redimensionner() {
       const echelle = Math.min(window.innerWidth / W, window.innerHeight / H);
@@ -8614,6 +8771,7 @@ body {
       for (const o2 of verifierObjectifs(this.partie)) this.annoncerObjectif(o2);
       sauver(this.partie);
       this.partieSauvee = this.partie;
+      ecrire(this.partie);
     }
     /** Bandeau « Objectif atteint » en haut de l'écran, sans bloquer le jeu. */
     annoncerObjectif(o2) {
@@ -8823,7 +8981,12 @@ body {
         finBalade(this.partie, this.ville.bilan());
       }
       this.ville = null;
-      if (!reprise || !this.partie.gp) commencerGP(this.partie, gpId);
+      if (!peutCourir(this.partie)) {
+        this.toast("Une seule course par soir : la prochaine, c\u2019est demain soir.");
+        this.garage();
+        return;
+      }
+      if (!(this.partie.gp && this.partie.gp.id === gpId)) commencerGP(this.partie, gpId);
       this.sauver();
       const gp = grandPrix(gpId);
       const manche = this.partie.gp.manche;
@@ -8915,12 +9078,23 @@ body {
       this.montrer(ecranResultats(this, { gp, manche: this.partie.gp.manche, resultats, general, gain, depassements: c2.depassements, drift: c2.drift }));
     }
     noms() {
-      const noms = { joueur: { nom: this.partie.pilote, ecurie: "Garage Piston", couleur: voitureActive(this.partie).couleur } };
-      for (const a of this.adversaires) noms[a.equipe] = { nom: a.nom, ecurie: a.ecurie, couleur: a.couleur };
+      const noms = { joueur: { nom: this.partie.pilote, ecurie: "Garage Piston", couleur: voitureActive(this.partie)?.couleur || "#f2c14e" } };
+      const gp = this.partie.gp && grandPrix(this.partie.gp.id);
+      for (const a of gp ? adversaires(gp) : this.adversaires || []) noms[a.equipe] = { nom: a.nom, ecurie: a.ecurie, couleur: a.couleur };
       return noms;
     }
+    /** Après une manche (pas la dernière) : la soirée est finie, on passe au lendemain matin. */
     mancheSuivante() {
       this.course = null;
+      const gp = grandPrix(this.partie.gp.id);
+      jourSuivant(this.partie);
+      this.partie.nouvelles.unshift({ titre: gp.nom, texte: `Manche ${this.partie.gp.manche + 1} sur ${gp.manches.length} : ce soir ! Pr\xE9pare la voiture dans la journ\xE9e.` });
+      this.sauver();
+      this.garage();
+    }
+    /** Bouton du garage : courir la manche suivante du Grand Prix en cours. */
+    courirCeSoir() {
+      if (!this.partie.gp) return;
       this.briefing(this.partie.gp.id, true);
     }
     finGP() {

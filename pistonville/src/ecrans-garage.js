@@ -19,7 +19,7 @@ import {
   barre, carteVoiture, texteRecompense, ecranAtelier, ecranBoutique, ecranPieces, ecranLabo, ecranPilote, ecranBureau,
   ecranObjectifs, ecranAide, ecranCelebration,
 } from './ecrans.js';
-import { voitureActive, peutSortir, objectifsActifs } from './partie.js';
+import { voitureActive, peutSortir, objectifsActifs, peutCourir, grandPrix } from './partie.js';
 import { PERSONNAGES, idPersonnage } from './sprites.js';
 import { formatArgent } from './outils.js';
 
@@ -73,6 +73,7 @@ export function ecranGarage(app) {
     ${nouvelles ? `<div class="nouvelles" data-action="lu">${nouvelles}<small>Toucher pour fermer</small></div>` : ''}
     <div class="espace"></div>
     ${sansVoiture ? '<p class="astuce">Ton garage est vide : onglet <b>Voitures</b> pour construire ta première voiture.</p>' : '<p class="astuce">Touche un bâtiment pour le gérer · fais glisser pour voir tout le terrain</p>'}
+    ${p.gp ? `<button class="btn btn-rouge gp-en-cours" data-action="courir" ${peutCourir(p) ? '' : 'disabled'}>${e(grandPrix(p.gp.id).nom)} · manche ${p.gp.manche + 1}/${grandPrix(p.gp.id).manches.length} : ${peutCourir(p) ? 'courir ce soir ▶' : 'demain soir'}</button>` : ''}
     <div class="actions-jour">
       <button class="btn btn-vert" data-action="ville" ${sortie ? '' : 'disabled'}>${peutSortir(p) ? 'En ville' : 'Ville : demain'}</button>
       <button class="btn btn-principal" data-action="jour">Jour suivant ▶</button>
@@ -84,6 +85,7 @@ export function ecranGarage(app) {
       objectifs: () => app.montrer(ecranObjectifs(app)),
       ville: () => app.sortirEnVille(),
       jour: () => app.jourSuivant(),
+      courir: () => app.courirCeSoir(),
     },
   };
 }

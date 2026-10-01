@@ -72,6 +72,8 @@ body {
   display: flex;
   flex-direction: column;
 }
+/* Caché = vraiment absent : sinon le calque vide avale les touchers de la course et de la ville. */
+#interface[hidden] { display: none !important; }
 #interface.fond-sombre { background: rgba(20, 16, 34, 0.84); }
 #interface.plein { background: rgba(20, 16, 34, 0.9); }
 
@@ -87,6 +89,12 @@ body {
   min-height: 0;
 }
 .defile-ecran { justify-content: flex-start; overflow-y: auto; }
+/* Tout écran peut défiler si son contenu dépasse (choix de couleur, aide…).
+   Centré quand il y a la place (marges automatiques), sans rien couper en haut sinon. */
+.ecran { overflow-y: auto; touch-action: pan-y; justify-content: flex-start; }
+.ecran > * { flex: none; }
+.ecran:not(.defile-ecran) > :first-child { margin-top: auto; }
+.ecran:not(.defile-ecran) > :last-child { margin-bottom: auto; }
 
 .pile { display: flex; flex-direction: column; gap: calc(var(--u) * 8); }
 
@@ -374,6 +382,8 @@ body {
 .teinte:disabled { opacity: 0.4; }
 .teinte-voiture { background: #e6dcc4; border: calc(var(--u) * 2) solid var(--encre); border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 4); cursor: pointer; }
 .teinte-voiture img { width: calc(var(--u) * 50); image-rendering: pixelated; display: block; }
+.nuancier.grand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-items: center; }
+.nuancier.grand .teinte-voiture img { width: 100%; max-width: calc(var(--u) * 60); }
 
 .niveau-labo { border-bottom: calc(var(--u) * 1) dashed #c9bf9f; padding-bottom: calc(var(--u) * 5); display: flex; flex-direction: column; gap: calc(var(--u) * 3); }
 .niveau-labo:last-child { border: 0; }
@@ -652,3 +662,4 @@ body {
 .jauge-mini i { display: block; height: 100%; }
 .petit-titre { font-size: calc(var(--u) * 15.9); }
 .carte-batiment.sans-image { grid-template-columns: 1fr auto; }
+.gp-en-cours { margin: 0 calc(var(--u) * 8) calc(var(--u) * 6); min-height: calc(var(--u) * 36); }

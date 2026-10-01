@@ -93,8 +93,17 @@ export function charger() {
 }
 
 export function sauver(partie) {
+  partie.horodatage = Date.now();
   try { localStorage.setItem(CLE, JSON.stringify(partie)); } catch { /* stockage indisponible : la partie continue en mémoire */ }
 }
+
+/** Une partie venue d'ailleurs (serveur, code de transfert), mise au format courant. */
+export function restaurer(brute) {
+  try { return migrer(JSON.parse(JSON.stringify(brute))); } catch { return null; }
+}
+
+/** Une manche par soir : la course termine la journée. */
+export const peutCourir = (partie) => partie.courseJour !== partie.jour;
 
 /** Code de sauvegarde à copier d'un appareil à l'autre (texte, sans serveur). */
 export function exporter(partie) {
@@ -575,6 +584,7 @@ export function enregistrerManche(partie, resultats, course) {
   const gp = grandPrix(partie.gp.id);
   const moi = resultats.find((r) => r.id === 'joueur');
   const i = moi.place - 1;
+  partie.courseJour = partie.jour;
   const sp = sponsorActif(partie)?.effets || {};
   const prime = Math.round(gp.prix * (PART_PRIX[i] ?? 0.1) * (1 + (sp.prime || 0))) + (sp.argent || 0);
   const licence = POINTS_LICENCE[i] ?? 1;

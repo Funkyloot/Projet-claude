@@ -8,6 +8,8 @@
 # Le jeu est servi sur le port 8090 (PORT=9000 bash … pour en changer) ; si ce
 # port est déjà pris par une autre application, le script en choisit un libre.
 # Aucune installation nécessaire : seulement git et python3, déjà présents.
+# Le serveur garde aussi une copie de la partie : la même sauvegarde sur toutes
+# les adresses (maison, Tailscale), même si le téléphone ferme le jeu d'un coup.
 
 set -e
 DOSSIER="$(cd "$(dirname "$0")/.." && pwd)"
@@ -42,7 +44,8 @@ while port_pris "$PORT"; do
   PORT=$((PORT + 1))
 done
 
-# 2. Le service : un petit serveur web en lecture seule, sous un utilisateur jetable.
+# 2. Le service : le jeu en lecture seule + la copie de la sauvegarde (dans
+#    /var/lib/pistonville), sous un utilisateur jetable.
 echo "→ Installation du service pistonville (port $PORT)…"
 cat > /etc/systemd/system/pistonville.service <<EOF
 [Unit]
@@ -51,7 +54,8 @@ After=network.target
 
 [Service]
 WorkingDirectory=$WEB
-ExecStart=/usr/bin/python3 -m http.server $PORT --bind 0.0.0.0
+ExecStart=/usr/bin/python3 $DOSSIER/tools/serveur-pistonville.py $WEB $PORT
+StateDirectory=pistonville
 Restart=always
 DynamicUser=yes
 ProtectSystem=strict

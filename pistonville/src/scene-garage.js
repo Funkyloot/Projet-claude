@@ -74,14 +74,24 @@ export class SceneGarage {
     return g;
   }
 
-  /** Case libre la plus proche devant un bâtiment (en dessous, sinon autour). */
-  porte(partie, b, libre) {
+  /** Cases libres autour d'un bâtiment, celles de devant (en dessous) d'abord. */
+  portes(partie, b, libre) {
     const d = batiment(b.id);
     const essais = [];
-    for (let x = b.x; x < b.x + d.l; x++) essais.push([x, b.y + d.h], [x, b.y - 1]);
+    for (let x = b.x; x < b.x + d.l; x++) essais.push([x, b.y + d.h]);
     for (let y = b.y; y < b.y + d.h; y++) essais.push([b.x - 1, y], [b.x + d.l, y]);
-    for (const [x, y] of essais) if (libre[y]?.[x]) return { x, y };
-    return null;
+    for (let x = b.x; x < b.x + d.l; x++) essais.push([x, b.y - 1]);
+    return essais.filter(([x, y]) => libre[y]?.[x]).map(([x, y]) => ({ x, y }));
+  }
+
+  caseLibreAuHasard(libre, pres = null, rayon = 99) {
+    const cases = [];
+    for (let y = 0; y < libre.length; y++) for (let x = 0; x < libre[0].length; x++) {
+      if (!libre[y][x]) continue;
+      if (pres && Math.abs(x - pres.x) + Math.abs(y - pres.y) > rayon) continue;
+      cases.push({ x, y });
+    }
+    return cases.length ? cases[Math.floor(Math.random() * cases.length)] : null;
   }
 
   chemin(libre, depart, arrivee) {
@@ -136,21 +146,37 @@ export class SceneGarage {
       }
     }
 
-    // Personnel : chacun va vers son poste (ou la salle de repos), par les allées.
+    // Personnel, façon Kairosoft : chacun à son poste (une place par personne
+    // autour du bâtiment), les fatigués DANS la salle de repos, les autres se
+    // promènent dans les allées. Jamais tous entassés dans un coin.
     const libre = this.grilleLibre(partie);
-    const repos = partie.terrain.batiments.find((b) => b.id === 'repos');
+    const repos = partie.terrain.batiments.filter((b) => b.id === 'repos');
+    const occupation = new Map();   // bâtiment → nombre de personnes déjà placées
     for (const s of partie.personnel) {
       let m = this.marcheurs.get(s.uid);
-      const lieu = s.auRepos || !s.poste ? repos : partie.terrain.batiments.find((b) => b.uid === s.poste);
-      const cible = lieu ? this.porte(partie, lieu, libre) : null;
+      const poste = s.poste && partie.terrain.batiments.find((b) => b.uid === s.poste);
+      const salle = s.auRepos && repos.length ? repos[partie.personnel.indexOf(s) % repos.length] : null;
+      const lieu = salle || (!s.auRepos ? poste : null);
+      const rangDansLieu = lieu ? (occupation.get(lieu.uid) || 0) : 0;
+      if (lieu) occupation.set(lieu.uid, rangDansLieu + 1);
+      const portes = lieu ? this.portes(partie, lieu, libre) : [];
+      const cible = portes.length ? portes[rangDansLieu % portes.length] : null;
       if (!m) {
-        const depart = cible || { x: 0, y: partie.terrain.lignes - 1 };
+        const depart = cible || this.caseLibreAuHasard(libre) || { x: 0, y: 0 };
         m = { x: depart.x, y: depart.y, chemin: [], vers: null, attente: Math.random() * 2, bulle: null, dir: DIRECTION.face };
         this.marcheurs.set(s.uid, m);
       }
-      if (cible && (!m.vers || m.vers.x !== cible.x || m.vers.y !== cible.y)) {
-        m.vers = cible;
-        m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, cible);
+      m.dedans = null;
+      if (cible) {
+        if (!m.vers || m.vers.x !== cible.x || m.vers.y !== cible.y) {
+          m.vers = cible;
+          m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, cible);
+        }
+      } else if (!m.chemin.length && m.attente <= 0) {
+        // Sans poste : une petite promenade vers une case libre proche.
+        const but = this.caseLibreAuHasard(libre, m, 3);
+        if (but) { m.vers = but; m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, but); }
+        m.attente = 2 + Math.random() * 4;
       }
       if (m.chemin.length) {
         const n = m.chemin[0];
@@ -163,12 +189,19 @@ export class SceneGarage {
         m.marche = true;
       } else {
         m.marche = false;
-        m.dir = DIRECTION.dos;   // face au bâtiment, il travaille
+        if (lieu && cible) {
+          // Arrivé : il se tourne vers son bâtiment ; en salle de repos, il entre s'asseoir.
+          const d = batiment(lieu.id);
+          if (cible.y >= lieu.y + d.h) m.dir = DIRECTION.dos;
+          else if (cible.y < lieu.y) m.dir = DIRECTION.face;
+          else m.dir = cible.x < lieu.x ? DIRECTION.droite : DIRECTION.gauche;
+          if (salle) m.dedans = { x: lieu.x + 0.1 + (rangDansLieu % 3) * 0.55, y: lieu.y - 0.25 + d.h - 1 };
+        }
         m.attente -= dt;
-        if (m.attente <= 0) {
+        if (m.attente <= 0 && lieu) {
           m.attente = 3 + Math.random() * 4;
           if (Math.random() < 0.4) {
-            const p = s.auRepos ? ['Zzz…', 'Pause !'] : PAROLES[s.metier];
+            const p = s.auRepos ? ['Zzz…', 'Pause !', 'Café ?'] : PAROLES[s.metier];
             m.bulle = { texte: p[Math.floor(Math.random() * p.length)], vie: 1.5 };
           }
         }
@@ -249,14 +282,15 @@ export class SceneGarage {
     for (const e of this.etincelles) { ctx.fillStyle = e.vie > 0.2 ? '#ffe066' : '#f39c33'; ctx.fillRect(Math.round(e.x), Math.round(e.y), 2, 2); }
 
     // Personnel.
-    const persos = partie.personnel.map((s) => ({ s, m: this.marcheurs.get(s.uid) })).filter((x) => x.m).sort((a, b) => a.m.y - b.m.y);
-    for (const { s, m } of persos) {
-      const px = o.x + m.x * CASE + 16, py = o.y + m.y * CASE + 24;
+    const persos = partie.personnel.map((s) => ({ s, m: this.marcheurs.get(s.uid) })).filter((x) => x.m)
+      .map((x) => ({ ...x, pos: x.m.dedans || x.m })).sort((a, b) => a.pos.y - b.pos.y);
+    for (const { s, m, pos } of persos) {
+      const px = o.x + pos.x * CASE + 16, py = o.y + pos.y * CASE + 24;
       const pas = m.marche ? (Math.floor(t * 6) % 2) + 1 : (Math.floor(t * 3) % 4 === 0 ? 1 : 0);
       tuile(ctx, p, idPersonnage(PERSONNAGES[s.apparence % PERSONNAGES.length], m.dir, pas), px - 8, py - 14);
       if (s.auRepos) { ctx.fillStyle = '#7dd3fc'; ctx.fillRect(px + 5, py - 16, 3, 3); }
     }
-    for (const { m } of persos) if (m.bulle) bulle(ctx, o.x + m.x * CASE + 16, o.y + m.y * CASE + 8, m.bulle.texte);
+    for (const { m, pos } of persos) if (m.bulle) bulle(ctx, o.x + pos.x * CASE + 16, o.y + pos.y * CASE + 8, m.bulle.texte);
 
     for (const f of this.flottants) {
       texte(ctx, f.texte, o.x + f.cx * CASE, o.y + f.cy * CASE - 4 + f.y, 9, '#ffe066', 'center');

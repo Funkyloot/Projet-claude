@@ -13,7 +13,7 @@ import { VEHICULES, GRANDS_PRIX, PIECES, SPONSORS } from '../contenu/catalogue.j
 import {
   voitureActive, decrireVoiture, statutGP, coutReparation, fraisDossier, peutAcheter, licenceAuMoins, modele,
   piece, montureDe, peutSortir, prixPiece, promoDuJour, PRIX_CAFE, ORDRE_PALIERS, PALIERS,
-  objectifsActifs, objectifsFaits, totalObjectifs, estimerChances, rivalDe, sponsorActif, sponsorDispo,
+  peutCourir, objectifsActifs, objectifsFaits, totalObjectifs, estimerChances, rivalDe, sponsorActif, sponsorDispo,
   saisonDe, jourDeSaison, JOURS_SAISON, SAISONS_CARRIERE, pieceNiveau, coutNiveauPiece, NIVEAU_PIECE_MAX,
   tempsMedailles, NOMS_MEDAILLES, totalMedailles, PLAFOND_CLASSE, REGLAGES_MAX, exporter, importer, expPilote, STATS_PILOTE, CADEAUX, lirePalmares, scoreCarriere,
 } from './partie.js';
@@ -155,7 +155,7 @@ export function ecranTitre(app) {
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>
       </div>
-      <p class="credits">Version d'essai 0.3 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
+      <p class="credits">Version d'essai 0.4.1 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
     </div>`,
     actions: {
       continuer: () => app.continuer(),
@@ -789,6 +789,14 @@ function pastilleChances(app, gp) {
 
 // --- Bureau des courses -------------------------------------------------------------------------
 
+/** « Courir ce soir », sauf si la soirée est déjà prise ou qu'un autre Grand Prix est en cours. */
+function boutonCourir(p, gp, v) {
+  if (p.gp && p.gp.id !== gp.id) return '<span class="etat">Autre Grand Prix en cours</span>';
+  if (!peutCourir(p)) return '<span class="etat">Demain soir</span>';
+  const libelle = p.gp ? `Manche ${p.gp.manche + 1} ce soir` : 'Courir ce soir';
+  return `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? '' : 'disabled'}>${libelle}</button>`;
+}
+
 function ligneGP(app, gp) {
   const p = app.partie;
   const v = voitureActive(p);
@@ -799,7 +807,7 @@ function ligneGP(app, gp) {
   const coupe = trophee ? `<i class="coupe c${Math.min(trophee, 4)}" title="Meilleure place : ${ordinal(trophee)}"></i>` : '';
   let action = '';
   if (gp.palier === 'ouvert') {
-    if (statut === 'inscrit') action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? '' : 'disabled'}>Courir ce soir</button>`;
+    if (statut === 'inscrit') action = boutonCourir(p, gp, v);
     else action = `<button class="btn btn-mini" data-action="inscrire" data-id="${gp.id}" ${v ? '' : 'disabled'}>${v ? "S'inscrire" : 'Il faut une voiture'}</button>`;
     return `<div class="gp"><div class="gp-tete"><b>${coupe}${e(gp.nom)}</b>${action}</div><div class="petit">${infos}</div><div class="criteres">${pastilleChances(app, gp)}</div></div>`;
   }
@@ -812,7 +820,7 @@ function ligneGP(app, gp) {
     cond.victoires && `<span class="${p.victoires >= cond.victoires ? 'ok' : 'ko'}">${Math.min(p.victoires, cond.victoires)}/${cond.victoires} victoire${cond.victoires > 1 ? 's' : ''}</span>`,
     cond.classe && `<span class="${v && CLASSES.indexOf(v.classe) >= CLASSES.indexOf(cond.classe) ? 'ok' : 'ko'}">classe ${cond.classe}+</span>`,
   ].filter(Boolean).join('');
-  if (statut === 'acceptee') action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? '' : 'disabled'}>Courir ce soir</button>`;
+  if (statut === 'acceptee') action = boutonCourir(p, gp, v);
   else if (statut === 'attente') action = '<span class="etat">Réponse demain</span>';
   else if (statut === 'liste') action = "<span class=\"etat\">Liste d'attente</span>";
   else action = `<button class="btn btn-mini" data-action="candidater" data-id="${gp.id}" ${p.argent < fraisDossier(gp) ? 'disabled' : ''}>Candidater · ${formatArgent(fraisDossier(gp))}</button>`;
@@ -968,7 +976,7 @@ export function ecranResultats(app, r) {
       ${butin}
       <section class="panneau"><h2 class="titre-panneau">Arrivée</h2><div class="contenu"><table class="classement">${lignes}</table></div></section>
       <section class="panneau"><h2 class="titre-panneau">Classement du Grand Prix</h2><div class="contenu"><table class="classement">${general}</table></div></section>
-      <button class="btn btn-principal" data-action="suite">${g.fini ? 'Fin du Grand Prix' : 'Manche suivante'}</button>
+      <button class="btn btn-principal" data-action="suite">${g.fini ? 'Fin du Grand Prix' : 'Fin de la soirée (manche suivante demain)'}</button>
     </div>`,
     actions: { suite: () => app.apresRangs(g.rangs, () => (g.fini ? app.finGP() : app.mancheSuivante())) },
     apres: (racine) => {

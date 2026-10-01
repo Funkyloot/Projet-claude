@@ -36,6 +36,7 @@ export class Voiture {
     this.glisse = 0;           // vitesse latérale (px/s) ; au-delà de 35 : drift
     this.tete = 0;             // tête-à-queue en cours (secondes)
     this.calage = 0;           // moteur calé après un faux départ (secondes)
+    this.recul = false;        // marche arrière (en ville)
     this.tour = -1;
     this.s = 0;
     this.progres = 0;
@@ -77,7 +78,8 @@ export class Voiture {
     } else {
       // Le volant agit peu à l'arrêt, pleinement à vitesse moyenne.
       const efficacite = Math.max(this.braquageMin || 0, clamp(vitesse / 60, 0, 1)) * (1 - 0.18 * clamp(vitesse / this.p.vmax, 0, 1));
-      this.angle += this.direction * this.p.rotation * efficacite * dt;
+      // En marche arrière, le volant tourne la voiture dans l'autre sens, comme une vraie.
+      this.angle += this.direction * (this.recul ? -1 : 1) * this.p.rotation * efficacite * dt;
     }
 
     // 2. La vitesse actuelle, vue depuis le nouveau cap.
@@ -96,6 +98,7 @@ export class Voiture {
       if (this.nitro > 0) accel *= BOOSTS.nitro.accel;
       if (this.aura > 0) accel *= BOOSTS.aura.accel;
       if (this.calage > 0) avant += 0;
+      else if (this.recul) avant += Math.max(-140 * dt, Math.min(140 * dt, -55 - avant));
       else if (this.frein > 0) avant -= 280 * this.frein * dt;
       else if (avant < vmax) avant = Math.min(vmax, avant + accel * (1 - 0.55 * clamp(avant / vmax, 0, 1)) * dt);
       else avant -= 160 * dt;
@@ -106,8 +109,8 @@ export class Voiture {
     const grip = this.p.adherence * this.adherenceSol * (this.horsPiste > 0 ? 0.75 : 1);
     lateral *= Math.exp(-grip * dt);
     this.glisse = Math.abs(lateral);
-    avant -= this.glisse * 0.35 * dt;
-    avant = Math.max(0, avant);
+    avant -= Math.sign(avant || 1) * this.glisse * 0.35 * dt;
+    avant = this.recul ? Math.max(-60, avant) : Math.max(0, avant);
 
     this.vx = fx * avant + lx * lateral;
     this.vy = fy * avant + ly * lateral;
