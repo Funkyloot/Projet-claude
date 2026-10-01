@@ -51,6 +51,7 @@ export class Course {
         const adv = o.adversaires[a++];
         v = new Voiture({ physique: adv.physique, couleur: adv.couleur, nom: adv.nom, equipe: adv.equipe });
         v.talent = adv.talent || 0;
+        v.rival = !!adv.rival;
         v.voie = (this.alea() - 0.5) * 24;
         v.nitroIA = 1 + Math.floor(this.niveau / 2);
         v.prochaineVoie = this.alea() * 2;
@@ -74,6 +75,9 @@ export class Course {
     this.poteaux = [pointA(this.circuit, 0, -ECART_POTEAU), pointA(this.circuit, 0, ECART_POTEAU)];
     this.bonus = this.semerBonus();
     this.ramasses = { argent: 0, recherche: 0 };
+    this.piecesOr = 0;
+    this.driftMax = 0;
+    this.departReussi = false;
     this.drift = 0;            // EXP gagnée en drift
     this.driftEnCours = 0;     // secondes de drift continu
     this.secousse = 0;
@@ -391,6 +395,7 @@ export class Course {
       if (b.type === 'piece') {
         const valeur = 10 * this.niveau;
         this.ramasses.argent += valeur;
+        this.piecesOr += 1;
         this.message(`+${valeur} G`, 0.7, '#ffe066', b);
         this.son?.piece();
       } else {
@@ -408,6 +413,7 @@ export class Course {
       this.driftEnCours += dt;
       return;
     }
+    this.driftMax = Math.max(this.driftMax, this.driftEnCours);
     if (this.driftEnCours > 0.5) {
       const gain = Math.round(this.driftEnCours * 6);
       this.drift += gain;
@@ -431,6 +437,7 @@ export class Course {
     } else if (this.temps < 0.3) {
       this.joueur.nitro = Math.max(this.joueur.nitro, 1.2);
       this.message('DÉPART PARFAIT !', 1.4, '#9fe870');
+      this.departReussi = true;
       this.drift += 10;
       this.son?.aura();
       this.secousse = 3;
@@ -447,6 +454,12 @@ export class Course {
     });
     this.positionJoueur = this.classement.indexOf(this.joueur) + 1;
     if (this.etat !== 'course' || this.joueur.fini) return;
+    const rival = this.voitures.find((v) => v.rival);
+    if (rival) {
+      const devant = this.classement.indexOf(this.joueur) < this.classement.indexOf(rival);
+      if (devant && this.rivalDerriere === false) { this.drift += 10; this.message('RIVAL DÉPASSÉ ! +10 EXP', 1.3, '#ff8a80'); this.son?.aura(); }
+      this.rivalDerriere = devant;
+    }
     if (this.positionJoueur < avant) {
       this.depassements++;
       this.fans += 2;
@@ -523,6 +536,7 @@ export class Course {
     return {
       fans: this.fans, depassements: this.depassements, drift: this.drift,
       ramasses: { ...this.ramasses },
+      pieces: this.piecesOr, driftMax: this.driftMax, departParfait: this.departReussi,
       usure: 1 - this.joueur.durabilite / this.joueur.p.durabiliteMax,
     };
   }
@@ -610,6 +624,8 @@ export class Course {
       ctx.drawImage(sprite, -Math.floor(sprite.width / 2), -Math.floor(sprite.height / 2));
       ctx.restore();
     }
+
+    for (const v of this.voitures) if (v.rival) texte(ctx, 'RIVAL', v.x, v.y - 18, 7, '#ff8a80', 'center');
 
     // Repère au-dessus du joueur : une flèche jaune qui rebondit.
     const bx = Math.round(j.x), by = Math.round(j.y) - 24 + (Math.sin(t * 6) > 0 ? 1 : 0);

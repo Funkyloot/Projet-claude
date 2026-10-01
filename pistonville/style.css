@@ -450,3 +450,65 @@ body {
   .cri.pop, .bandeau, .revele, .grosses-etoiles i { animation-duration: 0.01s; }
 }
 
+
+/* --- Objectifs, sponsors, chances, album ------------------------------------- */
+
+.objectif-bande {
+  margin: calc(var(--u) * 6) calc(var(--u) * 8) 0;
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: calc(var(--u) * 2) calc(var(--u) * 6);
+  background: var(--creme); color: var(--encre); text-align: left; cursor: pointer;
+  border: calc(var(--u) * 2) solid var(--encre); border-left: calc(var(--u) * 6) solid var(--vert);
+  border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 4) calc(var(--u) * 8);
+  font-family: var(--police); box-shadow: calc(var(--u) * 3) calc(var(--u) * 3) 0 rgba(0, 0, 0, 0.35);
+}
+.objectif-bande small { font-size: calc(var(--u) * 10.2); color: var(--vert); grid-row: span 2; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: calc(var(--u) * 1); }
+.objectif-bande b { font-size: calc(var(--u) * 13); }
+.objectif-bande .jauge { display: block; }
+.objectif-bande em { grid-column: 2; font-style: normal; font-size: calc(var(--u) * 10.2); color: #4a5068; }
+.objectif { display: flex; flex-direction: column; gap: calc(var(--u) * 4); border-bottom: calc(var(--u) * 1) dashed #c9bf9f; padding-bottom: calc(var(--u) * 6); }
+.objectif:last-child { border: 0; padding-bottom: 0; }
+.objectif.premier b { color: var(--vert); }
+.num { font-variant-numeric: tabular-nums; }
+
+#objectif {
+  position: absolute; left: 8%; right: 8%; top: calc(var(--u) * 70);
+  text-align: center; pointer-events: none;
+  background: var(--vert); color: #fff; border: calc(var(--u) * 3) solid #1d5a28; border-radius: calc(var(--u) * 6);
+  box-shadow: 0 calc(var(--u) * 4) 0 #1d5a28; padding: calc(var(--u) * 5) calc(var(--u) * 10);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 2);
+}
+#objectif[hidden] { display: none; }
+#objectif small { font-size: calc(var(--u) * 11.6); color: #d9f99d; letter-spacing: calc(var(--u) * 1); }
+#objectif b { font-size: calc(var(--u) * 15.9); }
+#objectif span { font-size: calc(var(--u) * 13); color: #ffe066; }
+#objectif.entre { animation: pop 0.45s ease-out; }
+
+.nouvelle.evenement { border-left: calc(var(--u) * 4) solid var(--jaune); padding-left: calc(var(--u) * 5); }
+.nouvelle.evenement b { color: #b7791f; }
+
+.chances { color: #fff; border: 0 !important; font-weight: 700; }
+.bande-sponsor {
+  font-family: var(--police); font-size: calc(var(--u) * 13); text-align: left; cursor: pointer;
+  background: var(--encre-2); color: var(--clair); border: calc(var(--u) * 2) solid var(--jaune);
+  border-radius: calc(var(--u) * 5); padding: calc(var(--u) * 5) calc(var(--u) * 8);
+}
+.bande-sponsor b { color: var(--jaune); }
+.sponsor { display: flex; align-items: center; gap: calc(var(--u) * 8); border-bottom: calc(var(--u) * 1) dashed #c9bf9f; padding-bottom: calc(var(--u) * 6); }
+.sponsor:last-child { border: 0; padding-bottom: 0; }
+.sponsor.verrou { opacity: 0.55; }
+.sponsor.signe { background: #fff0c2; border-radius: calc(var(--u) * 4); padding: calc(var(--u) * 4); }
+.logo-sponsor {
+  flex: none; width: calc(var(--u) * 34); height: calc(var(--u) * 34); border-radius: 50%;
+  background: var(--sp); color: #fff; display: grid; place-items: center;
+  font-size: calc(var(--u) * 13); font-weight: 700; border: calc(var(--u) * 2) solid var(--encre); text-shadow: 0 calc(var(--u) * 1) 0 #000;
+}
+.sponsor-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.album { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(var(--u) * 4); }
+.carte-piece {
+  font-size: calc(var(--u) * 10.2); text-align: center; padding: calc(var(--u) * 4) calc(var(--u) * 2);
+  border: calc(var(--u) * 2) solid var(--rarete, #c9bf9f); border-radius: calc(var(--u) * 4); background: #fff;
+}
+.carte-piece.inconnue { background: #e6dcc4; color: #a89f86; font-size: calc(var(--u) * 15.9); border-style: dashed; }
+.premiere { margin: 0; text-align: center; color: #1a1626; background: var(--jaune); border-radius: calc(var(--u) * 4); padding: calc(var(--u) * 3); font-size: calc(var(--u) * 13); animation: pop 0.5s 1.2s both; }
+.nouveau { margin: 0; color: var(--rouge-vif); font-weight: 700; animation: clignote 0.6s steps(2) infinite; }

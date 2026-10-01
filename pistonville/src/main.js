@@ -20,7 +20,7 @@ import { Ville } from './ville.js';
 import { Son } from './son.js';
 import {
   Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranResultats, ecranFinGP,
-  ecranConstruction, ecranRang, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
+  ecranConstruction, ecranRang, texteRecompense, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
 } from './ecrans.js';
 import * as P from './partie.js';
 
@@ -182,7 +182,33 @@ class App {
     this.toastMinuteur = setTimeout(() => { this.toastEl.hidden = true; }, 2200);
   }
 
-  sauver() { P.sauver(this.partie); this.partieSauvee = this.partie; }
+  sauver() {
+    for (const o of P.verifierObjectifs(this.partie)) this.annoncerObjectif(o);
+    P.sauver(this.partie);
+    this.partieSauvee = this.partie;
+  }
+
+  /** Bandeau « Objectif atteint » en haut de l'écran, sans bloquer le jeu. */
+  annoncerObjectif(o) {
+    this.fileObjectifs = this.fileObjectifs || [];
+    this.fileObjectifs.push(o);
+    if (this.fileObjectifs.length > 1) return;
+    const suivant = () => {
+      const x = this.fileObjectifs[0];
+      if (!x) return;
+      const el = document.getElementById('objectif');
+      el.innerHTML = `<small>OBJECTIF ATTEINT !</small><b>${x.titre.replace(/</g, '&lt;')}</b><span>${texteRecompense(x.recompense)}</span>`;
+      el.hidden = false;
+      el.classList.remove('entre'); void el.offsetWidth; el.classList.add('entre');
+      this.son.niveau();
+      setTimeout(() => {
+        el.hidden = true;
+        this.fileObjectifs.shift();
+        suivant();
+      }, 2600);
+    };
+    suivant();
+  }
 
   titre() { this.ecran = 'titre'; this.montrer(ecranTitre(this)); }
 
@@ -214,6 +240,7 @@ class App {
       inscrire: P.inscrire, candidater: P.deposerCandidature,
       acheterPiece: (p, [id, remise]) => P.acheterPiece(p, id, remise), monter: P.monter, demonter: P.demonter,
       vendrePiece: P.vendrePiece, rechercher: P.rechercher, tirerTombola: P.tirerTombola, boireCafe: P.boireCafe,
+      signerSponsor: P.signerSponsor,
     }[nom];
     const ok = f(this.partie, arg);
     if (ok) this.sauver();
@@ -326,7 +353,7 @@ class App {
     const def = gp.manches[this.partie.gp.manche];
     const decor = rendreCircuit(this.circuit, this.assets.urbain, gp.niveau);
     const v = P.voitureActive(this.partie);
-    this.adversaires = P.adversaires(gp);
+    this.adversaires = P.adversaires(gp, this.partie.gp.manche);
     this.course = new Course({
       circuit: this.circuit,
       decor,

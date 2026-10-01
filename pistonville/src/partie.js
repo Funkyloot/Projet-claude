@@ -4,7 +4,7 @@
  * Grands Prix) : ajouter du contenu par une mise à jour ne la casse jamais.
  */
 
-import { VEHICULES, GRANDS_PRIX, EQUIPES, PIECES } from '../contenu/catalogue.js';
+import { VEHICULES, GRANDS_PRIX, EQUIPES, PIECES, OBJECTIFS, SPONSORS, EVENEMENTS } from '../contenu/catalogue.js';
 import {
   PALIERS, ORDRE_PALIERS, POINTS_GP, POINTS_LICENCE, PART_PRIX, FANS_PLACE, EXP_PLACE, EXP_DEPASSEMENT,
   coutAmelioration, GAIN_AMELIORATION, COUT_REPARATION_POINT, COUT_RECHERCHE, COUT_PEINTURE, BOOSTS,
@@ -41,6 +41,11 @@ export function nouvellePartie() {
     gp: null,                // Grand Prix en cours
     villeJour: 0,            // dernier jour de balade en ville
     cafeJour: 0,             // dernier café des pilotes
+    sponsor: null,           // contrat en cours
+    objectifs: {},           // id → jour où il a été atteint
+    collection: {},          // pièces déjà obtenues une fois (album)
+    premieres: {},           // circuits déjà gagnés une fois
+    stats: { courses: 0, piecesOr: 0, driftMax: 0, departsParfaits: 0, superRares: 0 },
     pilote: 'Léa',
     aide: true,
     son: true,
@@ -73,6 +78,8 @@ function migrer(p) {
     if (!v.pieces) v.pieces = {};
   }
   p.inventaire = p.inventaire.filter((i) => piece(i.piece));
+  p.stats = { ...base.stats, ...p.stats };
+  for (const i of p.inventaire) p.collection[i.piece] = true;
   p.version = VERSION;
   return p;
 }
@@ -211,6 +218,7 @@ export function acheterPiece(partie, id, remise = 0) {
   partie.argent -= prix;
   const inv = { uid: uid('p'), piece: id };
   partie.inventaire.push(inv);
+  partie.collection[id] = true;
   return inv;
 }
 
@@ -279,7 +287,12 @@ export function tirerTombola(partie) {
 }
 
 function appliquerLot(partie, lot) {
-  if (lot.type === 'piece') partie.inventaire.push({ uid: uid('p'), piece: lot.piece.id });
+  if (lot.type === 'piece') {
+    partie.inventaire.push({ uid: uid('p'), piece: lot.piece.id });
+    lot.nouvelle = !partie.collection[lot.piece.id];
+    partie.collection[lot.piece.id] = true;
+    if (lot.piece.rarete === 'super') partie.stats.superRares += 1;
+  }
   if (lot.type === 'recherche') partie.recherche += lot.valeur;
   if (lot.type === 'argent') partie.argent += lot.valeur;
 }
@@ -359,25 +372,77 @@ export function jourSuivant(partie) {
       nouvelles.push({ titre: 'Candidature refusée', texte: `${gp.nom} : il manque ${verdict.manques.join(', ')}.` });
     }
   }
+  const ev = evenementDuJour(partie, alea);
+  if (ev) nouvelles.push(ev);
   partie.nouvelles = nouvelles;
   return nouvelles;
+}
+
+/** Une nouvelle du matin, une fois sur trois environ. */
+function evenementDuJour(partie, alea) {
+  if (partie.garage.length === 0 || alea() > 0.38) return null;
+  const outils = {
+    piece: (rarete) => { const pc = pieceAuHasard(alea, rarete, partie.labo); appliquerLot(partie, { type: 'piece', piece: pc }); return pc; },
+    exp: (n) => gagnerExp(partie, n),
+    voiture: () => partie.garage.find((g) => g.uid === partie.voitureActive),
+  };
+  const possibles = EVENEMENTS.filter((e) => e.si(partie, outils));
+  let r = alea() * possibles.reduce((t, e) => t + e.poids, 0);
+  for (const e of possibles) {
+    r -= e.poids;
+    if (r <= 0) return { ...e.effet(partie, outils), evenement: true };
+  }
+  return null;
 }
 
 // --- Grands Prix ------------------------------------------------------------------------
 
 /** Niveau des adversaires par palier : il faut des pièces pour gagner. */
-const BASE_NIVEAU = [0, 36, 55, 71, 84, 94];
+const BASE_NIVEAU = [0, 33, 53, 70, 84, 94];
+/** Le rival est un peu plus fort, de plus en plus avec les paliers. */
+const bonusRival = (gp) => 0.03 + 0.01 * gp.niveau;
 
 /** Les adversaires d'un Grand Prix : toujours les mêmes écuries pour un GP donné. */
-export function adversaires(gp) {
+export function adversaires(gp, manche = 0) {
   const alea = creerAlea([...gp.id].reduce((h, c) => h * 31 + c.charCodeAt(0), 7) >>> 0);
   const equipes = EQUIPES.slice().sort(() => alea() - 0.5).slice(0, gp.adversaires);
-  const base = BASE_NIVEAU[gp.niveau] || 36;
+  const rival = rivalDe(gp);
+  // Dents de scie : la finale d'un Grand Prix est un cran plus dure.
+  const finale = manche === gp.manches.length - 1 ? 3 : 0;
+  const base = (BASE_NIVEAU[gp.niveau] || 36) + finale;
   return equipes.map((e) => {
-    const b = Math.min(99, base + e.talent * 70);
+    const talent = e.talent + (e.id === rival.id ? bonusRival(gp) : 0);
+    const b = Math.min(99, base + talent * 70);
     const stats = { vitesse: b, acceleration: b + 4, maniabilite: b + 2, solidite: 50 };
-    return { equipe: e.id, nom: e.pilote, ecurie: e.nom, couleur: e.couleur, talent: e.talent * 0.5, physique: physique(stats) };
+    return {
+      equipe: e.id, nom: e.pilote, ecurie: e.nom, couleur: e.couleur, talent: talent * 0.5,
+      rival: e.id === rival.id, physique: physique(stats),
+    };
   });
+}
+
+/** L'écurie rivale d'un Grand Prix : la plus talentueuse du plateau. */
+export function rivalDe(gp) {
+  const alea = creerAlea([...gp.id].reduce((h, c) => h * 31 + c.charCodeAt(0), 7) >>> 0);
+  const equipes = EQUIPES.slice().sort(() => alea() - 0.5).slice(0, gp.adversaires);
+  return equipes.reduce((a, b) => (b.talent > a.talent ? b : a));
+}
+
+/**
+ * Chances estimées sur un Grand Prix (conseil de GPS2 : courir quand on a au
+ * moins une chance sur deux). Compare la moyenne des qualités de conduite
+ * à celle du rival.
+ */
+export function estimerChances(partie, gp) {
+  const v = voitureActive(partie);
+  if (!v) return null;
+  const moi = (v.stats.vitesse + v.stats.acceleration + v.stats.maniabilite) / 3;
+  const lui = (BASE_NIVEAU[gp.niveau] || 36) + 2 + (rivalDe(gp).talent + bonusRival(gp)) * 70;
+  const ecart = moi - lui;
+  if (ecart >= 6) return { niveau: 0, nom: 'Facile', ecart };
+  if (ecart >= -3) return { niveau: 1, nom: 'Équilibré', ecart };
+  if (ecart >= -10) return { niveau: 2, nom: 'Difficile', ecart };
+  return { niveau: 3, nom: 'Très difficile', ecart };
 }
 
 export function commencerGP(partie, gpId) {
@@ -393,12 +458,22 @@ export function enregistrerManche(partie, resultats, course) {
   const gp = grandPrix(partie.gp.id);
   const moi = resultats.find((r) => r.id === 'joueur');
   const i = moi.place - 1;
-  const prime = Math.round(gp.prix * (PART_PRIX[i] ?? 0.1));
+  const sp = sponsorActif(partie)?.effets || {};
+  const prime = Math.round(gp.prix * (PART_PRIX[i] ?? 0.1) * (1 + (sp.prime || 0))) + (sp.argent || 0);
   const licence = POINTS_LICENCE[i] ?? 1;
-  const fans = Math.round((FANS_PLACE[i] ?? 2) * gp.niveau + course.fans);
+  const fans = Math.round(((FANS_PLACE[i] ?? 2) * gp.niveau + course.fans) * (1 + (sp.fans || 0)));
   const exp = Math.round((EXP_PLACE[i] ?? 8) * gp.niveau + course.depassements * EXP_DEPASSEMENT + course.drift);
+  // Première victoire sur ce circuit : bonus de recherche (comme dans GPS2).
+  const cleCircuit = `${gp.id}#${partie.gp.manche}`;
+  const premiere = moi.place === 1 && !partie.premieres[cleCircuit];
+  if (premiere) partie.premieres[cleCircuit] = partie.jour;
+  const recherche = course.ramasses.recherche + Math.max(0, 4 - i) + (sp.recherche || 0) + (premiere ? 10 : 0);
   partie.argent += prime + course.ramasses.argent;
-  partie.recherche += course.ramasses.recherche + Math.max(0, 4 - i);
+  partie.recherche += recherche;
+  partie.stats.courses += 1;
+  partie.stats.piecesOr += course.pieces || 0;
+  partie.stats.driftMax = Math.max(partie.stats.driftMax, course.driftMax || 0);
+  if (course.departParfait) partie.stats.departsParfaits += 1;
   partie.pointsLicence += licence;
   partie.fans += fans;
   if (moi.place <= 3) partie.podiums += 1;
@@ -426,7 +501,7 @@ export function enregistrerManche(partie, resultats, course) {
   partie.gp.manche += 1;
   return {
     prime, licence, fans, exp, rangs, butin, place: moi.place,
-    ramasses: course.ramasses, recherche: course.ramasses.recherche + Math.max(0, 4 - i),
+    ramasses: course.ramasses, recherche, premiere, sponsor: sponsorActif(partie)?.nom,
     fini: partie.gp.manche >= gp.manches.length,
   };
 }
@@ -469,5 +544,43 @@ export function boireCafe(partie) {
   partie.fans += 3;
   return gagnerExp(partie, 15);
 }
+
+// --- Sponsors ---------------------------------------------------------------------------------
+
+export const sponsorActif = (partie) => SPONSORS.find((s) => s.id === partie.sponsor) || null;
+export const sponsorDispo = (partie, s) => partie.fans >= s.fans;
+
+export function signerSponsor(partie, id) {
+  const s = SPONSORS.find((x) => x.id === id);
+  if (!s || !sponsorDispo(partie, s)) return false;
+  partie.sponsor = id;
+  return true;
+}
+
+// --- Objectifs --------------------------------------------------------------------------------
+
+/** Les trois prochains objectifs, avec leur avancement. */
+export function objectifsActifs(partie, nb = 3) {
+  return OBJECTIFS.filter((o) => !partie.objectifs[o.id]).slice(0, nb)
+    .map((o) => ({ ...o, actuel: Math.min(o.but, o.valeur(partie)) }));
+}
+
+/** Valide les objectifs atteints et verse leurs récompenses. Renvoie la liste. */
+export function verifierObjectifs(partie) {
+  const faits = [];
+  for (const o of objectifsActifs(partie, 3)) {
+    if (o.valeur(partie) < o.but) continue;
+    partie.objectifs[o.id] = partie.jour;
+    const r = o.recompense;
+    partie.argent += r.argent || 0;
+    partie.recherche += r.recherche || 0;
+    partie.tickets += r.tickets || 0;
+    faits.push(o);
+  }
+  return faits;
+}
+
+export const objectifsFaits = (partie) => Object.keys(partie.objectifs).length;
+export const totalObjectifs = () => OBJECTIFS.length;
 
 export { ORDRE_PALIERS, PALIERS };

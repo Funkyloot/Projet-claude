@@ -9,10 +9,11 @@
  * au lieu du garage.
  */
 
-import { VEHICULES, GRANDS_PRIX, PIECES } from '../contenu/catalogue.js';
+import { VEHICULES, GRANDS_PRIX, PIECES, SPONSORS } from '../contenu/catalogue.js';
 import {
   voitureActive, decrireVoiture, statutGP, coutReparation, fraisDossier, peutAcheter, licenceAuMoins, modele,
   piece, montureDe, peutSortir, prixPiece, promoDuJour, PRIX_CAFE, ORDRE_PALIERS, PALIERS,
+  objectifsActifs, objectifsFaits, totalObjectifs, estimerChances, rivalDe, sponsorActif, sponsorDispo,
 } from './partie.js';
 import {
   coutAmelioration, evaluerCandidature, SURFACES, kmh, CLASSES, EMPLACEMENTS, RARETES, COUT_RECHERCHE,
@@ -190,12 +191,17 @@ export function ecranAide(app, retour) {
 export function ecranGarage(app) {
   const p = app.partie;
   const v = voitureActive(p);
-  const nouvelles = (p.nouvelles || []).map((n) => `<div class="nouvelle"><b>${e(n.titre)}</b><span>${e(n.texte)}</span></div>`).join('');
+  const nouvelles = (p.nouvelles || []).map((n) => `<div class="nouvelle ${n.evenement ? 'evenement' : ''}"><b>${e(n.titre)}</b><span>${e(n.texte)}</span></div>`).join('');
   const sansVoiture = !v;
   const sortie = peutSortir(p);
+  const obj = objectifsActifs(p, 1)[0];
+  const bandeObjectif = obj
+    ? `<button class="objectif-bande" data-action="objectifs"><small>OBJECTIF</small><b>${e(obj.titre)}</b>
+        <span class="jauge"><i style="width:${Math.round((obj.actuel / obj.but) * 100)}%;background:#3fa34d"></i></span><em>${texteRecompense(obj.recompense)}</em></button>`
+    : '';
   return {
     classe: 'garage',
-    html: `${barre(p)}
+    html: `${barre(p)}${bandeObjectif}
     ${nouvelles ? `<div class="nouvelles" data-action="lu">${nouvelles}<small>Toucher pour fermer</small></div>` : ''}
     <div class="bas">
       ${sansVoiture
@@ -218,6 +224,7 @@ export function ecranGarage(app) {
     </div>`,
     actions: {
       lu: () => { p.nouvelles = []; app.garage(); },
+      objectifs: () => app.montrer(ecranObjectifs(app)),
       atelier: () => app.montrer(ecranAtelier(app)),
       boutique: () => app.montrer(ecranBoutique(app)),
       pieces: () => app.montrer(ecranPieces(app)),
@@ -434,6 +441,8 @@ export function ecranLabo(app, retour = () => app.garage()) {
             ${max ? '' : `<button class="btn btn-mini btn-principal" data-action="chercher" ${p.recherche < cout ? 'disabled' : ''}>Rechercher</button>`}</div>
         </div>
       </section>
+      <section class="panneau"><h2 class="titre-panneau sombre">Collection de pièces<small>${Object.keys(p.collection).length} / ${PIECES.length} découvertes</small></h2>
+        <div class="contenu album">${PIECES.map((x) => (p.collection[x.id] ? `<span class="carte-piece rarete-${x.rarete}">${e(x.nom)}</span>` : '<span class="carte-piece inconnue">?</span>')).join('')}</div></section>
       <section class="panneau"><div class="contenu">${niveaux}</div></section>
     </div>
     <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
@@ -688,6 +697,64 @@ export function ecranFinBalade(app, g, suite) {
   };
 }
 
+export function texteRecompense(r) {
+  return [r.argent && `+${formatArgent(r.argent)}`, r.recherche && `+${r.recherche} PR`, r.tickets && `+${r.tickets} ticket${r.tickets > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+}
+
+export function ecranObjectifs(app) {
+  const p = app.partie;
+  const actifs = objectifsActifs(p, 3);
+  const lignes = actifs.map((o, i) => `<div class="objectif ${i === 0 ? 'premier' : ''}">
+    <div class="ligne"><b>${e(o.titre)}</b><span class="petit">${texteRecompense(o.recompense)}</span></div>
+    <div class="ligne"><div class="jauge grande" style="flex:1"><i style="width:${Math.round((o.actuel / o.but) * 100)}%;background:#3fa34d"></i></div><span class="num">${o.actuel} / ${o.but}</span></div>
+  </div>`).join('');
+  return {
+    classe: 'garage plein',
+    html: `${barre(p)}<div class="defile">
+      <h2 class="titre-section">Objectifs</h2>
+      <p class="petit clair">${objectifsFaits(p)} sur ${totalObjectifs()} atteints. Chaque objectif est récompensé dès qu'il est rempli.</p>
+      <section class="panneau"><div class="contenu">${lignes || '<p>Tout est accompli. Légende !</p>'}</div></section>
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour au garage</button></div>`,
+    actions: { retour: () => app.garage() },
+  };
+}
+
+export function ecranSponsors(app, retour) {
+  const p = app.partie;
+  const actif = sponsorActif(p);
+  const cartes = SPONSORS.map((s) => {
+    const dispo = sponsorDispo(p, s);
+    const signe = actif?.id === s.id;
+    return `<div class="sponsor ${dispo ? '' : 'verrou'} ${signe ? 'signe' : ''}" style="--sp:${s.couleur}">
+      <div class="logo-sponsor">${e(s.nom.split(' ').map((m) => m[0]).join('').slice(0, 3))}</div>
+      <div class="sponsor-texte"><b>${e(s.nom)}</b><span class="petit">${e(s.texte)}</span></div>
+      ${signe ? '<span class="etat">Sous contrat</span>' : dispo
+        ? `<button class="btn btn-mini btn-principal" data-action="signer" data-id="${s.id}">Signer</button>`
+        : `<span class="petit ko">${s.fans} fans</span>`}
+    </div>`;
+  }).join('');
+  return {
+    classe: 'garage plein',
+    html: `${barre(p)}<div class="defile">
+      <h2 class="titre-section">Sponsors</h2>
+      <p class="petit clair">Un contrat à la fois. Plus tu as de fans, plus les marques se bousculent.</p>
+      <section class="panneau"><div class="contenu">${cartes}</div></section>
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
+    actions: {
+      signer: (d) => { if (app.action('signerSponsor', d.id)) { app.son.caisse(); app.toast('Contrat signé !'); } app.montrer(ecranSponsors(app, retour)); },
+      retour,
+    },
+  };
+}
+
+const COULEURS_CHANCES = ['#3fa34d', '#2f6fdb', '#f39c33', '#e4432d'];
+function pastilleChances(app, gp) {
+  const c = estimerChances(app.partie, gp);
+  return c ? `<span class="chances" style="background:${COULEURS_CHANCES[c.niveau]}">${c.nom}</span>` : '';
+}
+
 // --- Bureau des courses -------------------------------------------------------------------------
 
 function ligneGP(app, gp) {
@@ -701,7 +768,7 @@ function ligneGP(app, gp) {
   if (gp.palier === 'ouvert') {
     if (statut === 'inscrit') action = `<button class="btn btn-mini btn-rouge" data-action="briefing" data-id="${gp.id}" ${v ? '' : 'disabled'}>Courir ce soir</button>`;
     else action = `<button class="btn btn-mini" data-action="inscrire" data-id="${gp.id}" ${v ? '' : 'disabled'}>${v ? "S'inscrire" : 'Il faut une voiture'}</button>`;
-    return `<div class="gp"><div class="gp-tete"><b>${coupe}${e(gp.nom)}</b>${action}</div><div class="petit">${infos}</div></div>`;
+    return `<div class="gp"><div class="gp-tete"><b>${coupe}${e(gp.nom)}</b>${action}</div><div class="petit">${infos}</div><div class="criteres">${pastilleChances(app, gp)}</div></div>`;
   }
   const c = p.candidatures[gp.id];
   const verdict = evaluerCandidature(p, gp, v);
@@ -720,7 +787,7 @@ function ligneGP(app, gp) {
   return `<div class="gp">
     <div class="gp-tete"><b>${coupe}${e(gp.nom)}</b>${action}</div>
     <div class="petit">${infos}</div>
-    <div class="criteres">${crit}${verdict.ok && statut !== 'acceptee' ? '<span class="ok">dossier complet</span>' : ''}</div>${refus}
+    <div class="criteres">${pastilleChances(app, gp)}${crit}${verdict.ok && statut !== 'acceptee' ? '<span class="ok">dossier complet</span>' : ''}</div>${refus}
   </div>`;
 }
 
@@ -742,6 +809,8 @@ export function ecranBureau(app, retour = () => app.garage()) {
     classe: 'garage plein',
     html: `${barre(p)}<div class="defile">
       <h2 class="titre-section">Bureau des courses</h2>
+      <button class="bande-sponsor" data-action="sponsors">${sponsorActif(p) ? `Sponsor : <b>${e(sponsorActif(p).nom)}</b> · ${e(sponsorActif(p).texte)}` : '<b>Aucun sponsor</b> · toucher pour signer un contrat'}</button>
+      <p class="petit clair">Chances estimées d'après ta voiture face au rival de chaque Grand Prix.</p>
       ${blocs}
     </div>
     <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
@@ -749,6 +818,7 @@ export function ecranBureau(app, retour = () => app.garage()) {
       inscrire: (d) => { app.action('inscrire', d.id); app.montrer(ecranBureau(app, retour)); },
       candidater: (d) => { if (app.action('candidater', d.id)) app.toast('Dossier déposé : réponse demain matin.'); app.montrer(ecranBureau(app, retour)); },
       briefing: (d) => app.briefing(d.id),
+      sponsors: () => app.montrer(ecranSponsors(app, () => app.montrer(ecranBureau(app, retour)))),
       retour,
     },
   };
@@ -776,9 +846,12 @@ export function ecranBriefing(app, gp, manche, apercu) {
               <dt>Tours</dt><dd>${def.tours}</dd>
               <dt>Longueur</dt><dd>${Math.round(def.longueur / 16)} cases</dd>
               <dt>Adversaires</dt><dd>${gp.adversaires}</dd>
+              <dt>Rival</dt><dd class="ko">${e(rivalDe(gp).nom)}</dd>
+              <dt>Chances</dt><dd>${pastilleChances(app, gp)}</dd>
             </dl>
           </div>
         </div>
+        ${manche === gp.manches.length - 1 && gp.manches.length > 1 ? '<div class="contenu texte petit ko">Finale : les adversaires sortent le grand jeu !</div>' : ''}
         <div class="contenu texte petit">Touche l'écran pile au feu vert pour un départ parfait. Ramasse les pièces d'or et les disquettes sur la piste !</div>
       </section>
       <div class="pile">
@@ -831,7 +904,7 @@ export function ecranResultats(app, r) {
   const besoin = expPourRang(p.rang);
   const butin = g.butin
     ? `<section class="panneau revele rarete-${g.butin.piece.rarete} retarde"><h2 class="titre-panneau">Caisse de pièces !</h2>
-        <div class="contenu texte centre"><div class="caisse-ouverte"></div><p class="gros">${e(g.butin.piece.nom)}</p><p class="rarete">${RARETES[g.butin.piece.rarete].nom}</p><p class="petit">${texteBonus(g.butin.piece)}</p></div></section>`
+        <div class="contenu texte centre"><div class="caisse-ouverte"></div><p class="gros">${e(g.butin.piece.nom)}</p>${g.butin.nouvelle ? '<p class="nouveau">NOUVEAU !</p>' : ''}<p class="rarete">${RARETES[g.butin.piece.rarete].nom}</p><p class="petit">${texteBonus(g.butin.piece)}</p></div></section>`
     : '';
   return {
     classe: 'fond-sombre',
@@ -850,7 +923,8 @@ export function ecranResultats(app, r) {
         <div class="contenu">
           <div class="ligne petit-clair"><span>Rang ${p.rang}</span><span>${p.exp} / ${besoin} EXP</span></div>
           <div class="jauge grande"><i class="remplir" style="--w:${Math.round((p.exp / besoin) * 100)}%;background:#f2c14e"></i></div>
-          <p class="petit-clair">${r.depassements} dépassement${r.depassements > 1 ? 's' : ''} · ${r.drift} EXP de drift</p>
+          <p class="petit-clair">${r.depassements} dépassement${r.depassements > 1 ? 's' : ''} · ${r.drift} EXP bonus (drift, départ, rival)${g.sponsor ? ` · sponsor ${e(g.sponsor)}` : ''}</p>
+          ${g.premiere ? '<p class="premiere">PREMIÈRE VICTOIRE SUR CE CIRCUIT · +10 PR</p>' : ''}
         </div>
       </section>
       ${butin}
