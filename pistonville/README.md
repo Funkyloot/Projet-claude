@@ -18,14 +18,16 @@ Tout est dans ce fichier : aucune installation, aucune connexion.
 
 | Action | Clavier | Écran tactile ou souris |
 |---|---|---|
-| Tourner à gauche / droite | ← → (ou Q / D, A / D) | Toucher la moitié gauche / droite de l'écran |
+| Tourner à gauche / droite | ← → (ou Q / D, A / D) | Boutons Gauche / Droite (ou la moitié gauche / droite de l'écran) |
 | Nitro | Espace (ou ↑) | Bouton NITRO |
 | Aura (jauge pleine) | E | Toucher le portrait de la pilote |
 | Pause | Échap (ou P) | Bouton pause en haut |
 | Départ parfait | n'importe quelle touche pile au feu vert | toucher l'écran pile au feu vert |
-| Freiner (en ville) | ← et → ensemble | toucher les deux côtés |
+| Freiner, puis reculer (en ville) | ↓ (ou S), ou ← et → ensemble | Bouton FREIN gardé, ou les deux côtés |
 
-La voiture accélère toute seule. Garder la direction dans un virage fait
+La course et la balade en ville se conduisent pareil, avec le même panneau en
+bas de l'écran (pilote, vitesse, état de la voiture, Gauche / Droite) ; au
+milieu, NITRO en course et FREIN en ville. La voiture accélère toute seule. Garder la direction dans un virage fait
 drifter ; un long drift et chaque dépassement remplissent la jauge d'aura.
 L'aide au pilotage (activée par défaut, réglable dans la pause) recentre
 doucement la voiture quand on ne touche à rien.
@@ -33,16 +35,18 @@ doucement la voiture quand on ne touche à rien.
 ## Ce que contient cette version
 
 **Graphismes 100 % Kenney** : personnages RPG Urban partout (piétons,
-personnel, pilotes, public) ; en course, voitures, tribunes, tentes, murs de
-pneus et feux de départ du Racing Pack ; en ville, bâtiments, voitures (vues de
-côté, de face, de dos), feux, lampadaires, bancs et eau de Roguelike Modern
-City ; à la campagne, maisons, grange, mairie, puits, clôtures et cultures de
+personnel, pilotes, public) ; tous les véhicules (voitures de course, karts,
+berlines, taxis, police, camions, ambulances, pompiers, tracteurs) viennent
+du Car Kit en 3D, rendus sous 32 angles et repeints aux couleurs des écuries ;
+en course, tribunes, tentes, murs de pneus et feux de départ du Racing Pack,
+sur des pistes de 10 cases de large ; en ville, bâtiments, feux, lampadaires,
+bancs et eau de Roguelike Modern City ; à la campagne, maisons, grange, mairie, puits, clôtures et cultures de
 Tiny Town et Tiny Farm ; boutique et garage : Pixel Vehicle Pack.
 
 **Nouveau en 0.6** : une grande carte d'environ 5 km de côté, organisée
 comme une vraie carte. La ville au centre, en grands pâtés de quatre lots
-avec une cour, entourée d'un boulevard périphérique et traversée par deux
-boulevards à 2 × 2 voies avec terre-plein ; le lac au fond d'un grand parc ;
+avec une cour, desservis par des rues et entourée d'un boulevard périphérique
+à 2 × 2 voies avec terre-plein ; le lac au fond d'un grand parc ;
 la zone d'activités en bordure. Autour, la campagne en grandes parcelles le
 long d'une boucle de routes départementales : champs découpés en cultures,
 deux fermes, un village avec église, place et marché, prés, vergers, parc

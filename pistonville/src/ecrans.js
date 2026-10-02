@@ -940,6 +940,31 @@ export function ecranChargement(texte) {
   return { classe: 'fond-sombre', html: `<div class="ecran chargement"><p>${e(texte)}</p></div>`, actions: {} };
 }
 
+/** Pause pendant la balade : reprendre, le son, ou rentrer au garage (les gains sont gardés). */
+export function ecranPauseVille(app) {
+  const p = app.partie;
+  return {
+    classe: 'fond-sombre',
+    html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">Pause</h2>
+        <div class="contenu">
+          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p.son ? 'Activé' : 'Coupé'}</button></div>
+          <p class="petit">Rentrer maintenant termine la balade : ce que tu as gagné est gardé.</p>
+        </div>
+      </section>
+      <div class="pile">
+        <button class="btn btn-principal" data-action="reprendre">Reprendre</button>
+        <button class="btn" data-action="rentrer">Rentrer au garage</button>
+      </div>
+    </div>`,
+    actions: {
+      reprendre: () => app.reprendre(),
+      son: () => { p.son = !p.son; app.son.actif = p.son; app.sauver(); app.montrer(ecranPauseVille(app)); },
+      rentrer: () => { app.reprendre(); app.ville.fini = true; },
+    },
+  };
+}
+
 export function ecranPause(app) {
   const p = app.partie;
   return {

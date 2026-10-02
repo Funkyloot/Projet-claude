@@ -2,8 +2,8 @@
  *
  * Pistonville est une grande carte d'environ 5 km de côté (une case = 1 m),
  * organisée comme une vraie carte (voir reseau.js) : la ville au centre, en
- * grands pâtés de quatre lots, entourée d'un boulevard périphérique et
- * traversée par deux boulevards à 2 × 2 voies ; le lac au fond d'un grand
+ * grands pâtés de quatre lots desservis par des rues, entourée d'un
+ * boulevard périphérique à 2 × 2 voies ; le lac au fond d'un grand
  * parc ; la zone d'activités en bordure. Autour, la campagne en grandes
  * parcelles le long d'une boucle de routes départementales (champs, fermes,
  * village, prés, vergers, éoliennes, étang, station-service ; voir
@@ -13,7 +13,8 @@
  * ville-vie.js). Tout ce qui est construit est solide.
  *
  * La carte est trop grande pour une seule image sur téléphone : elle est
- * peinte par morceaux de 510 px, à la demande, autour de la voiture.
+ * peinte par petits morceaux de 290 px, à la demande, autour de la voiture
+ * (un par image d'avance : pas d'à-coup en roulant).
  *
  * Les choses à faire, inspirées des jeux de course en ville ouverte (on lance
  * un défi en roulant dessus, des objets cachés à trouver) :
@@ -31,10 +32,10 @@
 
 import { Voiture, DEMI_LONGUEUR, DEMI_LARGEUR } from './voiture.js';
 import { PERSONNAGES, bulle, T } from './sprites.js';
-import { texte, recouvrement } from './course.js';
+import { texte, recouvrement, pastille, dessinerPanneau, dessinerPause, HAUTEUR_PANNEAU } from './course.js';
 import { clamp, lerp, creerAlea, hash2, formatTemps } from './outils.js';
 import { Trafic, Pietons, Feux } from './ville-vie.js';
-import { Reseau, CELLULE, LOT, COUR } from './reseau.js';
+import { Reseau, CELLULE, LOT, COUR, BOULEVARD, TERRE_PLEIN } from './reseau.js';
 import { tuileTiny, dessinerVoiture, dessinerPerso, tenue, modeleVoiture, CONTOUR, tuileVille, pileVille, imageAtlas, motifEau, motifTuile } from './tiny.js';
 import {
   batimentModerne, hauteurBatiment, maisonModerne, caisses, lampadaire, banc, poubelle, borne, feuTricolore, fleurs, panneauStop,
@@ -42,11 +43,10 @@ import {
 import { CAMPAGNE, remplirParcelle, COULEURS_SOL } from './ville-campagne.js';
 
 export const DUREE_BALADE = 150;     // secondes réelles pour une heure de jeu
-const HAUT_HUD = 52;
 const TAILLE_ILOT = LOT;             // 160 px : un lot de ville
 const GRAINE_PLAN = 4242;            // le plan de la ville ne change jamais
-const MORCEAU = 510;                 // la carte est peinte par morceaux de 510 px (8 × 8)
-const MORCEAUX_GARDES = 18;          // morceaux gardés en mémoire (≈ 19 Mo)
+const MORCEAU = 290;                 // la carte est peinte par morceaux de 290 px (16 × 16)
+const MORCEAUX_GARDES = 56;          // morceaux gardés en mémoire (≈ 19 Mo)
 
 /** Bâtiments où l'on peut entrer, et leur lot (colonne, ligne dans la grille des lots de la ville). */
 export const BATIMENTS = [
@@ -60,8 +60,8 @@ export const BATIMENTS = [
 
 /*
  * Le plan, comme une vraie carte : la ville au centre (4 × 4 grands pâtés),
- * entourée d'un boulevard périphérique et traversée par deux boulevards qui
- * se croisent au centre ; entre eux, des rues. Autour, la campagne en grandes
+ * entourée d'un boulevard périphérique ; dedans, des rues à une voie par
+ * sens, bordées de bâtiments. Autour, la campagne en grandes
  * parcelles le long d'une boucle de routes départementales, reliée au
  * périphérique par six routes ; au bord de la carte, la forêt.
  *
@@ -98,8 +98,8 @@ const LOTS = [
 ];
 const VILLE0 = 3;                          // premier pâté de la ville
 const N = PLAN.length;
-/** Largeur de chaque ligne de route, en cases : 13 = boulevard (2 × 2 voies), 6 = rue, 0 = pas de route. */
-const LARGEURS = [0, 6, 0, 13, 6, 13, 6, 13, 0, 6, 0];
+/** Largeur de chaque ligne de route, en cases : 10 = boulevard (2 × 2 voies), 6 = rue, 0 = pas de route. */
+const LARGEURS = [0, 6, 0, 10, 6, 6, 6, 10, 0, 6, 0];
 const VILLE = [3, 7];                      // carrefours de la ville (du périphérique au périphérique)
 const BOUCLE = [1, 9];                     // la boucle des routes de campagne
 const LIAISONS = [3, 5, 7];                // routes qui relient le périphérique à la boucle
@@ -197,13 +197,15 @@ export class Ville {
     this.preparerDefis();
 
     const p = o.voiture.physique;
-    // En ville, on roule plus doucement : 60 % de la pointe, plafonnée.
-    const physique = { ...p, vmax: Math.min(150, p.vmax * 0.6), accel: p.accel * 0.8 };
-    this.voiture = new Voiture({ physique, couleur: o.voiture.couleur, nom: 'moi', joueur: true });
+    // La même voiture qu'en course, un peu bridée en ville : 70 % de la pointe, plafonnée.
+    const physique = { ...p, vmax: Math.min(175, p.vmax * 0.7), accel: p.accel * 0.9 };
+    this.voiture = new Voiture({ physique, couleur: o.voiture.couleur, nom: o.pilote?.nom || 'Pilote', joueur: true });
+    this.tenuePilote = o.pilote?.tenue;
+    this.usureDepart = o.voiture.usure || 0;
     this.voiture.looks = o.voiture.looks || [];
     this.voiture.modele = modeleVoiture(o.voiture.profil, o.voiture.id);
     this.voiture.braquageMin = 0.6;   // on peut se dégager d'un mur en braquant
-    // Au départ, la voiture sort du garage sur le boulevard, voie de droite.
+    // Au départ, la voiture sort du garage dans la rue, voie de droite.
     this.placerDevant(this.portes.find((g) => g.id === 'garage'));
     this.ignorer = 'garage';
     this.camera = { x: this.voiture.x, y: this.voiture.y };
@@ -630,7 +632,7 @@ export class Ville {
       { id: 'oeufs', type: 'livraison', vers: 'ferme', nom: 'Œufs frais', ...surVoie(false, 7, 1, 1) },
     ];
     for (const d of this.defis) d.fait = false;
-    // Radars de vitesse sur de longues lignes droites : boulevards et routes de campagne.
+    // Radars de vitesse sur de longues lignes droites : rues, périphérique et routes de campagne.
     this.radars = [
       { id: 'radar-a', ...surVoie(true, 5, 3, 0) },
       { id: 'radar-b', ...surVoie(false, 5, 6, 1) },
@@ -1079,8 +1081,9 @@ export class Ville {
     const marge = 20;
     c.fillStyle = '#e8e4d6';
     if (!ville) { rect(0, 5, l, 2); rect(0, w - 7, l, 2); }
-    if (w >= 13 * T) {
-      for (let p = marge; p < l - marge - 8; p += 24) { rect(p, 47, 12, 2); rect(p, w - 49, 12, 2); }
+    if (w >= BOULEVARD * T) {
+      const lv = (w - TERRE_PLEIN) / 4;
+      for (let p = marge; p < l - marge - 8; p += 24) { rect(p, lv - 1, 12, 2); rect(p, w - lv - 1, 12, 2); }
       // Terre-plein central : bordures, herbe et petits buissons.
       const m = w / 2 - 8;
       c.fillStyle = '#8b9bb4'; rect(marge, m, l - 2 * marge, 16);
@@ -1120,22 +1123,24 @@ export class Ville {
 
   dessiner(ctx, W, H, t) {
     const v = this.voiture;
-    this.camera.x = lerp(this.camera.x, v.x + v.vx * 0.4, 0.12);
-    this.camera.y = lerp(this.camera.y, v.y + v.vy * 0.4, 0.12);
+    // Caméra de la course : un peu en avant de la voiture, au-dessus du panneau de conduite.
+    const hVue = H - HAUTEUR_PANNEAU;
+    this.camera.x = lerp(this.camera.x, v.x + v.vx * 0.45, 0.12);
+    this.camera.y = lerp(this.camera.y, v.y + v.vy * 0.45, 0.12);
     const sx = this.secousse ? (Math.random() - 0.5) * this.secousse : 0;
     const camX = Math.round(clamp(this.camera.x - W / 2 + sx, 0, TAILLE_VILLE - W));
-    const camY = Math.round(clamp(this.camera.y - H / 2 + sx, 0, TAILLE_VILLE - H));
+    const camY = Math.round(clamp(this.camera.y - hVue / 2 + sx, 0, TAILLE_VILLE - hVue));
     ctx.imageSmoothingEnabled = false;
     // Les morceaux de carte visibles (peints à la demande), puis un de plus d'avance.
-    for (let j = Math.floor(camY / MORCEAU); j <= Math.floor((camY + H - 1) / MORCEAU); j++) {
+    for (let j = Math.floor(camY / MORCEAU); j <= Math.floor((camY + hVue - 1) / MORCEAU); j++) {
       for (let i = Math.floor(camX / MORCEAU); i <= Math.floor((camX + W - 1) / MORCEAU); i++) {
         ctx.drawImage(this.morceau(i, j), i * MORCEAU - camX, j * MORCEAU - camY);
       }
     }
-    this.prechauffer(camX, camY, W, H);
+    this.prechauffer(camX, camY, W, hVue);
     ctx.save();
     ctx.translate(-camX, -camY);
-    const visible = (x, y, m = 40) => x > camX - m && x < camX + W + m && y > camY - m && y < camY + H + m;
+    const visible = (x, y, m = 40) => x > camX - m && x < camX + W + m && y > camY - m && y < camY + hVue + m;
 
     // La campagne vit : bêtes qui broutent, fermiers et promeneurs.
     for (const a of this.animaux) {
@@ -1186,8 +1191,8 @@ export class Ville {
     this.dessinerSoir(ctx, camX, camY, W, H, visible);
     ctx.restore();
 
-    if (this.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${this.flash * 3})`; ctx.fillRect(0, 0, W, H); }
-    if (this.defi) this.fleche(ctx, W, H, camX, camY);
+    if (this.flash > 0) { ctx.fillStyle = `rgba(255,255,255,${this.flash * 3})`; ctx.fillRect(0, 0, W, hVue); }
+    if (this.defi) this.fleche(ctx, W, hVue, camX, camY);
     this.dessinerInterface(ctx, W, H, t);
   }
 
@@ -1250,11 +1255,11 @@ export class Ville {
   /** Flèche au bord de l'écran vers l'objectif du défi en cours. */
   fleche(ctx, W, H, camX, camY) {
     const c = this.defi.cible;
-    const cx = W / 2, cy = (H + HAUT_HUD) / 2;
+    const cx = W / 2, cy = H / 2;
     const dx = c.x - camX - cx, dy = c.y - camY - cy;
-    if (Math.abs(dx) < W / 2 - 20 && Math.abs(dy) < (H - HAUT_HUD) / 2 - 20) return;
+    if (Math.abs(dx) < W / 2 - 20 && Math.abs(dy) < H / 2 - 20) return;
     const ang = Math.atan2(dy, dx);
-    const r = Math.min((W / 2 - 22) / Math.abs(Math.cos(ang) || 1e-3), ((H - HAUT_HUD) / 2 - 40) / Math.abs(Math.sin(ang) || 1e-3));
+    const r = Math.min((W / 2 - 22) / Math.abs(Math.cos(ang) || 1e-3), (H / 2 - 40) / Math.abs(Math.sin(ang) || 1e-3));
     ctx.save();
     ctx.translate(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
     ctx.rotate(ang);
@@ -1263,22 +1268,20 @@ export class Ville {
     ctx.restore();
   }
 
-  dessinerInterface(ctx, W, H) {
-    ctx.fillStyle = 'rgba(31,42,68,0.92)'; ctx.fillRect(0, 0, W, HAUT_HUD);
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, HAUT_HUD, W, 2);
-    texte(ctx, 'BALADE EN VILLE', 8, 12, 10, '#9fb3d9', 'left');
-    texte(ctx, this.heure(), 8, 32, 18, '#ffe066', 'left');
-    const reste = 1 - this.temps / DUREE_BALADE;
-    ctx.fillStyle = '#3a4a6b'; ctx.fillRect(8, 44, 140, 4);
-    ctx.fillStyle = reste > 0.25 ? '#5ad16a' : '#e4432d'; ctx.fillRect(8, 44, Math.round(140 * reste), 4);
+  /** L'interface de la course : cartouches en haut, mini-carte, panneau de conduite en bas. */
+  dessinerInterface(ctx, W, H, t) {
+    const hVue = H - HAUTEUR_PANNEAU;
     const net = this.gains.argent - this.gains.amendes;
-    texte(ctx, `${net >= 0 ? '' : '−'}${Math.abs(net)} G`, 156, 18, 11, net >= 0 ? '#ffe066' : '#fca5a5', 'left');
-    texte(ctx, `${this.gains.recherche} PR · ${this.gains.fans} fans`, 156, 36, 10, '#cfe0ff', 'left');
+    pastille(ctx, 6, 6, `BALADE · ${this.heure()}`, '#1f2a44');
+    pastille(ctx, 6, 26, `${net < 0 ? '−' : ''}${Math.abs(net)} G · ${this.gains.recherche} PR`, net < 0 ? '#9b2c2c' : '#7a5a12');
+    pastille(ctx, 6, 46, `${this.gains.fans} fans`, '#c2504d');
+    pastille(ctx, 6, 66, `Affiches ${Object.keys(this.memoire.affiches).length}/${AFFICHES}`, '#1f2a44');
+    dessinerPause(ctx, W, H);
 
     // Défi en cours : nom, chrono, avancement.
     if (this.defi) {
       const f = this.defi;
-      const y = HAUT_HUD + 4;
+      const y = 88;
       ctx.fillStyle = 'rgba(15,23,42,0.85)'; ctx.fillRect(6, y, 200, 34);
       texte(ctx, f.d.nom, 12, y + 10, 10, '#ffe066', 'left');
       const det = f.type === 'sprint' ? `Point ${f.etape + 1}/${f.d.etapes.length}`
@@ -1286,32 +1289,37 @@ export class Ville {
       texte(ctx, `${Math.max(0, f.limite - f.t).toFixed(1)} s · ${det}`, 12, y + 24, 10, '#ffffff', 'left');
     }
 
+    // Mini-carte, encadrée comme en course.
     const mc = this.minicarte;
-    const mx = W - mc.width - 6, my = HAUT_HUD + 8;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(mx - 3, my - 3, mc.width + 6, mc.height + 6);
+    const mx = W - mc.width - 6, my = 6;
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(mx - 4, my - 4, mc.width + 8, mc.height + 8);
+    ctx.fillStyle = '#1f2a44'; ctx.fillRect(mx - 2, my - 2, mc.width + 4, mc.height + 4);
     ctx.drawImage(mc, mx, my);
     const e = mc.width / TAILLE_VILLE;
-    const point = (x, y, coul, t = 3) => { ctx.fillStyle = coul; ctx.fillRect(Math.round(mx + x * e) - (t >> 1), Math.round(my + y * e) - (t >> 1), t, t); };
+    const point = (x, y, coul, n = 3) => { ctx.fillStyle = coul; ctx.fillRect(Math.round(mx + x * e) - (n >> 1), Math.round(my + y * e) - (n >> 1), n, n); };
     for (const p of this.portes) point(p.x + p.w / 2, p.y, '#ffffff');
     for (const d of this.defis) if (!d.fait && !this.defi) point(d.x, d.y, d.type === 'drift' ? '#c4b5fd' : d.type === 'livraison' ? '#f39c33' : '#ffe066');
     if (this.defi) point(this.defi.cible.x, this.defi.cible.y, '#9fe870', 4);
     point(this.voiture.x, this.voiture.y, '#1a1626', 6);
     point(this.voiture.x, this.voiture.y, '#ffe066', 4);
-    texte(ctx, `Affiches ${Object.keys(this.memoire.affiches).length}/${AFFICHES}`, mx + mc.width / 2, my + mc.height + 10, 8, '#f4f1e8', 'center');
 
     if (this.bandeau) {
-      ctx.fillStyle = 'rgba(15,23,42,0.88)'; ctx.fillRect(10, H - 70, W - 20, 30);
-      texte(ctx, this.bandeau.texte, W / 2, H - 55, 10, this.bandeau.couleur, 'center');
+      ctx.fillStyle = 'rgba(15,23,42,0.88)'; ctx.fillRect(10, hVue - 40, W - 20, 30);
+      texte(ctx, this.bandeau.texte, W / 2, hVue - 25, 10, this.bandeau.couleur, 'center');
     }
-    ctx.fillStyle = 'rgba(31,42,68,0.55)';
-    ctx.fillRect(0, H - 26, W, 26);
-    texte(ctx, '◀ gauche', 10, H - 13, 10, '#f4f1e8', 'left');
-    texte(ctx, 'les deux : freiner / reculer', W / 2, H - 13, 9, '#cfe0ff', 'center');
-    if (this.attente && Math.sin(this.temps * 6) > -0.4) {
-      ctx.fillStyle = 'rgba(15,23,42,0.85)'; ctx.fillRect(W / 2 - 96, H - 108, 192, 26);
-      texte(ctx, 'Touche un côté pour démarrer', W / 2, H - 95, 10, '#ffe066', 'center');
+    if (this.attente && Math.sin(this.temps * 6 + t * 6) > -0.4) {
+      ctx.fillStyle = 'rgba(15,23,42,0.85)'; ctx.fillRect(W / 2 - 110, hVue - 40, 220, 26);
+      texte(ctx, 'Touche Gauche ou Droite pour démarrer', W / 2, hVue - 27, 10, '#ffe066', 'center');
     }
-    texte(ctx, 'droite ▶', W - 10, H - 13, 10, '#f4f1e8', 'right');
+
+    // Panneau de conduite : le même qu'en course, avec le frein au milieu.
+    const v = this.voiture;
+    const reste = clamp(1 - this.temps / DUREE_BALADE, 0, 1);
+    dessinerPanneau(ctx, W, H, t, {
+      tenue: this.tenuePilote, nom: v.nom, vitesse: v.vitesse, etat: 1 - this.usureDepart - this.gains.usure,
+      jauge: { libelle: this.heure(), valeur: reste, couleur: reste > 0.25 ? '#5ad16a' : '#e4432d', texte: '#ffe066' },
+      centre: { titre: v.recul ? 'RECUL' : 'FREIN', detail: 'tenir : recule', fond: v.frein || v.recul ? '#e4432d' : '#a63d3a' },
+    });
   }
 
   /** Gains nets de la balade, à verser dans la partie. */

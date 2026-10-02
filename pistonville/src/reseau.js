@@ -4,7 +4,7 @@
  * route. Chaque ligne a sa largeur :
  *   - 0 : pas de route du tout (les pâtés voisins se touchent) ;
  *   - 6 cases : une rue ou une route de campagne, une voie par sens ;
- *   - 13 cases : un boulevard, deux voies par sens et un terre-plein central.
+ *   - 10 cases : un boulevard, deux voies par sens et un terre-plein central.
  * Sur une ligne, chaque tronçon (d'un carrefour au suivant) existe ou non :
  * en ville il y a une rue à chaque pâté, à la campagne seulement quelques
  * routes, et les pâtés que rien ne sépare forment une grande parcelle
@@ -27,7 +27,7 @@ export const CELLULE = CASES_CELLULE * T;   // 384 px
 export const INTERIEUR = (CASES_CELLULE - 2) * T;   // 352 px
 export const LOT = 160;                      // un lot de ville (10 cases)
 export const COUR = INTERIEUR - 2 * LOT;     // 32 px entre les lots
-export const LARGEUR_VOIE = 48;
+export const BOULEVARD = 10;                // cases : à partir de là, deux voies par sens
 export const TERRE_PLEIN = 16;
 export const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];   // 0 est, 1 sud, 2 ouest, 3 nord
 
@@ -89,13 +89,16 @@ export class Reseau {
 
   // --- Voies -----------------------------------------------------------------------------
 
-  voies(k) { return this.L[k] >= 13 * T ? 2 : 1; }
+  voies(k) { return this.L[k] >= BOULEVARD * T ? 2 : 1; }
+
+  /** Largeur d'une voie : la moitié d'une rue, le quart d'un boulevard (terre-plein à part). */
+  largeurVoie(k) { return this.voies(k) === 2 ? (this.L[k] - TERRE_PLEIN) / 4 : this.L[k] / 2; }
 
   /** Coordonnée transversale de la voie n, pour la direction dir, sur la ligne k. */
   voie(dir, k, n = 0) {
-    const a = this.X[k], l = this.L[k];
+    const a = this.X[k], l = this.L[k], lv = this.largeurVoie(k);
     n = Math.min(n, this.voies(k) - 1);
-    const pres = LARGEUR_VOIE / 2 + n * LARGEUR_VOIE;
+    const pres = lv / 2 + n * lv;
     // Ouest (2) et sud (1) : côté « bas » des coordonnées ; est (0) et nord (3) : côté « haut ».
     return dir === 2 || dir === 1 ? a + pres : a + l - pres;
   }

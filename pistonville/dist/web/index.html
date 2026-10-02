@@ -1387,11 +1387,11 @@ body {
     const c3 = COLONNES2[pack];
     ctx.drawImage(img, n % c3 * 16, Math.floor(n / c3) * 16, 16, 16, Math.round(x), Math.round(y), 16, 16);
   }
-  function toile(w, h) {
+  function toile(w, h, lecture = false) {
     const c3 = document.createElement("canvas");
     c3.width = w;
     c3.height = h;
-    const ctx = c3.getContext("2d");
+    const ctx = c3.getContext("2d", lecture ? { willReadFrequently: true } : void 0);
     ctx.imageSmoothingEnabled = false;
     return { c: c3, ctx };
   }
@@ -1500,10 +1500,17 @@ body {
     const [r, g, b2] = h < 60 ? [c3, x, 0] : h < 120 ? [x, c3, 0] : h < 180 ? [0, c3, x] : h < 240 ? [0, x, c3] : h < 300 ? [x, 0, c3] : [c3, 0, x];
     return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b2 + m) * 255)];
   };
-  function repeindre(ctx, w, h, couleur, masque) {
-    const [th, ts, tv] = enHsv(...[1, 3, 5].map((i) => parseInt(couleur.slice(i, i + 2), 16)));
-    const img = ctx.getImageData(0, 0, w, h);
-    const d2 = img.data;
+  var cacheMasques = /* @__PURE__ */ new Map();
+  function masqueModele(m) {
+    if (cacheMasques.has(m)) return cacheMasques.get(m);
+    const [y, w, h] = ATLAS_VOITURES[m];
+    const lw = w * VUES;
+    const t = toile(lw, h, true);
+    t.ctx.drawImage(planches.tiny.voituresMasque, 0, y, lw, h, 0, 0, lw, h);
+    const masque = t.ctx.getImageData(0, 0, lw, h).data;
+    t.ctx.clearRect(0, 0, lw, h);
+    t.ctx.drawImage(planches.tiny.voitures, 0, y, lw, h, 0, 0, lw, h);
+    const d2 = t.ctx.getImageData(0, 0, lw, h).data;
     const compte = /* @__PURE__ */ new Map();
     for (let i = 0; i < d2.length; i += 4) {
       if (!d2[i + 3] || masque[i] < 128) continue;
@@ -1515,33 +1522,40 @@ body {
       max = n;
       ref = k;
     }
-    if (ref === null) return;
-    const [, rs, rv] = enHsv(ref >> 16, ref >> 8 & 255, ref & 255);
-    for (let i = 0; i < d2.length; i += 4) {
-      if (!d2[i + 3] || masque[i] < 128) continue;
-      const [, ss, vv] = enHsv(d2[i], d2[i + 1], d2[i + 2]);
-      const s2 = Math.min(1, ts * (rs ? ss / rs : 1)), v2 = Math.min(1, Math.max(0.08, tv * (vv / rv)));
-      [d2[i], d2[i + 1], d2[i + 2]] = enRgb(th, s2, v2);
+    const [, rs, rv] = ref === null ? [0, 0, 1] : enHsv(ref >> 16, ref >> 8 & 255, ref & 255);
+    const mm = { masque, lw, rs, rv, vide: ref === null };
+    cacheMasques.set(m, mm);
+    return mm;
+  }
+  function repeindreVue(l, i) {
+    l.peintes[i] = 1;
+    const mm = masqueModele(l.m);
+    if (mm.vide) return;
+    const [th, ts, tv] = enHsv(...[1, 3, 5].map((k) => parseInt(l.couleur.slice(k, k + 2), 16)));
+    const ctx = l.c.getContext("2d");
+    const img = ctx.getImageData(i * l.w, 0, l.w, l.h);
+    const d2 = img.data;
+    for (let y = 0; y < l.h; y++) for (let x = 0; x < l.w; x++) {
+      const p3 = (y * l.w + x) * 4;
+      if (!d2[p3 + 3] || mm.masque[(y * mm.lw + i * l.w + x) * 4] < 128) continue;
+      const [, ss, vv] = enHsv(d2[p3], d2[p3 + 1], d2[p3 + 2]);
+      const s2 = Math.min(1, ts * (mm.rs ? ss / mm.rs : 1)), v2 = Math.min(1, Math.max(0.08, tv * (vv / mm.rv)));
+      [d2[p3], d2[p3 + 1], d2[p3 + 2]] = enRgb(th, s2, v2);
     }
-    ctx.putImageData(img, 0, 0);
+    ctx.putImageData(img, i * l.w, 0);
   }
   var cacheLignes = /* @__PURE__ */ new Map();
   function ligneVoiture(modele2, couleur) {
     const m = ATLAS_VOITURES[modele2] ? modele2 : "sedan";
-    const repeinte = couleur && !LIVREES.has(m);
+    const repeinte = !!couleur && !LIVREES.has(m) && !!planches.tiny.voituresMasque;
     const cle = repeinte ? `${m}|${couleur}` : m;
     if (cacheLignes.has(cle)) return cacheLignes.get(cle);
     const [y, w, h, cy] = ATLAS_VOITURES[m];
     const planche = planches.tiny.voitures;
-    const l = toile(w * VUES, h);
+    const l = toile(w * VUES, h, repeinte);
     if (!planche) return { c: l.c, w, h, cy };
     l.ctx.drawImage(planche, 0, y, w * VUES, h, 0, 0, w * VUES, h);
-    if (repeinte && planches.tiny.voituresMasque) {
-      const mk = toile(w * VUES, h);
-      mk.ctx.drawImage(planches.tiny.voituresMasque, 0, y, w * VUES, h, 0, 0, w * VUES, h);
-      repeindre(l.ctx, w * VUES, h, couleur, mk.ctx.getImageData(0, 0, w * VUES, h).data);
-    }
-    const ligne = { c: l.c, w, h, cy, ...empreinte(m) };
+    const ligne = { c: l.c, w, h, cy, m, couleur, peintes: repeinte ? new Uint8Array(VUES) : null, ...empreinte(m) };
     cacheLignes.set(cle, ligne);
     return ligne;
   }
@@ -1549,7 +1563,7 @@ body {
   function empreinte(m) {
     if (cacheEmpreintes.has(m)) return cacheEmpreintes.get(m);
     const [y, w, h] = ATLAS_VOITURES[m];
-    const t = toile(w, h);
+    const t = toile(w, h, true);
     const mesure = (i) => {
       t.ctx.clearRect(0, 0, w, h);
       t.ctx.drawImage(planches.tiny.voitures, i * w, y, w, h, 0, 0, w, h);
@@ -1570,6 +1584,7 @@ body {
     const l = ligneVoiture(modele2, couleur);
     const a = (angle % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
     const i = Math.round(a / (Math.PI * 2) * VUES) % VUES;
+    if (l.peintes && !l.peintes[i]) repeindreVue(l, i);
     const px = Math.round(x), py = Math.round(y);
     if (ombre && l.longueur) {
       ctx.save();
@@ -1584,6 +1599,11 @@ body {
     }
     const w = l.w * echelle, h = l.h * echelle;
     ctx.drawImage(l.c, i * l.w, 0, l.w, l.h, Math.round(px - w / 2), Math.round(py - (l.cy + 4) * echelle), Math.round(w), Math.round(h));
+  }
+  function prechaufferVoiture(modele2, couleur) {
+    const l = ligneVoiture(modele2, couleur);
+    if (!l.peintes) return;
+    for (let k = 0; k < 4; k++) if (!l.peintes[k * VUES / 4]) repeindreVue(l, k * VUES / 4);
   }
   var ANGLE_VITRINE = Math.PI * 0.75;
   var FLOTTE_VILLE = ["sedan", "sedan", "suv", "suv-luxury", "taxi", "van", "hatchback-sports", "sedan", "police", "delivery", "truck", "garbage-truck", "ambulance", "firetruck"];
@@ -3093,16 +3113,10 @@ body {
       return liste.map((r, i) => ({ ...r, place: i + 1, ecart: r.temps - t0 }));
     }
     // --- Dessin ------------------------------------------------------------------
-    /** Zones tactiles du panneau, en coordonnées d'écran. */
+    /** Zones tactiles du panneau, en coordonnées d'écran (le bouton du milieu : nitro). */
     zones(W3, H3) {
-      const y0 = H3 - HAUTEUR_PANNEAU;
-      return {
-        portrait: { x: 10, y: y0 + 8, w: 36, h: 36 },
-        nitro: { x: W3 / 2 - 34, y: y0 + 50, w: 68, h: 54 },
-        gauche: { x: 8, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
-        droite: { x: W3 / 2 + 38, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
-        pause: { x: W3 / 2 - 14, y: 6, w: 28, h: 22 }
-      };
+      const z = zonesPanneau(W3, H3);
+      return { ...z, nitro: z.centre };
     }
     dessiner(ctx, W3, H3, t) {
       const j = this.joueur;
@@ -3211,12 +3225,7 @@ body {
       pastille(ctx, 6, 46, formatTemps(Math.max(0, this.temps)), "#1f2a44");
       pastille(ctx, 6, 66, `${this.ramasses.argent} G \xB7 ${this.ramasses.recherche} PR`, "#7a5a12");
       if (this.driftEnCours > 0.5) texte(ctx, `DRIFT ${(this.driftEnCours * 6).toFixed(0)}`, W3 / 2, 44, 14, "#c4b5fd", "center");
-      const z = this.zones(W3, H3);
-      ctx.fillStyle = "rgba(31,42,68,0.85)";
-      ctx.fillRect(z.pause.x, z.pause.y, z.pause.w, z.pause.h);
-      ctx.fillStyle = "#f4f1e8";
-      ctx.fillRect(z.pause.x + 9, z.pause.y + 6, 3, 10);
-      ctx.fillRect(z.pause.x + 16, z.pause.y + 6, 3, 10);
+      dessinerPause(ctx, W3, H3);
       const mc = this.decor.minicarte;
       const mx = W3 - mc.canvas.width - 6, my = 6;
       ctx.fillStyle = "#0f172a";
@@ -3234,72 +3243,101 @@ body {
       }
       const hVue = H3 - HAUTEUR_PANNEAU;
       if (this.etat === "compte") {
-        const n2 = Math.ceil(-this.temps);
-        texte(ctx, n2 > 3 ? "" : String(n2), W3 / 2, hVue * 0.38, 36, "#ffffff", "center");
+        const n = Math.ceil(-this.temps);
+        texte(ctx, n > 3 ? "" : String(n), W3 / 2, hVue * 0.38, 36, "#ffffff", "center");
       }
       for (const m of this.messages) if (!m.ancre) {
         const echelle = 1 + 0.3 * clamp((m.vie - m.max + 0.2) / 0.2, 0, 1);
         texte(ctx, m.texte, W3 / 2, hVue * 0.38, Math.round(22 * echelle), m.couleur, "center");
       }
-      const y0 = H3 - HAUTEUR_PANNEAU;
-      ctx.fillStyle = "#1f2a44";
-      ctx.fillRect(0, y0, W3, HAUTEUR_PANNEAU);
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, y0, W3, 3);
-      const pr = z.portrait;
       const pleine = this.jaugeAura >= 1;
-      ctx.fillStyle = pleine ? Math.sin(t * 10) > 0 ? "#f472b6" : "#db2777" : "#3a4a6b";
-      ctx.fillRect(pr.x - 2, pr.y - 2, pr.w + 4, pr.h + 4);
-      ctx.fillStyle = "#fff6e0";
-      ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
-      ctx.save();
-      ctx.translate(pr.x + 18, pr.y + 18);
-      ctx.scale(2, 2);
-      ctx.drawImage(spritePerso(this.tenuePilote || { base: PERSONNES.bandeau, haut: "#e4432d" }, "face", 0), -8, -8);
-      ctx.restore();
-      texte(ctx, j.nom, 54, y0 + 16, 11, "#f4f1e8", "left");
-      texte(ctx, `${kmh(j.vitesse)}`, W3 - 52, y0 + 22, 20, "#ffe066", "right");
-      texte(ctx, "km/h", W3 - 10, y0 + 22, 9, "#ffe066", "right");
-      texte(ctx, pleine ? "AURA PR\xCATE" : "Aura", 54, y0 + 33, 9, pleine ? "#f472b6" : "#9fb3d9", "left");
-      for (let i = 0; i < 6; i++) {
-        ctx.fillStyle = this.jaugeAura * 6 > i ? "#ec4899" : "#3a4a6b";
-        ctx.fillRect(112 + i * 13, y0 + 29, 11, 6);
-      }
-      const dur = j.durabilite / j.p.durabiliteMax;
-      texte(ctx, "Voiture", W3 - 92, y0 + 38, 8, "#9fb3d9", "left");
-      ctx.fillStyle = "#3a4a6b";
-      ctx.fillRect(W3 - 54, y0 + 34, 44, 5);
-      ctx.fillStyle = dur > 0.5 ? "#5ad16a" : dur > 0.25 ? "#f2c14e" : "#e4432d";
-      ctx.fillRect(W3 - 54, y0 + 34, Math.round(44 * dur), 5);
-      for (const [cle, fleche] of [["gauche", -1], ["droite", 1]]) {
-        const r = z[cle];
-        ctx.fillStyle = "#2a3654";
-        ctx.fillRect(r.x, r.y, r.w, r.h);
-        ctx.fillStyle = "#9fb3d9";
-        for (let i = r.x; i < r.x + r.w; i += 6) {
-          ctx.fillRect(i, r.y, 3, 1);
-          ctx.fillRect(i, r.y + r.h - 1, 3, 1);
-        }
-        for (let i = r.y; i < r.y + r.h; i += 6) {
-          ctx.fillRect(r.x, i, 1, 3);
-          ctx.fillRect(r.x + r.w - 1, i, 1, 3);
-        }
-        const cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 6;
-        ctx.fillStyle = "#f4f1e8";
-        for (let i = 0; i < 7; i++) ctx.fillRect(Math.round(cx + fleche * 8 - fleche * i * 2), Math.round(cy - i), 2, i * 2 + 1);
-        ctx.fillRect(Math.round(fleche > 0 ? cx - 14 : cx + 4), Math.round(cy - 2), 10, 4);
-        texte(ctx, fleche < 0 ? "Gauche" : "Droite", cx, r.y + r.h - 9, 9, "#f4f1e8", "center");
-      }
-      const n = z.nitro;
-      const dispo = this.nitros > 0 && j.nitro <= 0;
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(n.x - 2, n.y - 2, n.w + 4, n.h + 4);
-      ctx.fillStyle = dispo ? "#2f6fdb" : "#3a4a6b";
-      ctx.fillRect(n.x, n.y, n.w, n.h);
-      texte(ctx, "NITRO", n.x + n.w / 2, n.y + 22, 13, "#ffffff", "center");
-      texte(ctx, `${this.nitros} restant${this.nitros > 1 ? "s" : ""}`, n.x + n.w / 2, n.y + 40, 9, "#cfe0ff", "center");
+      dessinerPanneau(ctx, W3, H3, t, {
+        tenue: this.tenuePilote,
+        nom: j.nom,
+        vitesse: j.vitesse,
+        etat: j.durabilite / j.p.durabiliteMax,
+        jauge: { libelle: pleine ? "AURA PR\xCATE" : "Aura", valeur: this.jaugeAura, couleur: "#ec4899", clignote: pleine, texte: pleine ? "#f472b6" : "#9fb3d9" },
+        centre: { titre: "NITRO", detail: `${this.nitros} restant${this.nitros > 1 ? "s" : ""}`, fond: this.nitros > 0 && j.nitro <= 0 ? "#2f6fdb" : "#3a4a6b" }
+      });
     }
   };
+  function zonesPanneau(W3, H3) {
+    const y0 = H3 - HAUTEUR_PANNEAU;
+    return {
+      portrait: { x: 10, y: y0 + 8, w: 36, h: 36 },
+      centre: { x: W3 / 2 - 34, y: y0 + 50, w: 68, h: 54 },
+      gauche: { x: 8, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
+      droite: { x: W3 / 2 + 38, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
+      pause: { x: W3 / 2 - 14, y: 6, w: 28, h: 22 }
+    };
+  }
+  function dessinerPanneau(ctx, W3, H3, t, o3) {
+    const z = zonesPanneau(W3, H3);
+    const y0 = H3 - HAUTEUR_PANNEAU;
+    ctx.fillStyle = "#1f2a44";
+    ctx.fillRect(0, y0, W3, HAUTEUR_PANNEAU);
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, y0, W3, 3);
+    const pr = z.portrait;
+    ctx.fillStyle = o3.jauge.clignote ? Math.sin(t * 10) > 0 ? "#f472b6" : "#db2777" : "#3a4a6b";
+    ctx.fillRect(pr.x - 2, pr.y - 2, pr.w + 4, pr.h + 4);
+    ctx.fillStyle = "#fff6e0";
+    ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
+    ctx.save();
+    ctx.translate(pr.x + 18, pr.y + 18);
+    ctx.scale(2, 2);
+    ctx.drawImage(spritePerso(o3.tenue || { base: PERSONNES.bandeau, haut: "#e4432d" }, "face", 0), -8, -8);
+    ctx.restore();
+    texte(ctx, o3.nom, 54, y0 + 16, 11, "#f4f1e8", "left");
+    texte(ctx, `${kmh(o3.vitesse)}`, W3 - 52, y0 + 22, 20, "#ffe066", "right");
+    texte(ctx, "km/h", W3 - 10, y0 + 22, 9, "#ffe066", "right");
+    const g = o3.jauge;
+    texte(ctx, g.libelle, 54, y0 + 33, 9, g.texte || "#9fb3d9", "left");
+    for (let i = 0; i < 6; i++) {
+      ctx.fillStyle = g.valeur * 6 > i ? g.couleur : "#3a4a6b";
+      ctx.fillRect(112 + i * 13, y0 + 29, 11, 6);
+    }
+    const dur = clamp(o3.etat, 0, 1);
+    texte(ctx, "Voiture", W3 - 92, y0 + 38, 8, "#9fb3d9", "left");
+    ctx.fillStyle = "#3a4a6b";
+    ctx.fillRect(W3 - 54, y0 + 34, 44, 5);
+    ctx.fillStyle = dur > 0.5 ? "#5ad16a" : dur > 0.25 ? "#f2c14e" : "#e4432d";
+    ctx.fillRect(W3 - 54, y0 + 34, Math.round(44 * dur), 5);
+    for (const [cle, fleche] of [["gauche", -1], ["droite", 1]]) {
+      const r = z[cle];
+      ctx.fillStyle = "#2a3654";
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.fillStyle = "#9fb3d9";
+      for (let i = r.x; i < r.x + r.w; i += 6) {
+        ctx.fillRect(i, r.y, 3, 1);
+        ctx.fillRect(i, r.y + r.h - 1, 3, 1);
+      }
+      for (let i = r.y; i < r.y + r.h; i += 6) {
+        ctx.fillRect(r.x, i, 1, 3);
+        ctx.fillRect(r.x + r.w - 1, i, 1, 3);
+      }
+      const cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 6;
+      ctx.fillStyle = "#f4f1e8";
+      for (let i = 0; i < 7; i++) ctx.fillRect(Math.round(cx + fleche * 8 - fleche * i * 2), Math.round(cy - i), 2, i * 2 + 1);
+      ctx.fillRect(Math.round(fleche > 0 ? cx - 14 : cx + 4), Math.round(cy - 2), 10, 4);
+      texte(ctx, fleche < 0 ? "Gauche" : "Droite", cx, r.y + r.h - 9, 9, "#f4f1e8", "center");
+    }
+    const n = z.centre, c3 = o3.centre;
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(n.x - 2, n.y - 2, n.w + 4, n.h + 4);
+    ctx.fillStyle = c3.fond;
+    ctx.fillRect(n.x, n.y, n.w, n.h);
+    texte(ctx, c3.titre, n.x + n.w / 2, n.y + 22, 13, "#ffffff", "center");
+    texte(ctx, c3.detail, n.x + n.w / 2, n.y + 40, 9, "#cfe0ff", "center");
+  }
+  function dessinerPause(ctx, W3, H3) {
+    const p3 = zonesPanneau(W3, H3).pause;
+    ctx.fillStyle = "rgba(31,42,68,0.85)";
+    ctx.fillRect(p3.x, p3.y, p3.w, p3.h);
+    ctx.fillStyle = "#f4f1e8";
+    ctx.fillRect(p3.x + 9, p3.y + 6, 3, 10);
+    ctx.fillRect(p3.x + 16, p3.y + 6, 3, 10);
+  }
   function texte(ctx, chaine, x, y, taille, couleur, align = "left") {
     ctx.font = police(taille);
     ctx.textAlign = align;
@@ -6987,7 +7025,8 @@ body {
   var INTERIEUR = (CASES_CELLULE - 2) * T2;
   var LOT = 160;
   var COUR = INTERIEUR - 2 * LOT;
-  var LARGEUR_VOIE = 48;
+  var BOULEVARD = 10;
+  var TERRE_PLEIN = 16;
   var DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
   var Reseau = class {
     /**
@@ -7062,13 +7101,17 @@ body {
     }
     // --- Voies -----------------------------------------------------------------------------
     voies(k) {
-      return this.L[k] >= 13 * T2 ? 2 : 1;
+      return this.L[k] >= BOULEVARD * T2 ? 2 : 1;
+    }
+    /** Largeur d'une voie : la moitié d'une rue, le quart d'un boulevard (terre-plein à part). */
+    largeurVoie(k) {
+      return this.voies(k) === 2 ? (this.L[k] - TERRE_PLEIN) / 4 : this.L[k] / 2;
     }
     /** Coordonnée transversale de la voie n, pour la direction dir, sur la ligne k. */
     voie(dir, k, n = 0) {
-      const a = this.X[k], l = this.L[k];
+      const a = this.X[k], l = this.L[k], lv = this.largeurVoie(k);
       n = Math.min(n, this.voies(k) - 1);
-      const pres2 = LARGEUR_VOIE / 2 + n * LARGEUR_VOIE;
+      const pres2 = lv / 2 + n * lv;
       return dir === 2 || dir === 1 ? a + pres2 : a + l - pres2;
     }
     /** La ligne dont la bande contient cette coordonnée (ou -1). */
@@ -7242,6 +7285,7 @@ body {
           v2.y = pos;
         }
         v2.angle = Math.atan2(DIRS[dir][1], DIRS[dir][0]);
+        prechaufferVoiture(v2.modele, v2.couleur);
         this.voitures.push(v2);
       }
     }
@@ -7782,11 +7826,10 @@ body {
 
   // pistonville/src/ville.js
   var DUREE_BALADE = 150;
-  var HAUT_HUD = 52;
   var TAILLE_ILOT = LOT;
   var GRAINE_PLAN = 4242;
-  var MORCEAU = 510;
-  var MORCEAUX_GARDES = 18;
+  var MORCEAU = 290;
+  var MORCEAUX_GARDES = 56;
   var BATIMENTS2 = [
     { id: "garage", nom: "Garage Piston", lot: [4, 3], toit: "#f2c14e" },
     { id: "bureau", nom: "Bureau des courses", lot: [5, 3], toit: "#c2504d" },
@@ -7819,7 +7862,7 @@ body {
   ];
   var VILLE0 = 3;
   var N = PLAN.length;
-  var LARGEURS = [0, 6, 0, 13, 6, 13, 6, 13, 0, 6, 0];
+  var LARGEURS = [0, 6, 0, 10, 6, 6, 6, 10, 0, 6, 0];
   var VILLE = [3, 7];
   var BOUCLE = [1, 9];
   var LIAISONS = [3, 5, 7];
@@ -7903,8 +7946,10 @@ body {
       this.semerDuJour();
       this.preparerDefis();
       const p3 = o3.voiture.physique;
-      const physique2 = { ...p3, vmax: Math.min(150, p3.vmax * 0.6), accel: p3.accel * 0.8 };
-      this.voiture = new Voiture({ physique: physique2, couleur: o3.voiture.couleur, nom: "moi", joueur: true });
+      const physique2 = { ...p3, vmax: Math.min(175, p3.vmax * 0.7), accel: p3.accel * 0.9 };
+      this.voiture = new Voiture({ physique: physique2, couleur: o3.voiture.couleur, nom: o3.pilote?.nom || "Pilote", joueur: true });
+      this.tenuePilote = o3.pilote?.tenue;
+      this.usureDepart = o3.voiture.usure || 0;
       this.voiture.looks = o3.voiture.looks || [];
       this.voiture.modele = modeleVoiture(o3.voiture.profil, o3.voiture.id);
       this.voiture.braquageMin = 0.6;
@@ -8850,10 +8895,11 @@ body {
         rect(0, 5, l, 2);
         rect(0, w - 7, l, 2);
       }
-      if (w >= 13 * T) {
+      if (w >= BOULEVARD * T) {
+        const lv = (w - TERRE_PLEIN) / 4;
         for (let p3 = marge; p3 < l - marge - 8; p3 += 24) {
-          rect(p3, 47, 12, 2);
-          rect(p3, w - 49, 12, 2);
+          rect(p3, lv - 1, 12, 2);
+          rect(p3, w - lv - 1, 12, 2);
         }
         const m = w / 2 - 8;
         c3.fillStyle = "#8b9bb4";
@@ -8903,21 +8949,22 @@ body {
     }
     dessiner(ctx, W3, H3, t) {
       const v2 = this.voiture;
-      this.camera.x = lerp(this.camera.x, v2.x + v2.vx * 0.4, 0.12);
-      this.camera.y = lerp(this.camera.y, v2.y + v2.vy * 0.4, 0.12);
+      const hVue = H3 - HAUTEUR_PANNEAU;
+      this.camera.x = lerp(this.camera.x, v2.x + v2.vx * 0.45, 0.12);
+      this.camera.y = lerp(this.camera.y, v2.y + v2.vy * 0.45, 0.12);
       const sx = this.secousse ? (Math.random() - 0.5) * this.secousse : 0;
       const camX = Math.round(clamp(this.camera.x - W3 / 2 + sx, 0, TAILLE_VILLE - W3));
-      const camY = Math.round(clamp(this.camera.y - H3 / 2 + sx, 0, TAILLE_VILLE - H3));
+      const camY = Math.round(clamp(this.camera.y - hVue / 2 + sx, 0, TAILLE_VILLE - hVue));
       ctx.imageSmoothingEnabled = false;
-      for (let j = Math.floor(camY / MORCEAU); j <= Math.floor((camY + H3 - 1) / MORCEAU); j++) {
+      for (let j = Math.floor(camY / MORCEAU); j <= Math.floor((camY + hVue - 1) / MORCEAU); j++) {
         for (let i = Math.floor(camX / MORCEAU); i <= Math.floor((camX + W3 - 1) / MORCEAU); i++) {
           ctx.drawImage(this.morceau(i, j), i * MORCEAU - camX, j * MORCEAU - camY);
         }
       }
-      this.prechauffer(camX, camY, W3, H3);
+      this.prechauffer(camX, camY, W3, hVue);
       ctx.save();
       ctx.translate(-camX, -camY);
-      const visible = (x, y, m = 40) => x > camX - m && x < camX + W3 + m && y > camY - m && y < camY + H3 + m;
+      const visible = (x, y, m = 40) => x > camX - m && x < camX + W3 + m && y > camY - m && y < camY + hVue + m;
       for (const a of this.animaux) {
         if (!visible(a.x, a.y, 24)) continue;
         const b2 = Math.sin(t * 1.3 + a.phase) > 0.85 ? 1 : 0;
@@ -8964,9 +9011,9 @@ body {
       ctx.restore();
       if (this.flash > 0) {
         ctx.fillStyle = `rgba(255,255,255,${this.flash * 3})`;
-        ctx.fillRect(0, 0, W3, H3);
+        ctx.fillRect(0, 0, W3, hVue);
       }
-      if (this.defi) this.fleche(ctx, W3, H3, camX, camY);
+      if (this.defi) this.fleche(ctx, W3, hVue, camX, camY);
       this.dessinerInterface(ctx, W3, H3, t);
     }
     /** Un feu sur poteau à chaque coin de carrefour, tourné vers la voie qui arrive. */
@@ -9035,11 +9082,11 @@ body {
     /** Flèche au bord de l'écran vers l'objectif du défi en cours. */
     fleche(ctx, W3, H3, camX, camY) {
       const c3 = this.defi.cible;
-      const cx = W3 / 2, cy = (H3 + HAUT_HUD) / 2;
+      const cx = W3 / 2, cy = H3 / 2;
       const dx = c3.x - camX - cx, dy = c3.y - camY - cy;
-      if (Math.abs(dx) < W3 / 2 - 20 && Math.abs(dy) < (H3 - HAUT_HUD) / 2 - 20) return;
+      if (Math.abs(dx) < W3 / 2 - 20 && Math.abs(dy) < H3 / 2 - 20) return;
       const ang = Math.atan2(dy, dx);
-      const r = Math.min((W3 / 2 - 22) / Math.abs(Math.cos(ang) || 1e-3), ((H3 - HAUT_HUD) / 2 - 40) / Math.abs(Math.sin(ang) || 1e-3));
+      const r = Math.min((W3 / 2 - 22) / Math.abs(Math.cos(ang) || 1e-3), (H3 / 2 - 40) / Math.abs(Math.sin(ang) || 1e-3));
       ctx.save();
       ctx.translate(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
       ctx.rotate(ang);
@@ -9057,24 +9104,18 @@ body {
       ctx.fill();
       ctx.restore();
     }
-    dessinerInterface(ctx, W3, H3) {
-      ctx.fillStyle = "rgba(31,42,68,0.92)";
-      ctx.fillRect(0, 0, W3, HAUT_HUD);
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(0, HAUT_HUD, W3, 2);
-      texte(ctx, "BALADE EN VILLE", 8, 12, 10, "#9fb3d9", "left");
-      texte(ctx, this.heure(), 8, 32, 18, "#ffe066", "left");
-      const reste = 1 - this.temps / DUREE_BALADE;
-      ctx.fillStyle = "#3a4a6b";
-      ctx.fillRect(8, 44, 140, 4);
-      ctx.fillStyle = reste > 0.25 ? "#5ad16a" : "#e4432d";
-      ctx.fillRect(8, 44, Math.round(140 * reste), 4);
+    /** L'interface de la course : cartouches en haut, mini-carte, panneau de conduite en bas. */
+    dessinerInterface(ctx, W3, H3, t) {
+      const hVue = H3 - HAUTEUR_PANNEAU;
       const net = this.gains.argent - this.gains.amendes;
-      texte(ctx, `${net >= 0 ? "" : "\u2212"}${Math.abs(net)} G`, 156, 18, 11, net >= 0 ? "#ffe066" : "#fca5a5", "left");
-      texte(ctx, `${this.gains.recherche} PR \xB7 ${this.gains.fans} fans`, 156, 36, 10, "#cfe0ff", "left");
+      pastille(ctx, 6, 6, `BALADE \xB7 ${this.heure()}`, "#1f2a44");
+      pastille(ctx, 6, 26, `${net < 0 ? "\u2212" : ""}${Math.abs(net)} G \xB7 ${this.gains.recherche} PR`, net < 0 ? "#9b2c2c" : "#7a5a12");
+      pastille(ctx, 6, 46, `${this.gains.fans} fans`, "#c2504d");
+      pastille(ctx, 6, 66, `Affiches ${Object.keys(this.memoire.affiches).length}/${AFFICHES}`, "#1f2a44");
+      dessinerPause(ctx, W3, H3);
       if (this.defi) {
         const f = this.defi;
-        const y = HAUT_HUD + 4;
+        const y = 88;
         ctx.fillStyle = "rgba(15,23,42,0.85)";
         ctx.fillRect(6, y, 200, 34);
         texte(ctx, f.d.nom, 12, y + 10, 10, "#ffe066", "left");
@@ -9082,36 +9123,42 @@ body {
         texte(ctx, `${Math.max(0, f.limite - f.t).toFixed(1)} s \xB7 ${det}`, 12, y + 24, 10, "#ffffff", "left");
       }
       const mc = this.minicarte;
-      const mx = W3 - mc.width - 6, my = HAUT_HUD + 8;
+      const mx = W3 - mc.width - 6, my = 6;
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(mx - 3, my - 3, mc.width + 6, mc.height + 6);
+      ctx.fillRect(mx - 4, my - 4, mc.width + 8, mc.height + 8);
+      ctx.fillStyle = "#1f2a44";
+      ctx.fillRect(mx - 2, my - 2, mc.width + 4, mc.height + 4);
       ctx.drawImage(mc, mx, my);
       const e3 = mc.width / TAILLE_VILLE;
-      const point = (x, y, coul, t = 3) => {
+      const point = (x, y, coul, n = 3) => {
         ctx.fillStyle = coul;
-        ctx.fillRect(Math.round(mx + x * e3) - (t >> 1), Math.round(my + y * e3) - (t >> 1), t, t);
+        ctx.fillRect(Math.round(mx + x * e3) - (n >> 1), Math.round(my + y * e3) - (n >> 1), n, n);
       };
       for (const p3 of this.portes) point(p3.x + p3.w / 2, p3.y, "#ffffff");
       for (const d2 of this.defis) if (!d2.fait && !this.defi) point(d2.x, d2.y, d2.type === "drift" ? "#c4b5fd" : d2.type === "livraison" ? "#f39c33" : "#ffe066");
       if (this.defi) point(this.defi.cible.x, this.defi.cible.y, "#9fe870", 4);
       point(this.voiture.x, this.voiture.y, "#1a1626", 6);
       point(this.voiture.x, this.voiture.y, "#ffe066", 4);
-      texte(ctx, `Affiches ${Object.keys(this.memoire.affiches).length}/${AFFICHES}`, mx + mc.width / 2, my + mc.height + 10, 8, "#f4f1e8", "center");
       if (this.bandeau) {
         ctx.fillStyle = "rgba(15,23,42,0.88)";
-        ctx.fillRect(10, H3 - 70, W3 - 20, 30);
-        texte(ctx, this.bandeau.texte, W3 / 2, H3 - 55, 10, this.bandeau.couleur, "center");
+        ctx.fillRect(10, hVue - 40, W3 - 20, 30);
+        texte(ctx, this.bandeau.texte, W3 / 2, hVue - 25, 10, this.bandeau.couleur, "center");
       }
-      ctx.fillStyle = "rgba(31,42,68,0.55)";
-      ctx.fillRect(0, H3 - 26, W3, 26);
-      texte(ctx, "\u25C0 gauche", 10, H3 - 13, 10, "#f4f1e8", "left");
-      texte(ctx, "les deux : freiner / reculer", W3 / 2, H3 - 13, 9, "#cfe0ff", "center");
-      if (this.attente && Math.sin(this.temps * 6) > -0.4) {
+      if (this.attente && Math.sin(this.temps * 6 + t * 6) > -0.4) {
         ctx.fillStyle = "rgba(15,23,42,0.85)";
-        ctx.fillRect(W3 / 2 - 96, H3 - 108, 192, 26);
-        texte(ctx, "Touche un c\xF4t\xE9 pour d\xE9marrer", W3 / 2, H3 - 95, 10, "#ffe066", "center");
+        ctx.fillRect(W3 / 2 - 110, hVue - 40, 220, 26);
+        texte(ctx, "Touche Gauche ou Droite pour d\xE9marrer", W3 / 2, hVue - 27, 10, "#ffe066", "center");
       }
-      texte(ctx, "droite \u25B6", W3 - 10, H3 - 13, 10, "#f4f1e8", "right");
+      const v2 = this.voiture;
+      const reste = clamp(1 - this.temps / DUREE_BALADE, 0, 1);
+      dessinerPanneau(ctx, W3, H3, t, {
+        tenue: this.tenuePilote,
+        nom: v2.nom,
+        vitesse: v2.vitesse,
+        etat: 1 - this.usureDepart - this.gains.usure,
+        jauge: { libelle: this.heure(), valeur: reste, couleur: reste > 0.25 ? "#5ad16a" : "#e4432d", texte: "#ffe066" },
+        centre: { titre: v2.recul ? "RECUL" : "FREIN", detail: "tenir : recule", fond: v2.frein || v2.recul ? "#e4432d" : "#a63d3a" }
+      });
     }
     /** Gains nets de la balade, à verser dans la partie. */
     bilan() {
@@ -10973,6 +11020,37 @@ body {
   function ecranChargement(texte2) {
     return { classe: "fond-sombre", html: `<div class="ecran chargement"><p>${e2(texte2)}</p></div>`, actions: {} };
   }
+  function ecranPauseVille(app2) {
+    const p3 = app2.partie;
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">Pause</h2>
+        <div class="contenu">
+          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p3.son ? "Activ\xE9" : "Coup\xE9"}</button></div>
+          <p class="petit">Rentrer maintenant termine la balade : ce que tu as gagn\xE9 est gard\xE9.</p>
+        </div>
+      </section>
+      <div class="pile">
+        <button class="btn btn-principal" data-action="reprendre">Reprendre</button>
+        <button class="btn" data-action="rentrer">Rentrer au garage</button>
+      </div>
+    </div>`,
+      actions: {
+        reprendre: () => app2.reprendre(),
+        son: () => {
+          p3.son = !p3.son;
+          app2.son.actif = p3.son;
+          app2.sauver();
+          app2.montrer(ecranPauseVille(app2));
+        },
+        rentrer: () => {
+          app2.reprendre();
+          app2.ville.fini = true;
+        }
+      }
+    };
+  }
   function ecranPause(app2) {
     const p3 = app2.partie;
     return {
@@ -11345,7 +11423,9 @@ body {
         KeyA: "gauche",
         KeyQ: "gauche",
         ArrowRight: "droite",
-        KeyD: "droite"
+        KeyD: "droite",
+        ArrowDown: "frein",
+        KeyS: "frein"
       };
       window.addEventListener("keydown", (ev) => {
         this.son.reveiller();
@@ -11354,14 +11434,17 @@ body {
           this.touches.add(clavier[ev.code]);
           ev.preventDefault();
         }
-        if (this.ecran === "ville") return;
         if (ev.repeat) return;
+        if (ev.code === "Escape" || ev.code === "KeyP") {
+          this.basculerPause();
+          return;
+        }
+        if (this.ecran === "ville") return;
         if (ev.code === "Space" || ev.code === "ArrowUp" || ev.code === "KeyW" || ev.code === "KeyZ") {
           this.impulsions.nitro = true;
           ev.preventDefault();
         }
         if (ev.code === "KeyE" || ev.code === "ShiftLeft" || ev.code === "ShiftRight") this.impulsions.aura = true;
-        if (ev.code === "Escape" || ev.code === "KeyP") this.basculerPause();
       });
       window.addEventListener("keyup", (ev) => {
         if (clavier[ev.code]) this.touches.delete(clavier[ev.code]);
@@ -11405,17 +11488,18 @@ body {
         if (this.ecran !== "course" && this.ecran !== "ville" || this.pause) return;
         ev.preventDefault();
         const p3 = position(ev);
-        if (this.ecran === "ville") {
-          this.canvas.setPointerCapture?.(ev.pointerId);
-          this.pointeurs.set(ev.pointerId, p3);
-          return;
-        }
-        const z = this.course.zones(W2, H2);
+        const z = zonesPanneau(W2, H2);
         if (dans2(p3, z.pause)) {
           this.basculerPause();
           return;
         }
-        if (dans2(p3, z.nitro)) {
+        if (this.ecran === "ville") {
+          if (dans2(p3, z.centre)) p3.frein = true;
+          this.canvas.setPointerCapture?.(ev.pointerId);
+          this.pointeurs.set(ev.pointerId, p3);
+          return;
+        }
+        if (dans2(p3, z.centre)) {
           this.impulsions.nitro = true;
           return;
         }
@@ -11427,7 +11511,8 @@ body {
         this.pointeurs.set(ev.pointerId, p3);
       });
       this.canvas.addEventListener("pointermove", (ev) => {
-        if (this.pointeurs.has(ev.pointerId)) this.pointeurs.set(ev.pointerId, position(ev));
+        const avant = this.pointeurs.get(ev.pointerId);
+        if (avant) this.pointeurs.set(ev.pointerId, { ...position(ev), frein: avant.frein });
       });
       const lacher = (ev) => this.pointeurs.delete(ev.pointerId);
       this.canvas.addEventListener("pointerup", lacher);
@@ -11437,8 +11522,15 @@ body {
     }
     entrees() {
       let gauche = this.touches.has("gauche"), droite = this.touches.has("droite");
+      if (this.touches.has("frein") && this.ecran === "ville") {
+        gauche = true;
+        droite = true;
+      }
       for (const p3 of this.pointeurs.values()) {
-        if (p3.x < W2 / 2) gauche = true;
+        if (p3.frein) {
+          gauche = true;
+          droite = true;
+        } else if (p3.x < W2 / 2) gauche = true;
         else droite = true;
       }
       const e3 = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura };
@@ -11683,7 +11775,16 @@ body {
       if (!peutSortir(this.partie)) return;
       const v2 = voitureActive(this.partie);
       if (!v2) return;
-      this.ville = new Ville({ planche: this.assets.urbain, tiny: this.assets.tiny, voiture: v2, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille });
+      const pilote = titulaire(this.partie);
+      this.ville = new Ville({
+        planche: this.assets.urbain,
+        tiny: this.assets.tiny,
+        voiture: v2,
+        son: this.son,
+        graine: this.partie.jour * 101 + 7,
+        memoire: this.partie.memoireVille,
+        pilote: { nom: pilote?.nom || "Pilote", tenue: tenuePilote(pilote) }
+      });
       this.villeFinie = false;
       this.pause = false;
       this.accu = 0;
@@ -11804,13 +11905,16 @@ body {
       this.ui.vider();
     }
     basculerPause() {
-      if (!this.course) return;
+      if (this.ecran !== "course" && this.ecran !== "ville") return;
+      if (this.ecran === "ville" && (this.ville.entree || this.ville.fini)) return;
       if (this.pause) {
         this.reprendre();
         return;
       }
       this.pause = true;
-      this.montrer(ecranPause(this));
+      this.pointeurs.clear();
+      this.touches.clear();
+      this.montrer(this.ecran === "ville" ? ecranPauseVille(this) : ecranPause(this));
     }
     reprendre() {
       this.pause = false;

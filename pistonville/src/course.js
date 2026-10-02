@@ -591,16 +591,10 @@ export class Course {
 
   // --- Dessin ------------------------------------------------------------------
 
-  /** Zones tactiles du panneau, en coordonnées d'écran. */
+  /** Zones tactiles du panneau, en coordonnées d'écran (le bouton du milieu : nitro). */
   zones(W, H) {
-    const y0 = H - HAUTEUR_PANNEAU;
-    return {
-      portrait: { x: 10, y: y0 + 8, w: 36, h: 36 },
-      nitro: { x: W / 2 - 34, y: y0 + 50, w: 68, h: 54 },
-      gauche: { x: 8, y: y0 + 50, w: W / 2 - 46, h: 54 },
-      droite: { x: W / 2 + 38, y: y0 + 50, w: W / 2 - 46, h: 54 },
-      pause: { x: W / 2 - 14, y: 6, w: 28, h: 22 },
-    };
+    const z = zonesPanneau(W, H);
+    return { ...z, nitro: z.centre };
   }
 
   dessiner(ctx, W, H, t) {
@@ -726,12 +720,7 @@ export class Course {
     pastille(ctx, 6, 66, `${this.ramasses.argent} G · ${this.ramasses.recherche} PR`, '#7a5a12');
     if (this.driftEnCours > 0.5) texte(ctx, `DRIFT ${(this.driftEnCours * 6).toFixed(0)}`, W / 2, 44, 14, '#c4b5fd', 'center');
 
-    // Pause.
-    const z = this.zones(W, H);
-    ctx.fillStyle = 'rgba(31,42,68,0.85)';
-    ctx.fillRect(z.pause.x, z.pause.y, z.pause.w, z.pause.h);
-    ctx.fillStyle = '#f4f1e8';
-    ctx.fillRect(z.pause.x + 9, z.pause.y + 6, 3, 10); ctx.fillRect(z.pause.x + 16, z.pause.y + 6, 3, 10);
+    dessinerPause(ctx, W, H);
 
     // Mini-carte.
     const mc = this.decor.minicarte;
@@ -761,59 +750,91 @@ export class Course {
       texte(ctx, m.texte, W / 2, hVue * 0.38, Math.round(22 * echelle), m.couleur, 'center');
     }
 
-    // Panneau du bas.
-    const y0 = H - HAUTEUR_PANNEAU;
-    ctx.fillStyle = '#1f2a44'; ctx.fillRect(0, y0, W, HAUTEUR_PANNEAU);
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(0, y0, W, 3);
-
-    // Portrait du pilote = bouton d'aura.
-    const pr = z.portrait;
+    // Panneau du bas (le même qu'en ville).
     const pleine = this.jaugeAura >= 1;
-    ctx.fillStyle = pleine ? (Math.sin(t * 10) > 0 ? '#f472b6' : '#db2777') : '#3a4a6b';
-    ctx.fillRect(pr.x - 2, pr.y - 2, pr.w + 4, pr.h + 4);
-    ctx.fillStyle = '#fff6e0'; ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
-    ctx.save(); ctx.translate(pr.x + 18, pr.y + 18); ctx.scale(2, 2);
-    ctx.drawImage(spritePerso(this.tenuePilote || { base: PERSONNES.bandeau, haut: '#e4432d' }, 'face', 0), -8, -8);
-    ctx.restore();
-
-    texte(ctx, j.nom, 54, y0 + 16, 11, '#f4f1e8', 'left');
-    texte(ctx, `${kmh(j.vitesse)}`, W - 52, y0 + 22, 20, '#ffe066', 'right');
-    texte(ctx, 'km/h', W - 10, y0 + 22, 9, '#ffe066', 'right');
-
-    // Jauge d'aura.
-    texte(ctx, pleine ? 'AURA PRÊTE' : 'Aura', 54, y0 + 33, 9, pleine ? '#f472b6' : '#9fb3d9', 'left');
-    for (let i = 0; i < 6; i++) {
-      ctx.fillStyle = this.jaugeAura * 6 > i ? '#ec4899' : '#3a4a6b';
-      ctx.fillRect(112 + i * 13, y0 + 29, 11, 6);
-    }
-    // Durabilité.
-    const dur = j.durabilite / j.p.durabiliteMax;
-    texte(ctx, 'Voiture', W - 92, y0 + 38, 8, '#9fb3d9', 'left');
-    ctx.fillStyle = '#3a4a6b'; ctx.fillRect(W - 54, y0 + 34, 44, 5);
-    ctx.fillStyle = dur > 0.5 ? '#5ad16a' : dur > 0.25 ? '#f2c14e' : '#e4432d';
-    ctx.fillRect(W - 54, y0 + 34, Math.round(44 * dur), 5);
-
-    // Zones de direction et nitro.
-    for (const [cle, fleche] of [['gauche', -1], ['droite', 1]]) {
-      const r = z[cle];
-      ctx.fillStyle = '#2a3654'; ctx.fillRect(r.x, r.y, r.w, r.h);
-      ctx.fillStyle = '#9fb3d9';
-      for (let i = r.x; i < r.x + r.w; i += 6) { ctx.fillRect(i, r.y, 3, 1); ctx.fillRect(i, r.y + r.h - 1, 3, 1); }
-      for (let i = r.y; i < r.y + r.h; i += 6) { ctx.fillRect(r.x, i, 1, 3); ctx.fillRect(r.x + r.w - 1, i, 1, 3); }
-      const cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 6;
-      ctx.fillStyle = '#f4f1e8';
-      // Flèche pointée vers le côté où l'on tourne : pointe à l'extérieur, tige vers le centre.
-      for (let i = 0; i < 7; i++) ctx.fillRect(Math.round(cx + fleche * 8 - fleche * i * 2), Math.round(cy - i), 2, i * 2 + 1);
-      ctx.fillRect(Math.round(fleche > 0 ? cx - 14 : cx + 4), Math.round(cy - 2), 10, 4);
-      texte(ctx, fleche < 0 ? 'Gauche' : 'Droite', cx, r.y + r.h - 9, 9, '#f4f1e8', 'center');
-    }
-    const n = z.nitro;
-    const dispo = this.nitros > 0 && j.nitro <= 0;
-    ctx.fillStyle = '#0f172a'; ctx.fillRect(n.x - 2, n.y - 2, n.w + 4, n.h + 4);
-    ctx.fillStyle = dispo ? '#2f6fdb' : '#3a4a6b'; ctx.fillRect(n.x, n.y, n.w, n.h);
-    texte(ctx, 'NITRO', n.x + n.w / 2, n.y + 22, 13, '#ffffff', 'center');
-    texte(ctx, `${this.nitros} restant${this.nitros > 1 ? 's' : ''}`, n.x + n.w / 2, n.y + 40, 9, '#cfe0ff', 'center');
+    dessinerPanneau(ctx, W, H, t, {
+      tenue: this.tenuePilote, nom: j.nom, vitesse: j.vitesse, etat: j.durabilite / j.p.durabiliteMax,
+      jauge: { libelle: pleine ? 'AURA PRÊTE' : 'Aura', valeur: this.jaugeAura, couleur: '#ec4899', clignote: pleine, texte: pleine ? '#f472b6' : '#9fb3d9' },
+      centre: { titre: 'NITRO', detail: `${this.nitros} restant${this.nitros > 1 ? 's' : ''}`, fond: this.nitros > 0 && j.nitro <= 0 ? '#2f6fdb' : '#3a4a6b' },
+    });
   }
+}
+
+/** Zones tactiles du panneau de conduite (course et ville), en coordonnées d'écran. */
+export function zonesPanneau(W, H) {
+  const y0 = H - HAUTEUR_PANNEAU;
+  return {
+    portrait: { x: 10, y: y0 + 8, w: 36, h: 36 },
+    centre: { x: W / 2 - 34, y: y0 + 50, w: 68, h: 54 },
+    gauche: { x: 8, y: y0 + 50, w: W / 2 - 46, h: 54 },
+    droite: { x: W / 2 + 38, y: y0 + 50, w: W / 2 - 46, h: 54 },
+    pause: { x: W / 2 - 14, y: 6, w: 28, h: 22 },
+  };
+}
+
+/**
+ * Le panneau de conduite, en bas de l'écran : portrait du pilote, jauge, vitesse,
+ * état de la voiture, puis les deux zones de direction et le bouton du milieu
+ * (nitro en course, frein en ville).
+ */
+export function dessinerPanneau(ctx, W, H, t, o) {
+  const z = zonesPanneau(W, H);
+  const y0 = H - HAUTEUR_PANNEAU;
+  ctx.fillStyle = '#1f2a44'; ctx.fillRect(0, y0, W, HAUTEUR_PANNEAU);
+  ctx.fillStyle = '#0f172a'; ctx.fillRect(0, y0, W, 3);
+
+  const pr = z.portrait;
+  ctx.fillStyle = o.jauge.clignote ? (Math.sin(t * 10) > 0 ? '#f472b6' : '#db2777') : '#3a4a6b';
+  ctx.fillRect(pr.x - 2, pr.y - 2, pr.w + 4, pr.h + 4);
+  ctx.fillStyle = '#fff6e0'; ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
+  ctx.save(); ctx.translate(pr.x + 18, pr.y + 18); ctx.scale(2, 2);
+  ctx.drawImage(spritePerso(o.tenue || { base: PERSONNES.bandeau, haut: '#e4432d' }, 'face', 0), -8, -8);
+  ctx.restore();
+
+  texte(ctx, o.nom, 54, y0 + 16, 11, '#f4f1e8', 'left');
+  texte(ctx, `${kmh(o.vitesse)}`, W - 52, y0 + 22, 20, '#ffe066', 'right');
+  texte(ctx, 'km/h', W - 10, y0 + 22, 9, '#ffe066', 'right');
+
+  // Jauge en six cases (aura en course, heure qui file en ville).
+  const g = o.jauge;
+  texte(ctx, g.libelle, 54, y0 + 33, 9, g.texte || '#9fb3d9', 'left');
+  for (let i = 0; i < 6; i++) {
+    ctx.fillStyle = g.valeur * 6 > i ? g.couleur : '#3a4a6b';
+    ctx.fillRect(112 + i * 13, y0 + 29, 11, 6);
+  }
+  const dur = clamp(o.etat, 0, 1);
+  texte(ctx, 'Voiture', W - 92, y0 + 38, 8, '#9fb3d9', 'left');
+  ctx.fillStyle = '#3a4a6b'; ctx.fillRect(W - 54, y0 + 34, 44, 5);
+  ctx.fillStyle = dur > 0.5 ? '#5ad16a' : dur > 0.25 ? '#f2c14e' : '#e4432d';
+  ctx.fillRect(W - 54, y0 + 34, Math.round(44 * dur), 5);
+
+  for (const [cle, fleche] of [['gauche', -1], ['droite', 1]]) {
+    const r = z[cle];
+    ctx.fillStyle = '#2a3654'; ctx.fillRect(r.x, r.y, r.w, r.h);
+    ctx.fillStyle = '#9fb3d9';
+    for (let i = r.x; i < r.x + r.w; i += 6) { ctx.fillRect(i, r.y, 3, 1); ctx.fillRect(i, r.y + r.h - 1, 3, 1); }
+    for (let i = r.y; i < r.y + r.h; i += 6) { ctx.fillRect(r.x, i, 1, 3); ctx.fillRect(r.x + r.w - 1, i, 1, 3); }
+    const cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 6;
+    ctx.fillStyle = '#f4f1e8';
+    // Flèche pointée vers le côté où l'on tourne : pointe à l'extérieur, tige vers le centre.
+    for (let i = 0; i < 7; i++) ctx.fillRect(Math.round(cx + fleche * 8 - fleche * i * 2), Math.round(cy - i), 2, i * 2 + 1);
+    ctx.fillRect(Math.round(fleche > 0 ? cx - 14 : cx + 4), Math.round(cy - 2), 10, 4);
+    texte(ctx, fleche < 0 ? 'Gauche' : 'Droite', cx, r.y + r.h - 9, 9, '#f4f1e8', 'center');
+  }
+  const n = z.centre, c = o.centre;
+  ctx.fillStyle = '#0f172a'; ctx.fillRect(n.x - 2, n.y - 2, n.w + 4, n.h + 4);
+  ctx.fillStyle = c.fond; ctx.fillRect(n.x, n.y, n.w, n.h);
+  texte(ctx, c.titre, n.x + n.w / 2, n.y + 22, 13, '#ffffff', 'center');
+  texte(ctx, c.detail, n.x + n.w / 2, n.y + 40, 9, '#cfe0ff', 'center');
+}
+
+/** Bouton pause, en haut au milieu. */
+export function dessinerPause(ctx, W, H) {
+  const p = zonesPanneau(W, H).pause;
+  ctx.fillStyle = 'rgba(31,42,68,0.85)';
+  ctx.fillRect(p.x, p.y, p.w, p.h);
+  ctx.fillStyle = '#f4f1e8';
+  ctx.fillRect(p.x + 9, p.y + 6, 3, 10); ctx.fillRect(p.x + 16, p.y + 6, 3, 10);
 }
 
 // --- Petits outils de dessin d'interface ---------------------------------------
@@ -830,7 +851,7 @@ export function texte(ctx, chaine, x, y, taille, couleur, align = 'left') {
   ctx.fillText(chaine, Math.round(x), Math.round(y));
 }
 
-function pastille(ctx, x, y, chaine, fond) {
+export function pastille(ctx, x, y, chaine, fond) {
   ctx.font = police(10);
   const w = Math.ceil(ctx.measureText(chaine).width) + 10;
   ctx.fillStyle = '#f4f1e8'; ctx.fillRect(x, y, w + 2, 16);

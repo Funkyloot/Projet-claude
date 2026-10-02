@@ -14,14 +14,14 @@
 import { chargerAssets } from './assets.js';
 import { genererCircuit } from './circuit.js';
 import { rendreCircuit, miniCarte } from './rendu-circuit.js';
-import { Course } from './course.js';
+import { Course, zonesPanneau } from './course.js';
 import { SceneGarage } from './scene-garage.js';
 import { interieur } from './interieurs.js';
 import { definirPlanches, modeleVoiture } from './tiny.js';
 import { Ville } from './ville.js';
 import { Son } from './son.js';
 import {
-  Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranResultats, ecranFinGP,
+  Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranPauseVille, ecranResultats, ecranFinGP,
   ecranConstruction, ecranRang, texteRecompense, ecranCelebration, ecranCeremonie, ecranFinCarriere, ecranCadeau, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
 } from './ecrans.js';
 import * as P from './partie.js';
@@ -149,16 +149,17 @@ class App {
     const clavier = {
       ArrowLeft: 'gauche', KeyA: 'gauche', KeyQ: 'gauche',
       ArrowRight: 'droite', KeyD: 'droite',
+      ArrowDown: 'frein', KeyS: 'frein',
     };
     window.addEventListener('keydown', (ev) => {
       this.son.reveiller();
       if (this.ecran !== 'course' && this.ecran !== 'ville') return;
       if (clavier[ev.code]) { this.touches.add(clavier[ev.code]); ev.preventDefault(); }
-      if (this.ecran === 'ville') return;
       if (ev.repeat) return;
+      if (ev.code === 'Escape' || ev.code === 'KeyP') { this.basculerPause(); return; }
+      if (this.ecran === 'ville') return;
       if (ev.code === 'Space' || ev.code === 'ArrowUp' || ev.code === 'KeyW' || ev.code === 'KeyZ') { this.impulsions.nitro = true; ev.preventDefault(); }
       if (ev.code === 'KeyE' || ev.code === 'ShiftLeft' || ev.code === 'ShiftRight') this.impulsions.aura = true;
-      if (ev.code === 'Escape' || ev.code === 'KeyP') this.basculerPause();
     });
     window.addEventListener('keyup', (ev) => {
       if (clavier[ev.code]) this.touches.delete(clavier[ev.code]);
@@ -198,16 +199,23 @@ class App {
       if ((this.ecran !== 'course' && this.ecran !== 'ville') || this.pause) return;
       ev.preventDefault();
       const p = position(ev);
-      if (this.ecran === 'ville') { this.canvas.setPointerCapture?.(ev.pointerId); this.pointeurs.set(ev.pointerId, p); return; }
-      const z = this.course.zones(W, H);
+      const z = zonesPanneau(W, H);
       if (dans(p, z.pause)) { this.basculerPause(); return; }
-      if (dans(p, z.nitro)) { this.impulsions.nitro = true; return; }
+      if (this.ecran === 'ville') {
+        // Le bouton du milieu freine (et recule si on le garde) : comme les deux côtés à la fois.
+        if (dans(p, z.centre)) p.frein = true;
+        this.canvas.setPointerCapture?.(ev.pointerId);
+        this.pointeurs.set(ev.pointerId, p);
+        return;
+      }
+      if (dans(p, z.centre)) { this.impulsions.nitro = true; return; }
       if (dans(p, z.portrait)) { this.impulsions.aura = true; return; }
       this.canvas.setPointerCapture?.(ev.pointerId);
       this.pointeurs.set(ev.pointerId, p);
     });
     this.canvas.addEventListener('pointermove', (ev) => {
-      if (this.pointeurs.has(ev.pointerId)) this.pointeurs.set(ev.pointerId, position(ev));
+      const avant = this.pointeurs.get(ev.pointerId);
+      if (avant) this.pointeurs.set(ev.pointerId, { ...position(ev), frein: avant.frein });
     });
     const lacher = (ev) => this.pointeurs.delete(ev.pointerId);
     this.canvas.addEventListener('pointerup', lacher);
@@ -218,8 +226,9 @@ class App {
 
   entrees() {
     let gauche = this.touches.has('gauche'), droite = this.touches.has('droite');
+    if (this.touches.has('frein') && this.ecran === 'ville') { gauche = true; droite = true; }
     for (const p of this.pointeurs.values()) {
-      if (p.x < W / 2) gauche = true; else droite = true;
+      if (p.frein) { gauche = true; droite = true; } else if (p.x < W / 2) gauche = true; else droite = true;
     }
     const e = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura };
     this.impulsions.nitro = false;
@@ -428,7 +437,11 @@ class App {
     if (!P.peutSortir(this.partie)) return;
     const v = P.voitureActive(this.partie);
     if (!v) return;
-    this.ville = new Ville({ planche: this.assets.urbain, tiny: this.assets.tiny, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille });
+    const pilote = PL.titulaire(this.partie);
+    this.ville = new Ville({
+      planche: this.assets.urbain, tiny: this.assets.tiny, voiture: v, son: this.son, graine: this.partie.jour * 101 + 7, memoire: this.partie.memoireVille,
+      pilote: { nom: pilote?.nom || 'Pilote', tenue: PL.tenuePilote(pilote) },
+    });
     this.villeFinie = false;
     this.pause = false;
     this.accu = 0;
@@ -534,10 +547,13 @@ class App {
   }
 
   basculerPause() {
-    if (!this.course) return;
+    if (this.ecran !== 'course' && this.ecran !== 'ville') return;
+    if (this.ecran === 'ville' && (this.ville.entree || this.ville.fini)) return;
     if (this.pause) { this.reprendre(); return; }
     this.pause = true;
-    this.montrer(ecranPause(this));
+    this.pointeurs.clear();
+    this.touches.clear();
+    this.montrer(this.ecran === 'ville' ? ecranPauseVille(this) : ecranPause(this));
   }
 
   reprendre() {

@@ -14,7 +14,7 @@
  */
 
 import { PERSONNAGES, DIRECTION, bulle, T } from './sprites.js';
-import { dessinerVoiture, vehiculeAuHasard, dessinerPerso, tenue } from './tiny.js';
+import { dessinerVoiture, prechaufferVoiture, vehiculeAuHasard, dessinerPerso, tenue } from './tiny.js';
 import { hash2 } from './outils.js';
 import { DIRS } from './reseau.js';
 
@@ -72,6 +72,7 @@ export class Trafic {
       const v = { dir, k: t.k, n, vmax: 55 + alea() * 30, v: 0, couleur: couleurs[i % couleurs.length], modele: vehiculeAuHasard(alea, enVille), choix: null, klaxon: 0, bloque: 0 };
       if (t.horizontal) { v.x = pos; v.y = r.voie(dir, t.k, n); } else { v.x = r.voie(dir, t.k, n); v.y = pos; }
       v.angle = Math.atan2(DIRS[dir][1], DIRS[dir][0]);
+      prechaufferVoiture(v.modele, v.couleur);
       this.voitures.push(v);
     }
   }

@@ -23,10 +23,11 @@ export function tuileTiny(ctx, planches, pack, n, x, y) {
   ctx.drawImage(img, (n % c) * 16, Math.floor(n / c) * 16, 16, 16, Math.round(x), Math.round(y), 16, 16);
 }
 
-function toile(w, h) {
+/** Une petite toile hors écran ; `lecture` si on y relit les pixels (repeinture) : elle reste en mémoire vive. */
+function toile(w, h, lecture = false) {
   const c = document.createElement('canvas');
   c.width = w; c.height = h;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext('2d', lecture ? { willReadFrequently: true } : undefined);
   ctx.imageSmoothingEnabled = false;
   return { c, ctx };
 }
@@ -152,14 +153,21 @@ const enRgb = (h, s, v) => {
 };
 
 /**
- * Repeint les pixels du masque dans la couleur voulue. La référence est la
- * teinte la plus fréquente de la carrosserie : ses ombres et reflets sont
- * reportés sur la nouvelle couleur.
+ * Masque de carrosserie d'un modèle (toute sa ligne de 32 vues) et sa couleur
+ * de référence : la teinte la plus fréquente de la carrosserie d'origine. Ses
+ * ombres et reflets sont reportés sur la nouvelle couleur.
  */
-function repeindre(ctx, w, h, couleur, masque) {
-  const [th, ts, tv] = enHsv(...[1, 3, 5].map((i) => parseInt(couleur.slice(i, i + 2), 16)));
-  const img = ctx.getImageData(0, 0, w, h);
-  const d = img.data;
+const cacheMasques = new Map();
+function masqueModele(m) {
+  if (cacheMasques.has(m)) return cacheMasques.get(m);
+  const [y, w, h] = ATLAS_VOITURES[m];
+  const lw = w * VUES;
+  const t = toile(lw, h, true);
+  t.ctx.drawImage(planches.tiny.voituresMasque, 0, y, lw, h, 0, 0, lw, h);
+  const masque = t.ctx.getImageData(0, 0, lw, h).data;
+  t.ctx.clearRect(0, 0, lw, h);
+  t.ctx.drawImage(planches.tiny.voitures, 0, y, lw, h, 0, 0, lw, h);
+  const d = t.ctx.getImageData(0, 0, lw, h).data;
   const compte = new Map();
   for (let i = 0; i < d.length; i += 4) {
     if (!d[i + 3] || masque[i] < 128) continue;
@@ -168,35 +176,44 @@ function repeindre(ctx, w, h, couleur, masque) {
   }
   let ref = null, max = 0;
   for (const [k, n] of compte) if (n > max) { max = n; ref = k; }
-  if (ref === null) return;
-  const [, rs, rv] = enHsv(ref >> 16, (ref >> 8) & 255, ref & 255);
-  for (let i = 0; i < d.length; i += 4) {
-    if (!d[i + 3] || masque[i] < 128) continue;
-    const [, ss, vv] = enHsv(d[i], d[i + 1], d[i + 2]);
-    const s2 = Math.min(1, ts * (rs ? ss / rs : 1)), v2 = Math.min(1, Math.max(0.08, tv * (vv / rv)));
-    [d[i], d[i + 1], d[i + 2]] = enRgb(th, s2, v2);
-  }
-  ctx.putImageData(img, 0, 0);
+  const [, rs, rv] = ref === null ? [0, 0, 1] : enHsv(ref >> 16, (ref >> 8) & 255, ref & 255);
+  const mm = { masque, lw, rs, rv, vide: ref === null };
+  cacheMasques.set(m, mm);
+  return mm;
 }
 
-/** La ligne d'un modèle (32 vues), repeinte au besoin ; et l'empreinte au sol du modèle. */
+/** Repeint la vue i d'une ligne (à la première fois qu'on la dessine : pas d'à-coup). */
+function repeindreVue(l, i) {
+  l.peintes[i] = 1;
+  const mm = masqueModele(l.m);
+  if (mm.vide) return;
+  const [th, ts, tv] = enHsv(...[1, 3, 5].map((k) => parseInt(l.couleur.slice(k, k + 2), 16)));
+  const ctx = l.c.getContext('2d');
+  const img = ctx.getImageData(i * l.w, 0, l.w, l.h);
+  const d = img.data;
+  for (let y = 0; y < l.h; y++) for (let x = 0; x < l.w; x++) {
+    const p = (y * l.w + x) * 4;
+    if (!d[p + 3] || mm.masque[(y * mm.lw + i * l.w + x) * 4] < 128) continue;
+    const [, ss, vv] = enHsv(d[p], d[p + 1], d[p + 2]);
+    const s2 = Math.min(1, ts * (mm.rs ? ss / mm.rs : 1)), v2 = Math.min(1, Math.max(0.08, tv * (vv / mm.rv)));
+    [d[p], d[p + 1], d[p + 2]] = enRgb(th, s2, v2);
+  }
+  ctx.putImageData(img, i * l.w, 0);
+}
+
+/** La ligne d'un modèle (32 vues), à repeindre au besoin vue par vue ; et l'empreinte au sol du modèle. */
 const cacheLignes = new Map();
 function ligneVoiture(modele, couleur) {
   const m = ATLAS_VOITURES[modele] ? modele : 'sedan';
-  const repeinte = couleur && !LIVREES.has(m);
+  const repeinte = !!couleur && !LIVREES.has(m) && !!planches.tiny.voituresMasque;
   const cle = repeinte ? `${m}|${couleur}` : m;
   if (cacheLignes.has(cle)) return cacheLignes.get(cle);
   const [y, w, h, cy] = ATLAS_VOITURES[m];
   const planche = planches.tiny.voitures;
-  const l = toile(w * VUES, h);
+  const l = toile(w * VUES, h, repeinte);
   if (!planche) return { c: l.c, w, h, cy };
   l.ctx.drawImage(planche, 0, y, w * VUES, h, 0, 0, w * VUES, h);
-  if (repeinte && planches.tiny.voituresMasque) {
-    const mk = toile(w * VUES, h);
-    mk.ctx.drawImage(planches.tiny.voituresMasque, 0, y, w * VUES, h, 0, 0, w * VUES, h);
-    repeindre(l.ctx, w * VUES, h, couleur, mk.ctx.getImageData(0, 0, w * VUES, h).data);
-  }
-  const ligne = { c: l.c, w, h, cy, ...empreinte(m) };
+  const ligne = { c: l.c, w, h, cy, m, couleur, peintes: repeinte ? new Uint8Array(VUES) : null, ...empreinte(m) };
   cacheLignes.set(cle, ligne);
   return ligne;
 }
@@ -206,7 +223,7 @@ const cacheEmpreintes = new Map();
 function empreinte(m) {
   if (cacheEmpreintes.has(m)) return cacheEmpreintes.get(m);
   const [y, w, h] = ATLAS_VOITURES[m];
-  const t = toile(w, h);
+  const t = toile(w, h, true);
   const mesure = (i) => {
     t.ctx.clearRect(0, 0, w, h);
     t.ctx.drawImage(planches.tiny.voitures, i * w, y, w, h, 0, 0, w, h);
@@ -229,6 +246,7 @@ export function dessinerVoiture(ctx, modele, couleur, x, y, angle, echelle = 1, 
   const l = ligneVoiture(modele, couleur);
   const a = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const i = Math.round((a / (Math.PI * 2)) * VUES) % VUES;
+  if (l.peintes && !l.peintes[i]) repeindreVue(l, i);
   const px = Math.round(x), py = Math.round(y);
   if (ombre && l.longueur) {
     // L'empreinte du véhicule, aplatie par la vue de 3/4, un peu décalée vers le bas.
@@ -244,6 +262,13 @@ export function dessinerVoiture(ctx, modele, couleur, x, y, angle, echelle = 1, 
   }
   const w = l.w * echelle, h = l.h * echelle;
   ctx.drawImage(l.c, i * l.w, 0, l.w, l.h, Math.round(px - w / 2), Math.round(py - (l.cy + 4) * echelle), Math.round(w), Math.round(h));
+}
+
+/** Repeint d'avance les quatre vues de face, de dos et de côté (la circulation, au départ). */
+export function prechaufferVoiture(modele, couleur) {
+  const l = ligneVoiture(modele, couleur);
+  if (!l.peintes) return;
+  for (let k = 0; k < 4; k++) if (!l.peintes[k * VUES / 4]) repeindreVue(l, k * VUES / 4);
 }
 
 /** Vignette d'un véhicule (vue de trois quarts avant) pour les menus, en data URL. */
