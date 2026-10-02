@@ -28,6 +28,7 @@ import { ALLONGE } from './circuit.js';
 import { dessinerVoiture, ANGLE_VITRINE, spritePerso, tenue, modeleVoiture } from './tiny.js';
 import { imgPiece } from './icones.js';
 import { STORE, VERSION_JEU } from './edition.js';
+import * as Soutien from './soutien.js';
 import { engagement, pointsAPlacer } from './pilotes.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -158,6 +159,7 @@ export function ecranTitre(app) {
         <button class="btn ${reprise ? '' : 'btn-principal'}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="btn" data-action="reglages">Paramètres</button>
+        ${Soutien.dansLAppli() || app.reglages.fondateur ? `<button class="btn fondateur" data-action="fondateur">${app.reglages.fondateur ? '★ Fondateur · merci !' : '★ Pack du fondateur'}</button>` : ''}
         <button class="lien" data-action="credits">Crédits</button>
         ${STORE ? '' : '<button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>'}
         ${!STORE && /^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre à jour le jeu</button>' : ''}
@@ -169,8 +171,42 @@ export function ecranTitre(app) {
       nouvelle: () => app.nouvellePartie(),
       aide: () => app.montrer(ecranAide(app, 'titre')),
       credits: () => app.montrer(ecranCredits(app)),
+      fondateur: () => app.montrer(ecranFondateur(app)),
       sauvegarde: () => app.montrer(ecranSauvegarde(app)),
       maj: () => app.mettreAJour(),
+    },
+  };
+}
+
+/** Le Pack du fondateur : pour soutenir le jeu (achat unique sur Google Play). */
+export function ecranFondateur(app) {
+  const possede = !!app.reglages.fondateur;
+  const prix = Soutien.prixFondateur();
+  return {
+    id: 'fondateur',
+    classe: 'fond-sombre',
+    html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">★ Pack du fondateur</h2>
+        <div class="contenu texte">
+          <p>Pistonville est un petit jeu indépendant, gratuit et jouable en entier sans rien payer. Si tu l'aimes, le Pack du fondateur aide à le faire grandir.</p>
+          <ul class="liste-avantages">
+            <li><b>Bonus vidéo sans publicité</b> : doubler primes et gains d'un toucher</li>
+            <li><b>Peinture « Or fondateur »</b>, réservée aux fondateurs</li>
+            <li><b>+${Soutien.CADEAU_FONDATEUR.argent.toLocaleString('fr-FR')} G</b> et <b>${Soutien.CADEAU_FONDATEUR.tickets} tickets</b> de tombola dans chaque nouvelle partie</li>
+            <li>Le badge <b>★ Fondateur</b> sur l'écran titre</li>
+          </ul>
+          <p class="petit">Achat unique, lié à ton compte Google : il revient tout seul si tu réinstalles le jeu.</p>
+        </div>
+      </section>
+      <div class="pile">
+        ${possede ? '<p class="merci">Tu es fondateur. Merci du fond du garage !</p>'
+          : `<button class="btn btn-principal" data-action="acheter" ${Soutien.dansLAppli() ? '' : 'disabled'}>Soutenir le jeu${prix ? ` · ${e(prix)}` : ''}</button>`}
+        <button class="btn" data-action="retour">Retour</button>
+      </div>
+    </div>`,
+    actions: {
+      acheter: () => Soutien.acheterFondateur(),
+      retour: () => app.titre(),
     },
   };
 }
@@ -320,7 +356,7 @@ export function ecranAtelier(app) {
           <div class="ligne"><span>État : ${Math.round((1 - v.usure) * 100)} %</span>
             <button class="btn btn-mini" data-action="reparer" ${!rep || p.argent < rep ? 'disabled' : ''}>Réparer · ${formatArgent(rep)}</button></div>
           <div class="ligne"><span>Peinture · ${formatArgent(COUT_PEINTURE)}</span>
-            <div class="nuancier">${PEINTURES.map((c) => `<button class="teinte ${c === v.couleur ? 'choisie' : ''}" style="background:${c}" data-action="peindre" data-couleur="${c}" aria-label="Peindre en ${c}" ${p.argent < COUT_PEINTURE ? 'disabled' : ''}></button>`).join('')}</div></div>
+            <div class="nuancier">${(p.fondateur ? [...PEINTURES, Soutien.OR_FONDATEUR] : PEINTURES).map((c) => `<button class="teinte ${c === v.couleur ? 'choisie' : ''}" style="background:${c}" data-action="peindre" data-couleur="${c}" aria-label="Peindre en ${c}" ${p.argent < COUT_PEINTURE ? 'disabled' : ''}></button>`).join('')}</div></div>
           ${autres.length ? `<div class="ligne"><span>Autres voitures</span>${autres.map((a) => `<button class="btn btn-mini" data-action="choisir" data-uid="${a.uid}">${e(modele(a.modele).nom)}</button>`).join('')}</div>` : ''}
         </div>
       </section>
@@ -746,11 +782,31 @@ export function ecranFinBalade(app, g, suite) {
         ${g.amendes ? `<p class="petit-clair contenu">Amendes et constats : −${formatArgent(g.amendes)}${g.usure ? ` · voiture abîmée (−${Math.round(g.usure * 100)} % d'état)` : ''}</p>` : ''}
         ${journal ? `<ul class="journal contenu">${journal}</ul>` : ''}
       </section>
+      ${boutonBonus(app, (g.argent > 0 || g.recherche > 0) && !g.double, `Doubler les gains (+${formatArgent(Math.max(0, g.argent))}${g.recherche ? `, +${g.recherche} PR` : ''})`)}
       <button class="btn btn-principal" data-action="suite">Retour au garage</button>
     </div>`,
-    actions: { suite },
+    actions: {
+      suite,
+      bonus: () => app.bonusVideo(() => {
+        const p = app.partie;
+        p.argent += Math.max(0, g.argent); p.recherche += g.recherche; g.double = true; app.sauver(); app.son.caisse();
+        app.toast('Gains de la balade doublés !');
+        app.montrer(ecranFinBalade(app, g, suite));
+      }),
+    },
     apres: (r) => animerCompteurs(r),
   };
+}
+
+/**
+ * Bouton de bonus vidéo (application Android seulement) : sans publicité pour
+ * les fondateurs ; sinon, seulement si une publicité est prête.
+ */
+function boutonBonus(app, possible, texte) {
+  if (!possible || !Soutien.dansLAppli()) return '';
+  if (app.partie.fondateur) return `<button class="btn bonus-video" data-action="bonus">★ ${texte} · fondateur</button>`;
+  if (!Soutien.pubPrete()) return '';
+  return `<button class="btn bonus-video" data-action="bonus">▶ ${texte} · courte pub</button>`;
 }
 
 export function texteRecompense(r) {
@@ -992,6 +1048,7 @@ export function ecranReglages(app, retour) {
           ${bascule('vibrations', 'Vibrations', r.vibrations, 'Le téléphone vibre aux chocs')}
           ${bascule('aide', 'Aide au pilotage', p.aide, 'La voiture se recentre seule en course')}
           ${bascule('economie', 'Économie de batterie', r.economie, '30 images par seconde au lieu de 60')}
+          ${Soutien.confidentialiteModifiable() ? `<div class="ligne"><span class="libelle">Publicités<small>Revoir ton choix de consentement</small></span><button class="btn btn-mini" data-action="confidentialite">Choix</button></div>` : ''}
         </div>
       </section>
       <div class="pile"><button class="btn btn-principal" data-action="retour">Retour</button></div>
@@ -1001,6 +1058,7 @@ export function ecranReglages(app, retour) {
       plus: (d) => changer(() => { r[d.cle] = Math.min(1, Math.round((r[d.cle] + 0.1) * 10) / 10); app.son.bip(660, 0.08); }),
       vibrations: () => changer(() => { r.vibrations = !r.vibrations; if (r.vibrations) app.son.vibrer(40); }),
       economie: () => changer(() => { r.economie = !r.economie; }),
+      confidentialite: () => Soutien.ouvrirConfidentialite(),
       aide: () => changer(() => { p.aide = !p.aide; if (app.course) app.course.aide = p.aide; app.sauver(); }),
       retour: () => retour(),
     },
@@ -1097,9 +1155,17 @@ export function ecranResultats(app, r) {
       ${butin}
       <section class="panneau"><h2 class="titre-panneau">Arrivée</h2><div class="contenu"><table class="classement">${lignes}</table></div></section>
       <section class="panneau"><h2 class="titre-panneau">Classement du Grand Prix</h2><div class="contenu"><table class="classement">${general}</table></div></section>
+      ${boutonBonus(app, g.prime > 0 && !r.double, `Doubler la prime (+${formatArgent(g.prime)})`)}
       <button class="btn btn-principal" data-action="suite">${g.fini ? 'Fin du Grand Prix' : 'Fin de la soirée (manche suivante demain)'}</button>
     </div>`,
-    actions: { suite: () => app.apresRangs(g.rangs, () => (g.fini ? app.finGP() : app.mancheSuivante())) },
+    actions: {
+      suite: () => app.apresRangs(g.rangs, () => (g.fini ? app.finGP() : app.mancheSuivante())),
+      bonus: () => app.bonusVideo(() => {
+        p.argent += g.prime; r.double = true; app.sauver(); app.son.caisse();
+        app.toast(`Prime doublée : +${formatArgent(g.prime)} !`);
+        app.montrer(ecranResultats(app, r));
+      }),
+    },
     apres: (racine) => {
       animerCompteurs(racine, 1100);
       if (g.butin) setTimeout(() => app.son.disque(), 1300);

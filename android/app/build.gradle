@@ -5,6 +5,9 @@
  *
  * Pour une mise à jour sur Google Play : augmenter versionCode (+1 à chaque
  * envoi) et versionName, puis voir android/LISEZMOI.md.
+ *
+ * Publicités (AdMob) : identifiants lus dans android/monetisation.properties ;
+ * sans ce fichier, ce sont les identifiants de TEST de Google (pubs factices).
  */
 plugins {
     id 'com.android.application'
@@ -20,6 +23,14 @@ android {
         targetSdk 36
         versionCode 1
         versionName '1.0.0'
+
+        def monetisation = new Properties()
+        def fichierPubs = rootProject.file('monetisation.properties')
+        if (fichierPubs.exists()) fichierPubs.withInputStream { monetisation.load(it) }
+        // Identifiants de test publiés par Google : à remplacer par les tiens (voir LISEZMOI.md).
+        manifestPlaceholders = [admobAppId: monetisation.getProperty('admobAppId', 'ca-app-pub-3940256099942544~3347511713')]
+        resValue 'string', 'pub_recompensee', monetisation.getProperty('pubRecompensee', 'ca-app-pub-3940256099942544/5224354917')
+        resValue 'string', 'produit_fondateur', monetisation.getProperty('produitFondateur', 'fondateur')
     }
 
     // La clé d'envoi Google Play : lue dans android/signature.properties (jamais dans Git).
@@ -48,10 +59,17 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    buildFeatures {
+        resValues true
+    }
 }
 
 dependencies {
     implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'com.google.android.gms:play-services-ads:25.5.0'          // publicités récompensées
+    implementation 'com.google.android.ump:user-messaging-platform:4.0.0'     // consentement (Europe)
+    implementation 'com.android.billingclient:billing:9.1.0'                  // Pack du fondateur
 }
 
 // Le jeu lui-même : copié depuis l'édition store avant chaque construction.

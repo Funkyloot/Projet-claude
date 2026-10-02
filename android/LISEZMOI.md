@@ -2,8 +2,9 @@
 
 Le jeu est une seule page HTML (l'édition « store », construite par
 `tools/build-pistonville.mjs` dans `pistonville/dist/android/index.html`)
-affichée plein écran dans une WebView. Tout tourne sur le téléphone du
-joueur : aucune connexion, aucun serveur, aucune permission Internet.
+affichée plein écran dans une WebView. Le jeu tourne sur le téléphone du
+joueur, sans serveur ; Internet ne sert qu'aux publicités récompensées
+facultatives et à l'achat du Pack du fondateur (voir plus bas).
 
 ## Construire
 
@@ -49,3 +50,31 @@ contactant le support Google, mais c'est long.
 
 Les icônes se refont avec `python3 tools/android/icones.py`, les visuels de
 la fiche avec `tools/android/fiche.py`.
+
+## Publicités récompensées (AdMob) et Pack du fondateur
+
+L'appli propose des **bonus vidéo facultatifs** (doubler une prime ou les gains
+d'une balade) et un **achat unique**, le Pack du fondateur (produit
+`fondateur` dans la Play Console, voir `store/fiche-google-play.md`).
+
+Tant que `android/monetisation.properties` n'existe pas, l'appli utilise les
+**identifiants de test de Google** : les publicités sont factices (« Test
+Ad ») et ne rapportent rien. Pour de vraies publicités :
+
+1. Créer un compte sur admob.google.com, ajouter l'appli Android
+   « Pistonville » (après sa mise en ligne sur Google Play, ou en
+   « non publiée » avant), puis créer un **bloc d'annonces « Avec
+   récompense »**.
+2. Dans AdMob > Confidentialité et messages : créer le **message RGPD**
+   (Europe) — c'est le formulaire de consentement que l'appli affiche.
+3. Créer `android/monetisation.properties` :
+
+   ```
+   admobAppId=ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY
+   pubRecompensee=ca-app-pub-XXXXXXXXXXXXXXXX/ZZZZZZZZZZ
+   ```
+
+4. Reconstruire (`./gradlew bundleRelease`), augmenter `versionCode`, envoyer.
+5. Pendant tes propres essais, **ne clique jamais sur tes vraies publicités**
+   (AdMob peut suspendre le compte) : ajoute ton téléphone comme appareil de
+   test dans AdMob.

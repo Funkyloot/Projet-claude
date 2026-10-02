@@ -48,7 +48,9 @@ Monte en rang, décroche tes licences, gagne les Pistons d'Or… et recommence e
 ✨ ET AUSSI
 • Graphismes pixel art lumineux
 • Musique arcade et bruitages rétro
-• Jouable hors connexion, sans compte et sans publicité
+• Jouable hors connexion et sans compte
+• Gratuit, sans publicité imposée : les bonus vidéo sont toujours au choix
+• Pack du fondateur (achat unique, facultatif) pour soutenir le jeu
 • Ta partie reste sur ton téléphone
 
 Pistonville est un petit jeu indépendant, fait avec passion. Bonne route, et à toi la victoire !
@@ -65,6 +67,17 @@ Graphismes : Kenney (kenney.nl), sous licence CC0. Police Jersey 10 (SIL Open Fo
 
 Première version de Pistonville ! Construis ton garage, embauche ton équipe et gagne les Grands Prix.
 
+## Produit intégré « Pack du fondateur »
+
+Play Console > Monétiser avec Play > Produits > **Produits intégrés à l'application** > Créer :
+- ID du produit : **`fondateur`** (exactement, sans majuscule — c'est celui que l'appli demande)
+- Nom : Pack du fondateur
+- Description : Soutiens Pistonville : bonus vidéo sans publicité, peinture Or fondateur, 25 000 G et 3 tickets dans chaque nouvelle partie.
+- Prix : **4,00 €** (Google calcule les prix des autres pays ; tu peux les ajuster)
+- Activer le produit.
+
+Il faut d'abord un **profil de paiement** (Play Console > Configuration > Profil de paiement) et avoir envoyé au moins une version de l'appli (même en test interne) pour pouvoir créer le produit.
+
 ## Fichiers à envoyer
 
 | Élément | Fichier | Format demandé par Google |
@@ -76,9 +89,15 @@ Première version de Pistonville ! Construis ton garage, embauche ton équipe et
 
 ## Questionnaires de la Play Console
 
-- **Classification du contenu (IARC)** : pas de violence réaliste, pas de langage grossier, pas d'achats, pas de jeux d'argent réels. La « tombola » utilise une monnaie du jeu qu'on ne peut pas acheter : réponds « non » aux jeux de hasard avec de l'argent réel. Résultat attendu : PEGI 3 / Tout public.
-- **Public cible** : 13 ans et plus (choisir « moins de 13 ans » impose les règles « Familles », plus strictes).
-- **Sécurité des données** : « Aucune donnée collectée ni partagée ». L'appli n'a pas la permission Internet.
-- **Publicités** : « Non, mon application ne contient pas de publicités » (tant qu'il n'y en a pas).
+- **Classification du contenu (IARC)** : pas de violence réaliste, pas de langage grossier, pas de jeux d'argent réels. Réponds **oui** à « achats numériques dans l'appli » (le Pack du fondateur). La « tombola » utilise des tickets du jeu : le pack en donne 3, mais on ne peut pas acheter de tirages à l'unité ; décris-le honnêtement si la question des récompenses aléatoires est posée. Résultat attendu : PEGI 3 ou 7.
+- **Public cible** : **13 ans et plus** (choisir « moins de 13 ans » impose les règles « Familles » et interdit les publicités personnalisées).
+- **Publicités** : « **Oui**, mon application contient des publicités » (publicités récompensées AdMob, toujours au choix du joueur).
+- **Identifiant publicitaire** (Contenu de l'appli > ID publicitaire) : « Oui », pour la **publicité ou le marketing**.
+- **Sécurité des données** (formulaire) :
+  - Données collectées : **Identifiants de l'appareil ou autres** (identifiant publicitaire) ; **Activité dans l'appli > interactions** ; **Infos sur l'appli et performances > diagnostics** (journaux de plantage). Raisons : **Publicité ou marketing**, **Statistiques**, **Prévention des fraudes**. Collecte faite par le SDK Google Mobile Ads.
+  - Données partagées : les mêmes, avec Google (fournisseur de publicités).
+  - Les données sont-elles chiffrées en transit ? **Oui**.
+  - Peut-on demander leur suppression ? Indique que l'identifiant publicitaire se réinitialise dans les réglages Android.
+  - Achats : gérés par Google Play, le développeur ne reçoit pas les informations de paiement (rien à déclarer de plus pour Google Play Billing).
 - **Accès à l'application** : « Toutes les fonctionnalités sont disponibles sans restriction ».
 - **Politique de confidentialité** : mettre en ligne `store/confidentialite.html` et coller son adresse.

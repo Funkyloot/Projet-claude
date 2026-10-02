@@ -708,3 +708,9 @@ body {
 .valeur-reglage { min-width: calc(var(--u) * 46); text-align: center; }
 .libelle { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .libelle small { font-size: calc(var(--u) * 11); opacity: 0.75; }
+
+/* Pack du fondateur et bonus vidéo. */
+.btn.fondateur { background: linear-gradient(#f6d77a, #d4a640); color: #3a2a08; }
+.btn.bonus-video { background: #2f6fdb; color: #fff; margin-bottom: calc(var(--u) * 8); width: 100%; }
+.liste-avantages { margin: calc(var(--u) * 8) 0; padding-left: calc(var(--u) * 18); display: grid; gap: calc(var(--u) * 6); }
+.merci { text-align: center; color: #f6d77a; font-size: calc(var(--u) * 16); margin: 0; }

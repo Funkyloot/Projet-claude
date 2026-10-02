@@ -15,6 +15,7 @@ import * as G from './garage.js';
 import * as PL from './pilotes.js';
 import { modeleVoiture } from './tiny.js';
 import { ALLONGE } from './circuit.js';
+import { CADEAU_FONDATEUR } from './soutien.js';
 
 const CLE = 'pistonville.partie.v1';
 const VERSION = 3;
@@ -83,6 +84,7 @@ export function nouvellePartie() {
     carriereFinie: false,
     aide: true,
     son: true,
+    fondateur: false,        // Pack du fondateur reçu dans cette partie
     nouvelles: [],
   };
 }
@@ -308,6 +310,17 @@ export function reparer(partie) {
   if (!cout || partie.argent < cout) return false;
   partie.argent -= cout;
   partie.garage.find((g) => g.uid === partie.voitureActive).usure = 0;
+  return true;
+}
+
+// --- Pack du fondateur ------------------------------------------------------------------------
+
+/** Le cadeau du Pack du fondateur, une fois par partie (l'achat, lui, suit le compte Google). */
+export function accorderFondateur(partie) {
+  if (!partie || partie.fondateur) return false;
+  partie.fondateur = true;
+  partie.argent += CADEAU_FONDATEUR.argent;
+  partie.tickets += CADEAU_FONDATEUR.tickets;
   return true;
 }
 

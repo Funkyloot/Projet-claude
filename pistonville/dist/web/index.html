@@ -723,6 +723,12 @@ body {
 .libelle { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .libelle small { font-size: calc(var(--u) * 11); opacity: 0.75; }
 
+/* Pack du fondateur et bonus vidéo. */
+.btn.fondateur { background: linear-gradient(#f6d77a, #d4a640); color: #3a2a08; }
+.btn.bonus-video { background: #2f6fdb; color: #fff; margin-bottom: calc(var(--u) * 8); width: 100%; }
+.liste-avantages { margin: calc(var(--u) * 8) 0; padding-left: calc(var(--u) * 18); display: grid; gap: calc(var(--u) * 6); }
+.merci { text-align: center; color: #f6d77a; font-size: calc(var(--u) * 16); margin: 0; }
+
 </style>
 </head>
 <body>
@@ -5417,6 +5423,42 @@ body {
     return [s2];
   }
 
+  // pistonville/src/soutien.js
+  var OR_FONDATEUR = "#d4a640";
+  var CADEAU_FONDATEUR = { argent: 25e3, tickets: 3 };
+  var pont = () => typeof window !== "undefined" && window.PistonvilleAndroid || null;
+  var appel = (nom, ...args) => {
+    try {
+      return pont()?.[nom]?.(...args);
+    } catch {
+      return void 0;
+    }
+  };
+  var dansLAppli = () => !!pont();
+  var pubPrete = () => !!appel("pubPrete");
+  var prixFondateur = () => appel("prixFondateur") || null;
+  var confidentialiteModifiable = () => !!appel("confidentialiteRequise");
+  var ouvrirConfidentialite = () => appel("ouvrirConfidentialite");
+  var acheterFondateur = () => appel("acheterFondateur");
+  var attentePub = null;
+  function regarderPub() {
+    return new Promise((ok) => {
+      if (!pubPrete()) {
+        ok(false);
+        return;
+      }
+      attentePub = ok;
+      appel("montrerPub");
+    });
+  }
+  function recevoir(type, valeur) {
+    if (type === "pub" && attentePub) {
+      const ok = attentePub;
+      attentePub = null;
+      ok(valeur === true || valeur === "true");
+    }
+  }
+
   // pistonville/src/partie.js
   var CLE = "pistonville.partie.v1";
   var VERSION = 3;
@@ -5508,6 +5550,8 @@ body {
       carriereFinie: false,
       aide: true,
       son: true,
+      fondateur: false,
+      // Pack du fondateur reçu dans cette partie
       nouvelles: []
     };
   }
@@ -5716,6 +5760,13 @@ body {
     if (!cout || partie.argent < cout) return false;
     partie.argent -= cout;
     partie.garage.find((g) => g.uid === partie.voitureActive).usure = 0;
+    return true;
+  }
+  function accorderFondateur(partie) {
+    if (!partie || partie.fondateur) return false;
+    partie.fondateur = true;
+    partie.argent += CADEAU_FONDATEUR.argent;
+    partie.tickets += CADEAU_FONDATEUR.tickets;
     return true;
   }
   function valeurVoiture(partie, vuid) {
@@ -6415,10 +6466,10 @@ body {
       if (this.passant > 380) this.passant = -60;
       if (this.construction) {
         this.construction.t += dt;
-        const pont = partie?.terrain.batiments.find((b2) => b2.id === "pont");
-        if (pont && Math.random() < 0.6) {
+        const pont2 = partie?.terrain.batiments.find((b2) => b2.id === "pont");
+        if (pont2 && Math.random() < 0.6) {
           const o3 = this.origine();
-          this.etincelles.push({ x: o3.x + pont.x * CASE + 32 + (Math.random() - 0.5) * 30, y: o3.y + pont.y * CASE + 20 + Math.random() * 30, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, vie: 0.4 });
+          this.etincelles.push({ x: o3.x + pont2.x * CASE + 32 + (Math.random() - 0.5) * 30, y: o3.y + pont2.y * CASE + 20 + Math.random() * 30, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, vie: 0.4 });
         }
       }
       for (const e3 of this.etincelles) {
@@ -10827,6 +10878,7 @@ body {
         <button class="btn ${reprise ? "" : "btn-principal"}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="btn" data-action="reglages">Param\xE8tres</button>
+        ${dansLAppli() || app2.reglages.fondateur ? `<button class="btn fondateur" data-action="fondateur">${app2.reglages.fondateur ? "\u2605 Fondateur \xB7 merci !" : "\u2605 Pack du fondateur"}</button>` : ""}
         <button class="lien" data-action="credits">Cr\xE9dits</button>
         ${STORE ? "" : '<button class="lien" data-action="sauvegarde">Transf\xE9rer ma sauvegarde (PC \u2194 t\xE9l\xE9phone)</button>'}
         ${!STORE && /^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre \xE0 jour le jeu</button>' : ""}
@@ -10838,8 +10890,39 @@ body {
         nouvelle: () => app2.nouvellePartie(),
         aide: () => app2.montrer(ecranAide(app2, "titre")),
         credits: () => app2.montrer(ecranCredits(app2)),
+        fondateur: () => app2.montrer(ecranFondateur(app2)),
         sauvegarde: () => app2.montrer(ecranSauvegarde(app2)),
         maj: () => app2.mettreAJour()
+      }
+    };
+  }
+  function ecranFondateur(app2) {
+    const possede = !!app2.reglages.fondateur;
+    const prix2 = prixFondateur();
+    return {
+      id: "fondateur",
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">\u2605 Pack du fondateur</h2>
+        <div class="contenu texte">
+          <p>Pistonville est un petit jeu ind\xE9pendant, gratuit et jouable en entier sans rien payer. Si tu l'aimes, le Pack du fondateur aide \xE0 le faire grandir.</p>
+          <ul class="liste-avantages">
+            <li><b>Bonus vid\xE9o sans publicit\xE9</b> : doubler primes et gains d'un toucher</li>
+            <li><b>Peinture \xAB Or fondateur \xBB</b>, r\xE9serv\xE9e aux fondateurs</li>
+            <li><b>+${CADEAU_FONDATEUR.argent.toLocaleString("fr-FR")} G</b> et <b>${CADEAU_FONDATEUR.tickets} tickets</b> de tombola dans chaque nouvelle partie</li>
+            <li>Le badge <b>\u2605 Fondateur</b> sur l'\xE9cran titre</li>
+          </ul>
+          <p class="petit">Achat unique, li\xE9 \xE0 ton compte Google : il revient tout seul si tu r\xE9installes le jeu.</p>
+        </div>
+      </section>
+      <div class="pile">
+        ${possede ? '<p class="merci">Tu es fondateur. Merci du fond du garage !</p>' : `<button class="btn btn-principal" data-action="acheter" ${dansLAppli() ? "" : "disabled"}>Soutenir le jeu${prix2 ? ` \xB7 ${e2(prix2)}` : ""}</button>`}
+        <button class="btn" data-action="retour">Retour</button>
+      </div>
+    </div>`,
+      actions: {
+        acheter: () => acheterFondateur(),
+        retour: () => app2.titre()
       }
     };
   }
@@ -10986,7 +11069,7 @@ body {
           <div class="ligne"><span>\xC9tat : ${Math.round((1 - v2.usure) * 100)} %</span>
             <button class="btn btn-mini" data-action="reparer" ${!rep || p3.argent < rep ? "disabled" : ""}>R\xE9parer \xB7 ${formatArgent(rep)}</button></div>
           <div class="ligne"><span>Peinture \xB7 ${formatArgent(COUT_PEINTURE)}</span>
-            <div class="nuancier">${PEINTURES.map((c3) => `<button class="teinte ${c3 === v2.couleur ? "choisie" : ""}" style="background:${c3}" data-action="peindre" data-couleur="${c3}" aria-label="Peindre en ${c3}" ${p3.argent < COUT_PEINTURE ? "disabled" : ""}></button>`).join("")}</div></div>
+            <div class="nuancier">${(p3.fondateur ? [...PEINTURES, OR_FONDATEUR] : PEINTURES).map((c3) => `<button class="teinte ${c3 === v2.couleur ? "choisie" : ""}" style="background:${c3}" data-action="peindre" data-couleur="${c3}" aria-label="Peindre en ${c3}" ${p3.argent < COUT_PEINTURE ? "disabled" : ""}></button>`).join("")}</div></div>
           ${autres.length ? `<div class="ligne"><span>Autres voitures</span>${autres.map((a) => `<button class="btn btn-mini" data-action="choisir" data-uid="${a.uid}">${e2(modele(a.modele).nom)}</button>`).join("")}</div>` : ""}
         </div>
       </section>
@@ -11440,11 +11523,30 @@ body {
         ${g.amendes ? `<p class="petit-clair contenu">Amendes et constats : \u2212${formatArgent(g.amendes)}${g.usure ? ` \xB7 voiture ab\xEEm\xE9e (\u2212${Math.round(g.usure * 100)} % d'\xE9tat)` : ""}</p>` : ""}
         ${journal ? `<ul class="journal contenu">${journal}</ul>` : ""}
       </section>
+      ${boutonBonus(app2, (g.argent > 0 || g.recherche > 0) && !g.double, `Doubler les gains (+${formatArgent(Math.max(0, g.argent))}${g.recherche ? `, +${g.recherche} PR` : ""})`)}
       <button class="btn btn-principal" data-action="suite">Retour au garage</button>
     </div>`,
-      actions: { suite },
+      actions: {
+        suite,
+        bonus: () => app2.bonusVideo(() => {
+          const p3 = app2.partie;
+          p3.argent += Math.max(0, g.argent);
+          p3.recherche += g.recherche;
+          g.double = true;
+          app2.sauver();
+          app2.son.caisse();
+          app2.toast("Gains de la balade doubl\xE9s !");
+          app2.montrer(ecranFinBalade(app2, g, suite));
+        })
+      },
       apres: (r) => animerCompteurs(r)
     };
+  }
+  function boutonBonus(app2, possible, texte2) {
+    if (!possible || !dansLAppli()) return "";
+    if (app2.partie.fondateur) return `<button class="btn bonus-video" data-action="bonus">\u2605 ${texte2} \xB7 fondateur</button>`;
+    if (!pubPrete()) return "";
+    return `<button class="btn bonus-video" data-action="bonus">\u25B6 ${texte2} \xB7 courte pub</button>`;
   }
   function texteRecompense(r) {
     return [r.argent && `+${formatArgent(r.argent)}`, r.recherche && `+${r.recherche} PR`, r.tickets && `+${r.tickets} ticket${r.tickets > 1 ? "s" : ""}`].filter(Boolean).join(" \xB7 ");
@@ -11695,6 +11797,7 @@ body {
           ${bascule("vibrations", "Vibrations", r.vibrations, "Le t\xE9l\xE9phone vibre aux chocs")}
           ${bascule("aide", "Aide au pilotage", p3.aide, "La voiture se recentre seule en course")}
           ${bascule("economie", "\xC9conomie de batterie", r.economie, "30 images par seconde au lieu de 60")}
+          ${confidentialiteModifiable() ? `<div class="ligne"><span class="libelle">Publicit\xE9s<small>Revoir ton choix de consentement</small></span><button class="btn btn-mini" data-action="confidentialite">Choix</button></div>` : ""}
         </div>
       </section>
       <div class="pile"><button class="btn btn-principal" data-action="retour">Retour</button></div>
@@ -11714,6 +11817,7 @@ body {
         economie: () => changer(() => {
           r.economie = !r.economie;
         }),
+        confidentialite: () => ouvrirConfidentialite(),
         aide: () => changer(() => {
           p3.aide = !p3.aide;
           if (app2.course) app2.course.aide = p3.aide;
@@ -11816,9 +11920,20 @@ body {
       ${butin}
       <section class="panneau"><h2 class="titre-panneau">Arriv\xE9e</h2><div class="contenu"><table class="classement">${lignes}</table></div></section>
       <section class="panneau"><h2 class="titre-panneau">Classement du Grand Prix</h2><div class="contenu"><table class="classement">${general}</table></div></section>
+      ${boutonBonus(app2, g.prime > 0 && !r.double, `Doubler la prime (+${formatArgent(g.prime)})`)}
       <button class="btn btn-principal" data-action="suite">${g.fini ? "Fin du Grand Prix" : "Fin de la soir\xE9e (manche suivante demain)"}</button>
     </div>`,
-      actions: { suite: () => app2.apresRangs(g.rangs, () => g.fini ? app2.finGP() : app2.mancheSuivante()) },
+      actions: {
+        suite: () => app2.apresRangs(g.rangs, () => g.fini ? app2.finGP() : app2.mancheSuivante()),
+        bonus: () => app2.bonusVideo(() => {
+          p3.argent += g.prime;
+          r.double = true;
+          app2.sauver();
+          app2.son.caisse();
+          app2.toast(`Prime doubl\xE9e : +${formatArgent(g.prime)} !`);
+          app2.montrer(ecranResultats(app2, r));
+        })
+      },
       apres: (racine) => {
         animerCompteurs(racine, 1100);
         if (g.butin) setTimeout(() => app2.son.disque(), 1300);
@@ -12393,11 +12508,13 @@ body {
     }
     nouvellePartie() {
       this.partie = nouvellePartie();
+      this.offrirFondateur();
       this.sauver();
       this.cadeauPuis(() => this.garage());
     }
     continuer() {
       this.partie = this.partieSauvee;
+      if (this.offrirFondateur()) this.sauver();
       this.cadeauPuis(() => {
         if (this.partie.gp) {
           this.briefing(this.partie.gp.id, true);
@@ -12405,6 +12522,48 @@ body {
         }
         this.garage();
       });
+    }
+    // --- Pack du fondateur et bonus vidéo (application Android) --------------------------------
+    /** Le pack a été acheté sur ce compte : son cadeau, une fois par partie. Vrai s'il vient d'être donné. */
+    offrirFondateur() {
+      if (!this.reglages.fondateur || !accorderFondateur(this.partie)) return false;
+      this.toast(`Pack du fondateur : +${CADEAU_FONDATEUR.argent.toLocaleString("fr-FR")} G, ${CADEAU_FONDATEUR.tickets} tickets, peinture or !`);
+      return true;
+    }
+    /**
+     * Messages de l'application Android : 'fondateur' (pack acheté ou retrouvé
+     * sur le compte), 'pub' (fin d'une publicité récompensée : vrai si gagnée).
+     */
+    evenementAndroid(type, valeur) {
+      if (type === "pub") {
+        recevoir(type, valeur);
+        return;
+      }
+      if (type === "fondateur") {
+        const nouveau2 = !this.reglages.fondateur;
+        this.reglages.fondateur = true;
+        ecrireReglages(this.reglages);
+        if (this.ecran !== "titre" && this.offrirFondateur()) {
+          this.sauver();
+          this.son.fanfare();
+        }
+        if (nouveau2 && this.ecran === "titre") {
+          this.son.fanfare();
+          if (this.dernierEcran?.id === "fondateur") this.montrer(ecranFondateur(this));
+          else this.titre();
+        }
+      }
+    }
+    /** Un bonus vidéo : sans publicité pour les fondateurs, sinon après une publicité vue jusqu'au bout. */
+    async bonusVideo(appliquer) {
+      if (this.partie.fondateur) {
+        appliquer();
+        return;
+      }
+      this.son.musique(null);
+      const ok = await regarderPub();
+      if (ok) appliquer();
+      else this.toast("Publicit\xE9 interrompue : pas de bonus cette fois.");
     }
     /** Cadeau du jour (vrai calendrier), puis la suite. */
     cadeauPuis(suite) {

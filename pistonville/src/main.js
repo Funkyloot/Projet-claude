@@ -21,8 +21,9 @@ import { definirPlanches, modeleVoiture } from './tiny.js';
 import { Ville } from './ville.js';
 import { Son } from './son.js';
 import { lireReglages, ecrireReglages } from './reglages.js';
+import * as Soutien from './soutien.js';
 import {
-  Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranPauseVille, ecranReglages, ecranResultats, ecranFinGP,
+  Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranPauseVille, ecranReglages, ecranFondateur, ecranResultats, ecranFinGP,
   ecranConstruction, ecranRang, texteRecompense, ecranCelebration, ecranCeremonie, ecranFinCarriere, ecranCadeau, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
 } from './ecrans.js';
 import * as P from './partie.js';
@@ -379,17 +380,54 @@ class App {
 
   nouvellePartie() {
     this.partie = P.nouvellePartie();
+    this.offrirFondateur();
     this.sauver();
     this.cadeauPuis(() => this.garage());
   }
 
   continuer() {
     this.partie = this.partieSauvee;
+    if (this.offrirFondateur()) this.sauver();
     // Une course interrompue (onglet fermé) se reprend au briefing.
     this.cadeauPuis(() => {
       if (this.partie.gp) { this.briefing(this.partie.gp.id, true); return; }
       this.garage();
     });
+  }
+
+  // --- Pack du fondateur et bonus vidéo (application Android) --------------------------------
+
+  /** Le pack a été acheté sur ce compte : son cadeau, une fois par partie. Vrai s'il vient d'être donné. */
+  offrirFondateur() {
+    if (!this.reglages.fondateur || !P.accorderFondateur(this.partie)) return false;
+    this.toast(`Pack du fondateur : +${Soutien.CADEAU_FONDATEUR.argent.toLocaleString('fr-FR')} G, ${Soutien.CADEAU_FONDATEUR.tickets} tickets, peinture or !`);
+    return true;
+  }
+
+  /**
+   * Messages de l'application Android : 'fondateur' (pack acheté ou retrouvé
+   * sur le compte), 'pub' (fin d'une publicité récompensée : vrai si gagnée).
+   */
+  evenementAndroid(type, valeur) {
+    if (type === 'pub') { Soutien.recevoir(type, valeur); return; }
+    if (type === 'fondateur') {
+      const nouveau = !this.reglages.fondateur;
+      this.reglages.fondateur = true;
+      ecrireReglages(this.reglages);
+      if (this.ecran !== 'titre' && this.offrirFondateur()) { this.sauver(); this.son.fanfare(); }
+      if (nouveau && this.ecran === 'titre') {
+        this.son.fanfare();
+        if (this.dernierEcran?.id === 'fondateur') this.montrer(ecranFondateur(this)); else this.titre();
+      }
+    }
+  }
+
+  /** Un bonus vidéo : sans publicité pour les fondateurs, sinon après une publicité vue jusqu'au bout. */
+  async bonusVideo(appliquer) {
+    if (this.partie.fondateur) { appliquer(); return; }
+    this.son.musique(null);
+    const ok = await Soutien.regarderPub();
+    if (ok) appliquer(); else this.toast('Publicité interrompue : pas de bonus cette fois.');
   }
 
   /** Cadeau du jour (vrai calendrier), puis la suite. */

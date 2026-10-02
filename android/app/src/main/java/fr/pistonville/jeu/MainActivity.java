@@ -11,6 +11,7 @@ import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
@@ -22,9 +23,10 @@ import androidx.webkit.WebViewAssetLoader;
 
 /**
  * Pistonville : tout le jeu est une page HTML rangée dans les assets de
- * l'application et affichée plein écran dans une WebView. Rien ne sort du
- * téléphone : aucune permission Internet, la partie est gardée dans le
- * stockage local de la WebView.
+ * l'application et affichée plein écran dans une WebView. La partie est
+ * gardée dans le stockage local de la WebView, sur le téléphone. Internet ne
+ * sert qu'aux publicités récompensées (facultatives) et au Pack du fondateur,
+ * que la page demande par l'objet JavaScript « PistonvilleAndroid ».
  *
  * La page est servie à l'adresse https://appassets.androidplatform.net/ (et
  * non file://) pour que le stockage local, le son et le canvas se comportent
@@ -33,6 +35,8 @@ import androidx.webkit.WebViewAssetLoader;
 public class MainActivity extends Activity {
     private static final String ADRESSE = "https://appassets.androidplatform.net/assets/index.html";
     private WebView vue;
+    private Pubs pubs;
+    private Achats achats;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -69,8 +73,13 @@ public class MainActivity extends Activity {
                 return !"appassets.androidplatform.net".equals(adresse.getHost());
             }
         });
+        pubs = new Pubs(this);
+        achats = new Achats(this, () -> versLeJeu("fondateur", "true"));
+        vue.addJavascriptInterface(new Pont(), "PistonvilleAndroid");
         setContentView(vue);
         pleinEcran();
+        pubs.lancer();
+        achats.lancer();
 
         if (etat != null) vue.restoreState(etat);
         else vue.loadUrl(ADRESSE);
@@ -81,6 +90,24 @@ public class MainActivity extends Activity {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                     OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::retour);
         }
+    }
+
+    /** Un message pour le jeu : window.pistonville.evenementAndroid(type, valeur). */
+    private void versLeJeu(String type, String valeur) {
+        runOnUiThread(() -> vue.evaluateJavascript(
+                "window.pistonville && window.pistonville.evenementAndroid('" + type + "', " + valeur + ")", null));
+    }
+
+    /** Ce que la page du jeu peut demander à l'application. */
+    private final class Pont {
+        @JavascriptInterface public boolean pubPrete() { return pubs.prete(); }
+        @JavascriptInterface public void montrerPub() {
+            runOnUiThread(() -> pubs.montrer(gagne -> versLeJeu("pub", gagne ? "true" : "false")));
+        }
+        @JavascriptInterface public String prixFondateur() { return achats.prix(); }
+        @JavascriptInterface public void acheterFondateur() { achats.acheter(); }
+        @JavascriptInterface public boolean confidentialiteRequise() { return pubs.choixModifiable(); }
+        @JavascriptInterface public void ouvrirConfidentialite() { runOnUiThread(() -> pubs.revoirChoix()); }
     }
 
     private void retour() {

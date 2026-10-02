@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Les vibrations aux chocs (réglables dans les paramètres du jeu). Aucune autre permission : pas d'Internet. -->
+    <!-- Vibrations aux chocs (réglables dans les paramètres du jeu). -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Internet : seulement pour les publicités récompensées (facultatives) et l'achat du Pack du fondateur.
+         Le jeu lui-même et la partie restent sur le téléphone. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Ajoutée par une bibliothèque (WorkManager) mais inutile ici : le jeu n'a aucun service au premier plan. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
 
     <application
         android:allowBackup="true"
@@ -15,6 +21,10 @@
         android:fullBackupContent="@xml/sauvegarde_ancienne"
         android:appCategory="game"
         android:isGame="true">
+
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="${admobAppId}" />
 
         <activity
             android:name=".MainActivity"
