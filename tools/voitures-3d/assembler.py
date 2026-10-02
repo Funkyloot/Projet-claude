@@ -19,6 +19,9 @@ SOURCE = Path(sys.argv[1])
 RACINE = Path(__file__).resolve().parent.parent.parent / 'pistonville'
 N = 32
 CONTOUR = (34, 28, 48, 255)
+# Ces modèles du Car Kit regardent dans l'autre sens que les autres (nez vers -Z) :
+# on décale leurs vues d'un demi-tour pour que le nez suive le cap de la voiture.
+INVERSES = {'race', 'race-future'}
 MODELES = ['race', 'race-future', 'sedan-sports', 'hatchback-sports', 'kart-oodi',
            'sedan', 'suv', 'suv-luxury', 'taxi', 'police', 'van', 'truck', 'truck-flat',
            'tractor', 'delivery', 'ambulance', 'firetruck', 'garbage-truck']
@@ -45,8 +48,9 @@ def net(im):
 
 lignes, atlas, y = [], {}, 0
 for m in MODELES:
-    vues = [net(Image.open(SOURCE / f'{m}_{i:02d}.png')) for i in range(N)]
-    masques = [Image.open(SOURCE / f'{m}-m_{i:02d}.png').convert('L') for i in range(N)]
+    k = N // 2 if m in INVERSES else 0
+    vues = [net(Image.open(SOURCE / f'{m}_{(i + k) % N:02d}.png')) for i in range(N)]
+    masques = [Image.open(SOURCE / f'{m}-m_{(i + k) % N:02d}.png').convert('L') for i in range(N)]
     boite = None
     for v in vues:
         b = v.getbbox()
