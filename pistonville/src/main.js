@@ -102,9 +102,28 @@ class App {
       this.partieSauvee = this.partie;
       Nuage.ecrireMaintenant(this.partie);
     };
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') auSecours(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'hidden') return;
+      auSecours();
+      // Appel, notification, appli quittée : la course ou la balade se met en pause.
+      if ((this.ecran === 'course' || this.ecran === 'ville') && !this.pause) this.basculerPause();
+    });
     window.addEventListener('pagehide', auSecours);
     setInterval(() => { if (this.ecran === 'garage' && this.partie === this.partieSauvee) this.sauver(); }, 15000);
+  }
+
+  /**
+   * Bouton « retour » d'Android (appelé par l'application) : met en pause,
+   * ou referme l'écran ouvert. Renvoie false quand il n'y a plus rien à
+   * fermer : l'application passe alors en arrière-plan.
+   */
+  boutonRetour() {
+    if ((this.ecran === 'course' || this.ecran === 'ville') && !this.pause && !this.ui.racine.innerHTML) { this.basculerPause(); return true; }
+    const r = this.ui.racine;
+    const bouton = !r.hidden && r.querySelector('[data-action=retour], [data-action=reprendre], [data-action=annuler], [data-action=suite], [data-action=sortir]');
+    if (bouton) { bouton.click(); return true; }
+    if (this.ecran !== 'titre' && this.ecran !== 'garage' && this.ecran !== 'course' && this.ecran !== 'ville') { this.garage(); return true; }
+    return false;
   }
 
   redimensionner() {

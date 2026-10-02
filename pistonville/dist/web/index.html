@@ -10151,6 +10151,10 @@ body {
     return `<img class="icone-piece ${classe}" src="${iconePiece(pc)}" alt="">`;
   }
 
+  // pistonville/src/edition.js
+  var STORE = false;
+  var VERSION_JEU = "1.0.0";
+
   // pistonville/src/ecrans-garage.js
   var e = (s2) => String(s2).replace(/[&<>"']/g, (c3) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c3]);
   var ONGLETS = [
@@ -10823,18 +10827,39 @@ body {
         <button class="btn ${reprise ? "" : "btn-principal"}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="btn" data-action="reglages">Param\xE8tres</button>
-        <button class="lien" data-action="sauvegarde">Transf\xE9rer ma sauvegarde (PC \u2194 t\xE9l\xE9phone)</button>
-        ${/^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre \xE0 jour le jeu</button>' : ""}
+        <button class="lien" data-action="credits">Cr\xE9dits</button>
+        ${STORE ? "" : '<button class="lien" data-action="sauvegarde">Transf\xE9rer ma sauvegarde (PC \u2194 t\xE9l\xE9phone)</button>'}
+        ${!STORE && /^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre \xE0 jour le jeu</button>' : ""}
       </div>
-      <p class="credits">Version d'essai 0.6 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
+      <p class="credits">Version ${VERSION_JEU} \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
     </div>`,
       actions: {
         continuer: () => app2.continuer(),
         nouvelle: () => app2.nouvellePartie(),
         aide: () => app2.montrer(ecranAide(app2, "titre")),
+        credits: () => app2.montrer(ecranCredits(app2)),
         sauvegarde: () => app2.montrer(ecranSauvegarde(app2)),
         maj: () => app2.mettreAJour()
       }
+    };
+  }
+  function ecranCredits(app2) {
+    const ligne = (titre, detail) => `<div class="ligne"><span class="libelle">${titre}<small>${detail}</small></span></div>`;
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">Cr\xE9dits</h2>
+        <div class="contenu">
+          ${ligne("Pistonville", `Conception, code et musique \xB7 version ${VERSION_JEU}`)}
+          ${ligne("Graphismes : Kenney (kenney.nl)", "RPG Urban Pack, Roguelike Modern City, Racing Pack, Car Kit, Pixel Vehicle Pack, Tiny Town, Tiny Farm, Tiny Factory, Tiny Ski, Tiny Battle \u2014 licence CC0")}
+          ${ligne("Police Jersey 10", "Sarah Cadigan-Fried \u2014 SIL Open Font License 1.1")}
+          ${ligne("Musique et bruitages", "Compos\xE9s pour le jeu et jou\xE9s par le t\xE9l\xE9phone (Web Audio)")}
+          <p class="petit">Merci \xE0 Kenney pour ses ressources libres, qui rendent possibles les petits jeux ind\xE9pendants.</p>
+        </div>
+      </section>
+      <div class="pile"><button class="btn btn-principal" data-action="retour">Retour</button></div>
+    </div>`,
+      actions: { retour: () => app2.titre() }
     };
   }
   function ecranSauvegarde(app2, message = "") {
@@ -11907,7 +11932,7 @@ body {
 
   // pistonville/src/nuage.js
   var URL_API = "api/sauvegarde";
-  var actif = typeof location !== "undefined" && /^https?:$/.test(location.protocol);
+  var actif = !STORE && typeof location !== "undefined" && /^https?:$/.test(location.protocol);
   var minuteur = null;
   var derniere = null;
   async function lire() {
@@ -12041,12 +12066,36 @@ body {
         ecrireMaintenant(this.partie);
       };
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") auSecours();
+        if (document.visibilityState !== "hidden") return;
+        auSecours();
+        if ((this.ecran === "course" || this.ecran === "ville") && !this.pause) this.basculerPause();
       });
       window.addEventListener("pagehide", auSecours);
       setInterval(() => {
         if (this.ecran === "garage" && this.partie === this.partieSauvee) this.sauver();
       }, 15e3);
+    }
+    /**
+     * Bouton « retour » d'Android (appelé par l'application) : met en pause,
+     * ou referme l'écran ouvert. Renvoie false quand il n'y a plus rien à
+     * fermer : l'application passe alors en arrière-plan.
+     */
+    boutonRetour() {
+      if ((this.ecran === "course" || this.ecran === "ville") && !this.pause && !this.ui.racine.innerHTML) {
+        this.basculerPause();
+        return true;
+      }
+      const r = this.ui.racine;
+      const bouton = !r.hidden && r.querySelector("[data-action=retour], [data-action=reprendre], [data-action=annuler], [data-action=suite], [data-action=sortir]");
+      if (bouton) {
+        bouton.click();
+        return true;
+      }
+      if (this.ecran !== "titre" && this.ecran !== "garage" && this.ecran !== "course" && this.ecran !== "ville") {
+        this.garage();
+        return true;
+      }
+      return false;
     }
     redimensionner() {
       const echelle = Math.min(window.innerWidth / W2, window.innerHeight / H2);

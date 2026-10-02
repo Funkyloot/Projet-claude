@@ -27,6 +27,7 @@ import { THEMES } from './rendu-circuit.js';
 import { ALLONGE } from './circuit.js';
 import { dessinerVoiture, ANGLE_VITRINE, spritePerso, tenue, modeleVoiture } from './tiny.js';
 import { imgPiece } from './icones.js';
+import { STORE, VERSION_JEU } from './edition.js';
 import { engagement, pointsAPlacer } from './pilotes.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -157,18 +158,41 @@ export function ecranTitre(app) {
         <button class="btn ${reprise ? '' : 'btn-principal'}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="btn" data-action="reglages">Paramètres</button>
-        <button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>
-        ${/^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre à jour le jeu</button>' : ''}
+        <button class="lien" data-action="credits">Crédits</button>
+        ${STORE ? '' : '<button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>'}
+        ${!STORE && /^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre à jour le jeu</button>' : ''}
       </div>
-      <p class="credits">Version d'essai 0.6 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
+      <p class="credits">Version ${VERSION_JEU} · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
     </div>`,
     actions: {
       continuer: () => app.continuer(),
       nouvelle: () => app.nouvellePartie(),
       aide: () => app.montrer(ecranAide(app, 'titre')),
+      credits: () => app.montrer(ecranCredits(app)),
       sauvegarde: () => app.montrer(ecranSauvegarde(app)),
       maj: () => app.mettreAJour(),
     },
+  };
+}
+
+/** Les crédits : tous les auteurs des ressources utilisées, et leurs licences. */
+export function ecranCredits(app) {
+  const ligne = (titre, detail) => `<div class="ligne"><span class="libelle">${titre}<small>${detail}</small></span></div>`;
+  return {
+    classe: 'fond-sombre',
+    html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">Crédits</h2>
+        <div class="contenu">
+          ${ligne('Pistonville', `Conception, code et musique · version ${VERSION_JEU}`)}
+          ${ligne('Graphismes : Kenney (kenney.nl)', 'RPG Urban Pack, Roguelike Modern City, Racing Pack, Car Kit, Pixel Vehicle Pack, Tiny Town, Tiny Farm, Tiny Factory, Tiny Ski, Tiny Battle — licence CC0')}
+          ${ligne('Police Jersey 10', 'Sarah Cadigan-Fried — SIL Open Font License 1.1')}
+          ${ligne('Musique et bruitages', 'Composés pour le jeu et joués par le téléphone (Web Audio)')}
+          <p class="petit">Merci à Kenney pour ses ressources libres, qui rendent possibles les petits jeux indépendants.</p>
+        </div>
+      </section>
+      <div class="pile"><button class="btn btn-principal" data-action="retour">Retour</button></div>
+    </div>`,
+    actions: { retour: () => app.titre() },
   };
 }
 

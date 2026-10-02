@@ -1,0 +1,9 @@
+.gradle/
+build/
+app/build/
+local.properties
+app/src/main/assets/
+# La clé d'envoi et son mot de passe ne vont JAMAIS dans Git.
+*.jks
+*.keystore
+signature.properties

@@ -8,6 +8,10 @@
  * pour jouer au téléphone : la même page, plus un manifeste et un service
  * worker pour l'installer sur l'écran d'accueil (plein écran, hors ligne).
  *
+ * Et pistonville/dist/android/index.html : l'édition « store », pour
+ * l'application Android (android/), sans serveur, ni transfert de
+ * sauvegarde, ni bouton de mise à jour (voir src/edition.js).
+ *
  * Usage : node tools/build-pistonville.mjs
  */
 
@@ -19,16 +23,20 @@ import { fileURLToPath } from 'node:url';
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), '..', 'pistonville');
 
-const { outputFiles } = await build({
-  entryPoints: [join(RACINE, 'src', 'main.js')],
-  bundle: true,
-  format: 'iife',
-  target: 'es2020',
-  write: false,
-  minify: false,          // lisible : c'est aussi un objet à lire, pas qu'à exécuter
-  legalComments: 'none',
-});
-const js = outputFiles[0].text;
+async function code(store) {
+  const { outputFiles } = await build({
+    entryPoints: [join(RACINE, 'src', 'main.js')],
+    bundle: true,
+    format: 'iife',
+    target: 'es2020',
+    write: false,
+    minify: false,          // lisible : c'est aussi un objet à lire, pas qu'à exécuter
+    legalComments: 'none',
+    define: { __STORE__: store ? 'true' : 'false' },
+  });
+  return outputFiles[0].text;
+}
+const js = await code(false);
 
 const TYPES = { '.png': 'image/png', '.woff2': 'font/woff2' };
 const dataUrl = (chemin) =>
@@ -48,12 +56,13 @@ ajouter('assets/police/Jersey10.woff2');
 const css = readFileSync(join(RACINE, 'style.css'), 'utf8')
   .replace("url('assets/police/Jersey10.woff2')", `url('${assets['assets/police/Jersey10.woff2']}')`);
 
-const page = readFileSync(join(RACINE, 'index.html'), 'utf8')
-  .replace('<link rel="stylesheet" href="style.css">', `<style>\n${css}\n</style>`)
+const assembler = (script) => readFileSync(join(RACINE, 'index.html'), 'utf8')
+  .replace('<link rel="stylesheet" href="style.css">', () => `<style>\n${css}\n</style>`)
   .replace(
     '<script type="module" src="src/main.js"></script>',
-    `<script>window.__PV_ASSETS = ${JSON.stringify(assets)};</script>\n<script>\n${js}\n</script>`,
+    () => `<script>window.__PV_ASSETS = ${JSON.stringify(assets)};</script>\n<script>\n${script}\n</script>`,
   );
+const page = assembler(js);
 
 mkdirSync(join(RACINE, 'dist'), { recursive: true });
 const sortie = join(RACINE, 'dist', 'pistonville.html');
@@ -113,3 +122,9 @@ self.addEventListener('fetch', (e) => {
 `);
 writeFileSync(join(WEB, 'version.txt'), `${version}\n`);
 console.log(`dist/web/ : version ${version}`);
+
+// --- Édition store pour l'application Android (dist/android) ----------------
+const ANDROID = join(RACINE, 'dist', 'android');
+mkdirSync(ANDROID, { recursive: true });
+writeFileSync(join(ANDROID, 'index.html'), assembler(await code(true)));
+console.log('dist/android/index.html : édition store');

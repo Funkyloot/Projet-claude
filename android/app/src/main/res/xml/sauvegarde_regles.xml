@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- La partie (stockage de la WebView) suit le joueur sur un nouveau téléphone via la sauvegarde Google. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="root" path="app_webview/" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="root" path="app_webview/" />
+    </device-transfer>
+</data-extraction-rules>

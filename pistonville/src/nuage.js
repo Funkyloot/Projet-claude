@@ -7,8 +7,11 @@
  * par une erreur et tout continue avec la seule sauvegarde du navigateur.
  */
 
+import { STORE } from './edition.js';
+
 const URL_API = 'api/sauvegarde';
-let actif = typeof location !== 'undefined' && /^https?:$/.test(location.protocol);
+// Dans l'application Android, tout reste sur le téléphone : jamais de serveur.
+let actif = !STORE && typeof location !== 'undefined' && /^https?:$/.test(location.protocol);
 let minuteur = null;
 let derniere = null;
 

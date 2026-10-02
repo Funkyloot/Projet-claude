@@ -1,0 +1,62 @@
+/*
+ * Pistonville pour Android : le jeu (une seule page HTML, construite par
+ * tools/build-pistonville.mjs dans pistonville/dist/android/) tourne dans une
+ * WebView, entièrement sur le téléphone, sans connexion.
+ *
+ * Pour une mise à jour sur Google Play : augmenter versionCode (+1 à chaque
+ * envoi) et versionName, puis voir android/LISEZMOI.md.
+ */
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'fr.pistonville.jeu'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'fr.pistonville.jeu'
+        minSdk 24
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    // La clé d'envoi Google Play : lue dans android/signature.properties (jamais dans Git).
+    def proprietes = new Properties()
+    def fichier = rootProject.file('signature.properties')
+    if (fichier.exists()) fichier.withInputStream { proprietes.load(it) }
+    signingConfigs {
+        envoi {
+            if (fichier.exists()) {
+                storeFile rootProject.file(proprietes['fichier'])
+                storePassword proprietes['motDePasse']
+                keyAlias proprietes['alias']
+                keyPassword proprietes['motDePasse']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (fichier.exists()) signingConfig signingConfigs.envoi
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+}
+
+// Le jeu lui-même : copié depuis l'édition store avant chaque construction.
+def copierJeu = tasks.register('copierJeu', Copy) {
+    from "${rootDir}/../pistonville/dist/android/index.html"
+    into "${projectDir}/src/main/assets"
+}
+tasks.named('preBuild') { dependsOn copierJeu }
