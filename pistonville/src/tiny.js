@@ -35,10 +35,12 @@ function toile(w, h, lecture = false) {
 // --- Personnages modernes ----------------------------------------------------------------
 
 /*
- * Personnages : ceux du pack Kenney RPG Urban (CC0), 16 × 16, six personnes
- * en 4 directions (gauche, face, dos, droite) et 3 images (repos, pas 1, pas 2).
- * Pour varier les tenues, on change seulement la couleur du haut (ou du bleu
- * de travail), en gardant le dessin et l'ombrage de Kenney.
+ * Personnages : ceux du pack Kenney RPG Urban (CC0), 16 × 16, en 4 directions
+ * (gauche, face, dos, droite) et 3 images (repos, pas 1, pas 2). Le pack n'a
+ * que six personnes : pour que chacun soit reconnaissable, on change la
+ * couleur du haut, de la peau, des cheveux (pour les deux qui en ont de
+ * visibles) et du casque des ouvriers, en gardant le dessin et l'ombrage de
+ * Kenney. Cela fait plusieurs centaines de combinaisons.
  */
 let planches = { urbain: null, tiny: {} };
 /** À appeler une fois les images chargées (main.js). */
@@ -52,6 +54,16 @@ const VETEMENT = {
   23: ['#42a379', '#369069'], 104: ['#c2504d', '#a54240'], 185: ['#42a379', '#369069'],
   266: ['#918eb9', '#7a77a4'], 347: ['#aaa8bd', '#898ca6'], 428: ['#aaa8bd', '#898ca6'],
 };
+/** Peau : les trois teintes de Kenney (clair, ombre, reflet) et trois autres carnations. */
+const PEAU = ['#ffc999', '#f1b089', '#ffc8a1'];
+const PEAUX = [null, ['#e0a478', '#c88c64', '#e0a67e'], ['#a86c48', '#8c583a', '#a86e4c'], ['#6e442c', '#5a3622', '#70462e']];
+/** Cheveux roux des deux premiers personnages, et trois autres couleurs. */
+const CHEVEUX_DE = ['#dc8652', '#c57652'];
+const CHEVEUX = [null, ['#3a2e2a', '#2a201e'], ['#e8c860', '#c8a440'], ['#70483a', '#583828']];
+const AVEC_CHEVEUX = [23, 104];
+/** Casque de chantier de l'ouvrier (jaune chez Kenney) : blanc, rouge, bleu. */
+const CASQUE_DE = ['#f5a94c', '#da923e', '#bc7d36'];
+const CASQUES = [null, ['#f4f6fb', '#d6dae6', '#b8bfd0'], ['#e4432d', '#c2382a', '#a42e22'], ['#4f8ff0', '#2f6fdb', '#2558b0']];
 const HAUTS = ['#c2504d', '#2f6fdb', '#3fa34d', '#f2c14e', '#8a6ad6', '#e86ca6', '#f39c33', '#4fc3d8', '#f4f6fb'];
 const CIVILS = [23, 104, 185, 347, 428];
 
@@ -62,7 +74,10 @@ const CIVILS = [23, 104, 185, 347, 428];
  */
 export function tenue(apparence = 0, metier = null) {
   const a = Math.abs(apparence | 0);
-  const t = { base: CIVILS[a % CIVILS.length], haut: a % 3 === 0 ? null : HAUTS[(a * 5 + 2) % HAUTS.length] };
+  const t = {
+    base: CIVILS[a % CIVILS.length], haut: a % 3 === 0 ? null : HAUTS[(a * 5 + 2) % HAUTS.length],
+    peau: Math.floor(a / 2) % PEAUX.length, cheveux: Math.floor(a / 5) % CHEVEUX.length, casque: Math.floor(a / 3) % CASQUES.length,
+  };
   if (metier === 'mecano') { t.base = PERSONNES.ouvrier; t.haut = a % 2 ? null : '#2f6fdb'; }
   if (metier === 'ingenieur') { t.base = a % 2 ? PERSONNES.chauve : PERSONNES.lunettes; t.haut = '#f4f6fb'; }
   if (metier === 'commercial') { t.base = PERSONNES.rouge; t.haut = ['#c2504d', '#3fa34d', '#8a6ad6'][a % 3]; }
@@ -77,7 +92,7 @@ const cachePersos = new Map();
  * Kenney Tiny (par exemple le fermier de Tiny Farm) à la place.
  */
 export function spritePerso(t, dir = 'face', pas = 0) {
-  const cle = t.tuile ? `t${t.tuile.join()}` : `${t.base}${t.haut}${dir}${pas}`;
+  const cle = t.tuile ? `t${t.tuile.join()}` : `${t.base}${t.haut}${t.peau | 0}${t.cheveux | 0}${t.casque | 0}${dir}${pas}`;
   if (cachePersos.has(cle)) return cachePersos.get(cle);
   const { c, ctx } = toile(16, 16);
   if (t.tuile) {
@@ -87,6 +102,9 @@ export function spritePerso(t, dir = 'face', pas = 0) {
     const n = base + (DIRECTIONS[dir] ?? 1) + (pas % 3) * COLONNES_URBAIN;
     ctx.drawImage(planches.urbain, (n % COLONNES_URBAIN) * 16, Math.floor(n / COLONNES_URBAIN) * 16, 16, 16, 0, 0, 16, 16);
     if (t.haut && VETEMENT[base]) recolorer(ctx, VETEMENT[base], [t.haut, melangerCouleur(t.haut, '#000000', 0.18)]);
+    if (PEAUX[t.peau] && base !== PERSONNES.ouvrier) recolorer(ctx, PEAU, PEAUX[t.peau]);
+    if (CHEVEUX[t.cheveux] && AVEC_CHEVEUX.includes(base)) recolorer(ctx, CHEVEUX_DE, CHEVEUX[t.cheveux]);
+    if (CASQUES[t.casque] && base === PERSONNES.ouvrier) recolorer(ctx, CASQUE_DE, CASQUES[t.casque]);
   }
   if (planches.urbain || t.tuile) cachePersos.set(cle, c);
   return c;

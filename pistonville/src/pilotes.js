@@ -182,4 +182,4 @@ export const pointsAPlacer = (partie) => partie.pilotes.reduce((t, p) => t + p.p
 export const talentPilote = (p) => -0.04 + 0.006 * p.stats.technique + 0.004 * p.stats.sangfroid + 0.002 * p.niveau;
 
 /** La tenue d'un pilote : le sportif au bandeau (Kenney), combinaison à sa couleur. */
-export const tenuePilote = (p) => ({ base: PERSONNES.bandeau, haut: p?.casque || '#e4432d' });
+export const tenuePilote = (p) => ({ base: PERSONNES.bandeau, haut: p?.casque || '#e4432d', peau: p?.trait === 'fondatrice' ? 0 : Math.floor((p?.apparence || 0) / 2) % 4 });

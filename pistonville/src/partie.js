@@ -168,6 +168,15 @@ function migrer(p) {
     delete p.installations;
   }
   for (const i of p.inventaire) p.collection[i.piece] = true;
+  // Avant, l'apparence du personnel n'avait que 6 valeurs : on l'étale (de façon stable).
+  for (const s of p.personnel || []) {
+    if (s.apparence < 6 && !s.apparenceEtalee) {
+      let h = 7;
+      for (const ch of String(s.uid)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      s.apparence += 6 * (h % 10);
+      s.apparenceEtalee = true;
+    }
+  }
   p.version = VERSION;
   return p;
 }

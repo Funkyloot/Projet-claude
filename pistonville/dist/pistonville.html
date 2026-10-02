@@ -1415,11 +1415,24 @@ body {
     347: ["#aaa8bd", "#898ca6"],
     428: ["#aaa8bd", "#898ca6"]
   };
+  var PEAU = ["#ffc999", "#f1b089", "#ffc8a1"];
+  var PEAUX = [null, ["#e0a478", "#c88c64", "#e0a67e"], ["#a86c48", "#8c583a", "#a86e4c"], ["#6e442c", "#5a3622", "#70462e"]];
+  var CHEVEUX_DE = ["#dc8652", "#c57652"];
+  var CHEVEUX = [null, ["#3a2e2a", "#2a201e"], ["#e8c860", "#c8a440"], ["#70483a", "#583828"]];
+  var AVEC_CHEVEUX = [23, 104];
+  var CASQUE_DE = ["#f5a94c", "#da923e", "#bc7d36"];
+  var CASQUES = [null, ["#f4f6fb", "#d6dae6", "#b8bfd0"], ["#e4432d", "#c2382a", "#a42e22"], ["#4f8ff0", "#2f6fdb", "#2558b0"]];
   var HAUTS = ["#c2504d", "#2f6fdb", "#3fa34d", "#f2c14e", "#8a6ad6", "#e86ca6", "#f39c33", "#4fc3d8", "#f4f6fb"];
   var CIVILS = [23, 104, 185, 347, 428];
   function tenue(apparence = 0, metier = null) {
     const a = Math.abs(apparence | 0);
-    const t = { base: CIVILS[a % CIVILS.length], haut: a % 3 === 0 ? null : HAUTS[(a * 5 + 2) % HAUTS.length] };
+    const t = {
+      base: CIVILS[a % CIVILS.length],
+      haut: a % 3 === 0 ? null : HAUTS[(a * 5 + 2) % HAUTS.length],
+      peau: Math.floor(a / 2) % PEAUX.length,
+      cheveux: Math.floor(a / 5) % CHEVEUX.length,
+      casque: Math.floor(a / 3) % CASQUES.length
+    };
     if (metier === "mecano") {
       t.base = PERSONNES.ouvrier;
       t.haut = a % 2 ? null : "#2f6fdb";
@@ -1436,7 +1449,7 @@ body {
   }
   var cachePersos = /* @__PURE__ */ new Map();
   function spritePerso(t, dir = "face", pas = 0) {
-    const cle = t.tuile ? `t${t.tuile.join()}` : `${t.base}${t.haut}${dir}${pas}`;
+    const cle = t.tuile ? `t${t.tuile.join()}` : `${t.base}${t.haut}${t.peau | 0}${t.cheveux | 0}${t.casque | 0}${dir}${pas}`;
     if (cachePersos.has(cle)) return cachePersos.get(cle);
     const { c: c3, ctx } = toile(16, 16);
     if (t.tuile) {
@@ -1446,6 +1459,9 @@ body {
       const n = base + (DIRECTIONS[dir] ?? 1) + pas % 3 * COLONNES_URBAIN;
       ctx.drawImage(planches.urbain, n % COLONNES_URBAIN * 16, Math.floor(n / COLONNES_URBAIN) * 16, 16, 16, 0, 0, 16, 16);
       if (t.haut && VETEMENT[base]) recolorer(ctx, VETEMENT[base], [t.haut, melangerCouleur(t.haut, "#000000", 0.18)]);
+      if (PEAUX[t.peau] && base !== PERSONNES.ouvrier) recolorer(ctx, PEAU, PEAUX[t.peau]);
+      if (CHEVEUX[t.cheveux] && AVEC_CHEVEUX.includes(base)) recolorer(ctx, CHEVEUX_DE, CHEVEUX[t.cheveux]);
+      if (CASQUES[t.casque] && base === PERSONNES.ouvrier) recolorer(ctx, CASQUE_DE, CASQUES[t.casque]);
     }
     if (planches.urbain || t.tuile) cachePersos.set(cle, c3);
     return c3;
@@ -4934,7 +4950,7 @@ body {
     p3.salaire = salairePilote(p3);
     return p3;
   }
-  var CASQUES = ["#e4432d", "#2f6fdb", "#3fa34d", "#f2c14e", "#8a6ad6", "#f39c33", "#e86ca6", "#f4f6fb", "#2a2838", "#4fc3d8"];
+  var CASQUES2 = ["#e4432d", "#2f6fdb", "#3fa34d", "#f2c14e", "#8a6ad6", "#f39c33", "#e86ca6", "#f4f6fb", "#2a2838", "#4fc3d8"];
   var titulaire = (partie) => partie.pilotes.find((p3) => p3.uid === partie.titulaire) || partie.pilotes[0] || null;
   function engagement(partie) {
     const t = titulaire(partie);
@@ -4996,7 +5012,7 @@ body {
         moral: 75,
         impayes: 0,
         apparence: Math.floor(alea() * 60),
-        casque: CASQUES[Math.floor(alea() * CASQUES.length)]
+        casque: CASQUES2[Math.floor(alea() * CASQUES2.length)]
       };
       p3.salaire = salairePilote(p3);
       liste.push(p3);
@@ -5054,7 +5070,7 @@ body {
   }
   var pointsAPlacer = (partie) => partie.pilotes.reduce((t, p3) => t + p3.points, 0);
   var talentPilote = (p3) => -0.04 + 6e-3 * p3.stats.technique + 4e-3 * p3.stats.sangfroid + 2e-3 * p3.niveau;
-  var tenuePilote = (p3) => ({ base: PERSONNES.bandeau, haut: p3?.casque || "#e4432d" });
+  var tenuePilote = (p3) => ({ base: PERSONNES.bandeau, haut: p3?.casque || "#e4432d", peau: p3?.trait === "fondatrice" ? 0 : Math.floor((p3?.apparence || 0) / 2) % 4 });
 
   // pistonville/src/garage.js
   var COLONNES_TERRAIN = 8;
@@ -5222,7 +5238,7 @@ body {
       for (const k of Object.keys(stats)) stats[k] = Math.max(1, stats[k]);
       const prenom = PRENOMS[Math.floor(alea() * PRENOMS.length)];
       const surnom = alea() < 0.35 ? ` \xAB ${SURNOMS[Math.floor(alea() * SURNOMS.length)]} \xBB` : "";
-      const s2 = { uid: uid2("s"), nom: `${prenom}${surnom}`, metier, stats, niveau: 1, potentiel, trait, energie: 100, moral: 70, impayes: 0, poste: null, apparence: Math.floor(alea() * 6) };
+      const s2 = { uid: uid2("s"), nom: `${prenom}${surnom}`, metier, stats, niveau: 1, potentiel, trait, energie: 100, moral: 70, impayes: 0, poste: null, apparence: Math.floor(alea() * 60), apparenceEtalee: true };
       s2.salaire = salaireDe(s2);
       liste.push(s2);
     }
@@ -5565,6 +5581,14 @@ body {
       delete p3.installations;
     }
     for (const i of p3.inventaire) p3.collection[i.piece] = true;
+    for (const s2 of p3.personnel || []) {
+      if (s2.apparence < 6 && !s2.apparenceEtalee) {
+        let h = 7;
+        for (const ch of String(s2.uid)) h = h * 31 + ch.charCodeAt(0) >>> 0;
+        s2.apparence += 6 * (h % 10);
+        s2.apparenceEtalee = true;
+      }
+    }
     p3.version = VERSION;
     return p3;
   }
@@ -6249,6 +6273,33 @@ body {
   var Y0 = 184;
   var NOMS_DIRECTION2 = ["gauche", "face", "dos", "droite"];
   var PAROLES = { mecano: ["Clac !", "Serr\xE9 !", "Huile ?"], ingenieur: ["Eur\xEAka !", "Hmm\u2026", "3,14"], commercial: ["Merci !", "Promo !", "Souriez !"] };
+  var POSTES = {
+    pont: [[12, 50, "droite", "meca"], [52, 50, "gauche", "meca"]],
+    "bureau-etudes": [[32, 37, "dos", "ordi"], [16, 37, "dos", "ordi"]],
+    analyse: [[22, 39, "dos", "ordi"], [46, 39, "dos", "ordi"]],
+    soufflerie: [[52, 58, "gauche", "observe"]],
+    precision: [[30, 30, "dos", "meca"]],
+    banc: [[40, 30, "dos", "ordi"]],
+    "simu-route": [[22, 30, "dos", "ordi"]],
+    "simu-terre": [[22, 30, "dos", "ordi"]],
+    "simu-glace": [[22, 30, "dos", "ordi"]],
+    cafeteria: [[42, 28, "face", "vente"]],
+    boutique: [[22, 28, "face", "vente"]],
+    tribune: [[32, 62, "face", "vente"]],
+    repos: [[12, 29, "face", "dort"], [24, 29, "face", "dort"], [36, 29, "face", "dort"]]
+  };
+  var posteDe = (id, rang) => {
+    const l = POSTES[id];
+    return l ? l[rang % l.length] : [32, 28, "dos", "ordi"];
+  };
+  var BADGES = {
+    mecano: { fond: "#e07b24", motif: ["..##.", "...#.", "..##.", ".#...", "#...."] },
+    // une clé
+    ingenieur: { fond: "#2f6fdb", motif: [".###.", "#...#", "#...#", ".###.", "..#.."] },
+    // une ampoule
+    commercial: { fond: "#2f9e48", motif: [".###.", "#....", ".###.", "....#", ".###."] }
+    // un S (ventes)
+  };
   var SceneGarage = class {
     constructor(planche, tiny = {}) {
       this.planche = planche;
@@ -6310,7 +6361,18 @@ body {
       for (let x = b2.x; x < b2.x + d2.l; x++) essais.push([x, b2.y + d2.h]);
       for (let y = b2.y; y < b2.y + d2.h; y++) essais.push([b2.x - 1, y], [b2.x + d2.l, y]);
       for (let x = b2.x; x < b2.x + d2.l; x++) essais.push([x, b2.y - 1]);
-      return essais.filter(([x, y]) => libre[y]?.[x]).map(([x, y]) => ({ x, y }));
+      const portes = essais.filter(([x, y]) => libre[y]?.[x]).map(([x, y]) => ({ x, y }));
+      if (portes.length) return portes;
+      let best = null, dmin = Infinity;
+      for (let y = 0; y < libre.length; y++) for (let x = 0; x < libre[0].length; x++) {
+        if (!libre[y][x]) continue;
+        const dx = Math.max(b2.x - x, 0, x - (b2.x + d2.l - 1)), dy = Math.max(b2.y - y, 0, y - (b2.y + d2.h - 1));
+        if (dx + dy < dmin) {
+          dmin = dx + dy;
+          best = { x, y };
+        }
+      }
+      return best ? [best] : [];
     }
     caseLibreAuHasard(libre, pres2 = null, rayon = 99) {
       const cases = [];
@@ -6393,11 +6455,11 @@ body {
           m = { x: depart.x, y: depart.y, chemin: [], vers: null, attente: Math.random() * 2, bulle: null, dir: DIRECTION.face };
           this.marcheurs.set(s2.uid, m);
         }
-        m.dedans = null;
         if (cible) {
           if (!m.vers || m.vers.x !== cible.x || m.vers.y !== cible.y) {
             m.vers = cible;
             m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, cible);
+            m.entree = 0;
           }
         } else if (!m.chemin.length && m.attente <= 0) {
           const but = this.caseLibreAuHasard(libre, m, 3);
@@ -6407,6 +6469,7 @@ body {
           }
           m.attente = 2 + Math.random() * 4;
         }
+        m.poste = null;
         if (m.chemin.length) {
           const n = m.chemin[0];
           const dx = n.x - m.x, dy = n.y - m.y;
@@ -6422,14 +6485,14 @@ body {
           }
           m.dir = Math.abs(dx) > Math.abs(dy) ? dx > 0 ? DIRECTION.droite : DIRECTION.gauche : dy > 0 ? DIRECTION.face : DIRECTION.dos;
           m.marche = true;
+          m.entree = 0;
         } else {
           m.marche = false;
           if (lieu && cible) {
-            const d2 = batiment(lieu.id);
-            if (cible.y >= lieu.y + d2.h) m.dir = DIRECTION.dos;
-            else if (cible.y < lieu.y) m.dir = DIRECTION.face;
-            else m.dir = cible.x < lieu.x ? DIRECTION.droite : DIRECTION.gauche;
-            if (salle) m.dedans = { x: lieu.x + 0.1 + rangDansLieu % 3 * 0.55, y: lieu.y - 0.25 + d2.h - 1 };
+            const [px, py, dir, tache] = posteDe(lieu.id, rangDansLieu);
+            m.poste = { x: lieu.x + px / CASE, y: lieu.y + py / CASE, dir, tache: salle ? "dort" : tache };
+            m.entree = Math.min(1, (m.entree || 0) + dt * 2.5);
+            if (m.entree < 1) m.marche = true;
           }
           m.attente -= dt;
           if (m.attente <= 0 && lieu) {
@@ -6501,17 +6564,40 @@ body {
         ctx.fillStyle = e3.vie > 0.2 ? "#ffe066" : "#f39c33";
         ctx.fillRect(Math.round(e3.x), Math.round(e3.y), 2, 2);
       }
-      const persos = partie.personnel.map((s2) => ({ s: s2, m: this.marcheurs.get(s2.uid) })).filter((x) => x.m).map((x) => ({ ...x, pos: x.m.dedans || x.m })).sort((a, b2) => a.pos.y - b2.pos.y);
-      for (const { s: s2, m, pos } of persos) {
-        const px = o3.x + pos.x * CASE + 16, py = o3.y + pos.y * CASE + 26;
-        const pas = m.marche ? Math.floor(t * 6) % 2 + 1 : 0;
-        dessinerPerso(ctx, tenue(s2.apparence, s2.metier), px, py, NOMS_DIRECTION2[m.dir] || "face", pas);
-        if (s2.auRepos) {
-          ctx.fillStyle = "#7dd3fc";
-          ctx.fillRect(px + 6, py - 18, 3, 3);
+      const persos = partie.personnel.map((s2) => ({ s: s2, m: this.marcheurs.get(s2.uid) })).filter((x) => x.m).map((x) => {
+        const m = x.m;
+        const porte = { x: o3.x + m.x * CASE + 16, y: o3.y + m.y * CASE + 26 };
+        let pos = porte;
+        if (m.poste) {
+          const p3 = { x: o3.x + m.poste.x * CASE, y: o3.y + m.poste.y * CASE };
+          const k = Math.hypot(p3.x - porte.x, p3.y - porte.y) > 2.5 * CASE ? 1 : m.entree ?? 1;
+          pos = { x: porte.x + (p3.x - porte.x) * k, y: porte.y + (p3.y - porte.y) * k };
         }
+        return { ...x, pos };
+      }).sort((a, b2) => a.pos.y - b2.pos.y);
+      for (const { s: s2, m, pos } of persos) {
+        const phase = (s2.uid.charCodeAt(s2.uid.length - 1) || 0) * 0.7;
+        const auPoste = m.poste && (m.entree >= 1 || Math.hypot(pos.x - (o3.x + m.poste.x * CASE), pos.y - (o3.y + m.poste.y * CASE)) < 1);
+        const tache = auPoste ? m.poste.tache : null;
+        let dir = NOMS_DIRECTION2[m.dir] || "face", pas = m.marche ? Math.floor(t * 6) % 2 + 1 : 0, dy = 0;
+        if (auPoste) dir = m.poste.dir;
+        if (tache === "meca") pas = Math.floor(t * 5 + phase) % 2 + 1;
+        if (tache === "ordi") dy = Math.sin(t * 9 + phase) > 0.7 ? -1 : 0;
+        if (tache === "vente") {
+          pas = Math.sin(t * 2 + phase) > 0.6 ? 1 : 0;
+          dy = Math.sin(t * 4 + phase) > 0.8 ? -1 : 0;
+        }
+        if (tache === "observe" && Math.sin(t * 0.8 + phase) > 0.3) dir = "dos";
+        const px = Math.round(pos.x), py = Math.round(pos.y);
+        if (py < -20 || py > H3 + 20) continue;
+        dessinerPerso(ctx, tenue(s2.apparence, s2.metier), px, py + dy, dir, pas);
+        this.dessinerTache(ctx, tache, px, py, dir, t + phase);
+        this.dessinerBadge(ctx, s2, px, py - 22);
       }
-      for (const { m, pos } of persos) if (m.bulle) bulle(ctx, o3.x + pos.x * CASE + 16, o3.y + pos.y * CASE + 8, m.bulle.texte);
+      for (const { m, pos } of persos) if (m.bulle) bulle(ctx, Math.round(pos.x), Math.round(pos.y) - 30, m.bulle.texte);
+      if (this.selection) {
+        for (const { s: s2, pos } of persos) if (s2.poste === this.selection) texte(ctx, s2.nom.split(" ")[0], Math.round(pos.x), Math.round(pos.y) + 7, 8, "#ffffff", "center");
+      }
       for (const f of this.flottants) {
         texte(ctx, f.texte, o3.x + f.cx * CASE, o3.y + f.cy * CASE - 4 + f.y, 9, "#ffe066", "center");
       }
@@ -6589,6 +6675,54 @@ body {
         liste.push({ couleur: dv.couleur, looks: dv.looks, modele: modeleVoiture(dv.profil, dv.id), active: v2 === active });
       }
       return liste;
+    }
+    /** Ce que fait la personne à son poste : étincelles, écran qui clignote, pièces, Zzz. */
+    dessinerTache(ctx, tache, x, y, dir, t) {
+      if (tache === "meca") {
+        const cote = dir === "gauche" ? -1 : dir === "droite" ? 1 : 0;
+        const hx = x + cote * 7, hy = y - 7 - Math.floor(t * 5) % 2;
+        ctx.fillStyle = "#26182e";
+        ctx.fillRect(hx - 1, hy - 1, 4, 3);
+        ctx.fillStyle = "#c0cbdc";
+        ctx.fillRect(hx, hy, 2, 1);
+        if (Math.sin(t * 7) > 0.85) {
+          ctx.fillStyle = "#ffe066";
+          for (let i = 0; i < 3; i++) ctx.fillRect(hx + cote * (2 + i * 2) + (i - 1), hy - 2 - i, 1, 1);
+        }
+      } else if (tache === "ordi") {
+        const k = Math.floor(t * 3) % 3;
+        ctx.fillStyle = "#26182e";
+        ctx.fillRect(x - 6, y - 26, 12, 7);
+        ctx.fillStyle = "#112233";
+        ctx.fillRect(x - 5, y - 25, 10, 5);
+        ctx.fillStyle = ["#7dd3fc", "#9fe870", "#ffe066"][k];
+        ctx.fillRect(x - 4, y - 24, 3 + k * 2, 1);
+        ctx.fillRect(x - 4, y - 22, 7 - k * 2, 1);
+      } else if (tache === "vente") {
+        if (Math.sin(t * 1.3) > 0.9) texte(ctx, "+G", x + 9, y - 18 - Math.floor(t * 6 % 4), 8, "#ffe066", "center");
+      } else if (tache === "dort") {
+        const k = t * 0.8 % 1;
+        texte(ctx, "z", x + 6 + k * 4, y - 18 - k * 8, 8, "#cfe0ff", "center");
+      }
+    }
+    /** Badge du métier au-dessus de la tête, et l'énergie en dessous. */
+    dessinerBadge(ctx, s2, x, y) {
+      const b2 = BADGES[s2.metier];
+      if (!b2) return;
+      const fond = s2.auRepos ? "#5c6a8a" : b2.fond;
+      ctx.fillStyle = "#26182e";
+      ctx.fillRect(x - 5, y - 9, 11, 9);
+      ctx.fillStyle = fond;
+      ctx.fillRect(x - 4, y - 8, 9, 7);
+      ctx.fillStyle = "#ffffff";
+      b2.motif.forEach((ligne, j) => {
+        for (let i = 0; i < 5; i++) if (ligne[i] === "#") ctx.fillRect(x - 2 + i, y - 7 + j, 1, 1);
+      });
+      const e3 = Math.max(0, Math.min(1, (s2.energie ?? 100) / 100));
+      ctx.fillStyle = "#26182e";
+      ctx.fillRect(x - 5, y, 11, 3);
+      ctx.fillStyle = e3 > 0.5 ? "#5ad16a" : e3 > 0.25 ? "#f2c14e" : "#e4432d";
+      ctx.fillRect(x - 4, y + 1, Math.max(1, Math.round(9 * e3)), 1);
     }
     /** La voiture se monte de l'arrière vers l'avant, puis reçoit sa peinture. */
     dessinerChantier(ctx, cx, cy, t) {
@@ -6685,7 +6819,6 @@ body {
         rangee(ctx, tiny, [111, 112, null, 100], x, y + 14);
         rangee(ctx, tiny, [54, 55, 56], x + 8, y + 38);
         tuileTiny(ctx, tiny, "town", 17, x + w - 16, y + 44);
-        perso(ctx, x + 32, y + 36, 7, "dos");
         return nom();
       case "soufflerie":
         piece2(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
@@ -6712,7 +6845,6 @@ body {
         piece2(ctx, tiny, x, y, w, h, [44, 57, 58, 45]);
         rangee(ctx, tiny, [111, 112, 113, 99], x, y + 14);
         rangee(ctx, tiny, [54, 55, 56], x + 8, y + 40);
-        perso(ctx, x + 22, y + 38, 3, "dos");
         return nom();
       case "repos": {
         piece2(ctx, tiny, x, y, w, h, [44, 58, 59, 45]);

@@ -20,6 +20,38 @@ const Y0 = 184;                                          // haut du terrain (sou
 const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 const PAROLES = { mecano: ['Clac !', 'Serré !', 'Huile ?'], ingenieur: ['Eurêka !', 'Hmm…', '3,14'], commercial: ['Merci !', 'Promo !', 'Souriez !'] };
 
+/**
+ * Les postes de travail, dans chaque pièce : où se tient la personne (pieds,
+ * en pixels depuis le coin de la pièce), vers où elle regarde, et ce qu'elle
+ * fait : meca (clé à la main, étincelles), ordi (devant l'écran), vente
+ * (derrière le comptoir), observe (surveille la soufflerie), dort (salle de repos).
+ */
+const POSTES = {
+  pont: [[12, 50, 'droite', 'meca'], [52, 50, 'gauche', 'meca']],
+  'bureau-etudes': [[32, 37, 'dos', 'ordi'], [16, 37, 'dos', 'ordi']],
+  analyse: [[22, 39, 'dos', 'ordi'], [46, 39, 'dos', 'ordi']],
+  soufflerie: [[52, 58, 'gauche', 'observe']],
+  precision: [[30, 30, 'dos', 'meca']],
+  banc: [[40, 30, 'dos', 'ordi']],
+  'simu-route': [[22, 30, 'dos', 'ordi']],
+  'simu-terre': [[22, 30, 'dos', 'ordi']],
+  'simu-glace': [[22, 30, 'dos', 'ordi']],
+  cafeteria: [[42, 28, 'face', 'vente']],
+  boutique: [[22, 28, 'face', 'vente']],
+  tribune: [[32, 62, 'face', 'vente']],
+  repos: [[12, 29, 'face', 'dort'], [24, 29, 'face', 'dort'], [36, 29, 'face', 'dort']],
+};
+const posteDe = (id, rang) => {
+  const l = POSTES[id];
+  return l ? l[rang % l.length] : [32, 28, 'dos', 'ordi'];
+};
+/** Couleur et pictogramme de chaque métier (badge au-dessus de la tête). */
+const BADGES = {
+  mecano: { fond: '#e07b24', motif: ['..##.', '...#.', '..##.', '.#...', '#....'] },        // une clé
+  ingenieur: { fond: '#2f6fdb', motif: ['.###.', '#...#', '#...#', '.###.', '..#..'] },     // une ampoule
+  commercial: { fond: '#2f9e48', motif: ['.###.', '#....', '.###.', '....#', '.###.'] },   // un S (ventes)
+};
+
 export class SceneGarage {
   constructor(planche, tiny = {}) {
     this.planche = planche;
@@ -84,7 +116,16 @@ export class SceneGarage {
     for (let x = b.x; x < b.x + d.l; x++) essais.push([x, b.y + d.h]);
     for (let y = b.y; y < b.y + d.h; y++) essais.push([b.x - 1, y], [b.x + d.l, y]);
     for (let x = b.x; x < b.x + d.l; x++) essais.push([x, b.y - 1]);
-    return essais.filter(([x, y]) => libre[y]?.[x]).map(([x, y]) => ({ x, y }));
+    const portes = essais.filter(([x, y]) => libre[y]?.[x]).map(([x, y]) => ({ x, y }));
+    if (portes.length) return portes;
+    // Pièce entourée d'autres pièces : on y entre par la case libre la plus proche.
+    let best = null, dmin = Infinity;
+    for (let y = 0; y < libre.length; y++) for (let x = 0; x < libre[0].length; x++) {
+      if (!libre[y][x]) continue;
+      const dx = Math.max(b.x - x, 0, x - (b.x + d.l - 1)), dy = Math.max(b.y - y, 0, y - (b.y + d.h - 1));
+      if (dx + dy < dmin) { dmin = dx + dy; best = { x, y }; }
+    }
+    return best ? [best] : [];
   }
 
   caseLibreAuHasard(libre, pres = null, rayon = 99) {
@@ -149,9 +190,9 @@ export class SceneGarage {
       }
     }
 
-    // Personnel, façon Kairosoft : chacun à son poste (une place par personne
-    // autour du bâtiment), les fatigués DANS la salle de repos, les autres se
-    // promènent dans les allées. Jamais tous entassés dans un coin.
+    // Personnel, façon Kairosoft : chacun va à la porte de sa pièce, y entre et
+    // s'installe à son poste (voir POSTES) ; les fatigués vont s'asseoir en
+    // salle de repos ; ceux sans poste se promènent dans les allées.
     const libre = this.grilleLibre(partie);
     const repos = partie.terrain.batiments.filter((b) => b.id === 'repos');
     const occupation = new Map();   // bâtiment → nombre de personnes déjà placées
@@ -169,11 +210,11 @@ export class SceneGarage {
         m = { x: depart.x, y: depart.y, chemin: [], vers: null, attente: Math.random() * 2, bulle: null, dir: DIRECTION.face };
         this.marcheurs.set(s.uid, m);
       }
-      m.dedans = null;
       if (cible) {
         if (!m.vers || m.vers.x !== cible.x || m.vers.y !== cible.y) {
           m.vers = cible;
           m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, cible);
+          m.entree = 0;
         }
       } else if (!m.chemin.length && m.attente <= 0) {
         // Sans poste : une petite promenade vers une case libre proche.
@@ -181,6 +222,7 @@ export class SceneGarage {
         if (but) { m.vers = but; m.chemin = this.chemin(libre, { x: Math.round(m.x), y: Math.round(m.y) }, but); }
         m.attente = 2 + Math.random() * 4;
       }
+      m.poste = null;
       if (m.chemin.length) {
         const n = m.chemin[0];
         const dx = n.x - m.x, dy = n.y - m.y;
@@ -190,15 +232,15 @@ export class SceneGarage {
         else { m.x += (dx / d) * v; m.y += (dy / d) * v; }
         m.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? DIRECTION.droite : DIRECTION.gauche) : (dy > 0 ? DIRECTION.face : DIRECTION.dos);
         m.marche = true;
+        m.entree = 0;
       } else {
         m.marche = false;
         if (lieu && cible) {
-          // Arrivé : il se tourne vers son bâtiment ; en salle de repos, il entre s'asseoir.
-          const d = batiment(lieu.id);
-          if (cible.y >= lieu.y + d.h) m.dir = DIRECTION.dos;
-          else if (cible.y < lieu.y) m.dir = DIRECTION.face;
-          else m.dir = cible.x < lieu.x ? DIRECTION.droite : DIRECTION.gauche;
-          if (salle) m.dedans = { x: lieu.x + 0.1 + (rangDansLieu % 3) * 0.55, y: lieu.y - 0.25 + d.h - 1 };
+          // Arrivé à la porte : il entre dans la pièce et s'installe à son poste.
+          const [px, py, dir, tache] = posteDe(lieu.id, rangDansLieu);
+          m.poste = { x: lieu.x + px / CASE, y: lieu.y + py / CASE, dir, tache: salle ? 'dort' : tache };
+          m.entree = Math.min(1, (m.entree || 0) + dt * 2.5);
+          if (m.entree < 1) m.marche = true;
         }
         m.attente -= dt;
         if (m.attente <= 0 && lieu) {
@@ -273,16 +315,43 @@ export class SceneGarage {
 
     for (const e of this.etincelles) { ctx.fillStyle = e.vie > 0.2 ? '#ffe066' : '#f39c33'; ctx.fillRect(Math.round(e.x), Math.round(e.y), 2, 2); }
 
-    // Personnel : petits personnages modernes (casque jaune des mécanos, blouse des ingénieurs).
-    const persos = partie.personnel.map((s) => ({ s, m: this.marcheurs.get(s.uid) })).filter((x) => x.m)
-      .map((x) => ({ ...x, pos: x.m.dedans || x.m })).sort((a, b) => a.pos.y - b.pos.y);
+    // Personnel : chacun à son poste, dans sa pièce, en train de travailler ;
+    // un badge de couleur dit son métier (clé : mécano, ampoule : ingénieur,
+    // S : commercial), une petite barre son énergie.
+    const persos = partie.personnel.map((s) => ({ s, m: this.marcheurs.get(s.uid) })).filter((x) => x.m).map((x) => {
+      const m = x.m;
+      // Position en pixels : la porte (case), puis le poste, en glissant à l'entrée.
+      const porte = { x: o.x + m.x * CASE + 16, y: o.y + m.y * CASE + 26 };
+      let pos = porte;
+      if (m.poste) {
+        const p = { x: o.x + m.poste.x * CASE, y: o.y + m.poste.y * CASE };
+        // Porte lointaine (pièce enclavée) : il apparaît directement à son poste.
+        const k = Math.hypot(p.x - porte.x, p.y - porte.y) > 2.5 * CASE ? 1 : m.entree ?? 1;
+        pos = { x: porte.x + (p.x - porte.x) * k, y: porte.y + (p.y - porte.y) * k };
+      }
+      return { ...x, pos };
+    }).sort((a, b) => a.pos.y - b.pos.y);
     for (const { s, m, pos } of persos) {
-      const px = o.x + pos.x * CASE + 16, py = o.y + pos.y * CASE + 26;
-      const pas = m.marche ? (Math.floor(t * 6) % 2) + 1 : 0;
-      dessinerPerso(ctx, tenue(s.apparence, s.metier), px, py, NOMS_DIRECTION[m.dir] || 'face', pas);
-      if (s.auRepos) { ctx.fillStyle = '#7dd3fc'; ctx.fillRect(px + 6, py - 18, 3, 3); }
+      const phase = (s.uid.charCodeAt(s.uid.length - 1) || 0) * 0.7;
+      const auPoste = m.poste && (m.entree >= 1 || Math.hypot(pos.x - (o.x + m.poste.x * CASE), pos.y - (o.y + m.poste.y * CASE)) < 1);
+      const tache = auPoste ? m.poste.tache : null;
+      let dir = NOMS_DIRECTION[m.dir] || 'face', pas = m.marche ? (Math.floor(t * 6) % 2) + 1 : 0, dy = 0;
+      if (auPoste) dir = m.poste.dir;
+      if (tache === 'meca') pas = (Math.floor(t * 5 + phase) % 2) + 1;                  // il serre, il tape
+      if (tache === 'ordi') dy = Math.sin(t * 9 + phase) > 0.7 ? -1 : 0;                  // il pianote
+      if (tache === 'vente') { pas = Math.sin(t * 2 + phase) > 0.6 ? 1 : 0; dy = Math.sin(t * 4 + phase) > 0.8 ? -1 : 0; }
+      if (tache === 'observe' && Math.sin(t * 0.8 + phase) > 0.3) dir = 'dos';
+      const px = Math.round(pos.x), py = Math.round(pos.y);
+      if (py < -20 || py > H + 20) continue;
+      dessinerPerso(ctx, tenue(s.apparence, s.metier), px, py + dy, dir, pas);
+      this.dessinerTache(ctx, tache, px, py, dir, t + phase);
+      this.dessinerBadge(ctx, s, px, py - 22);
     }
-    for (const { m, pos } of persos) if (m.bulle) bulle(ctx, o.x + pos.x * CASE + 16, o.y + pos.y * CASE + 8, m.bulle.texte);
+    for (const { m, pos } of persos) if (m.bulle) bulle(ctx, Math.round(pos.x), Math.round(pos.y) - 30, m.bulle.texte);
+    // Bâtiment touché : le nom de ceux qui y travaillent, sous leurs pieds.
+    if (this.selection) {
+      for (const { s, pos } of persos) if (s.poste === this.selection) texte(ctx, s.nom.split(' ')[0], Math.round(pos.x), Math.round(pos.y) + 7, 8, '#ffffff', 'center');
+    }
 
     for (const f of this.flottants) {
       texte(ctx, f.texte, o.x + f.cx * CASE, o.y + f.cy * CASE - 4 + f.y, 9, '#ffe066', 'center');
@@ -365,6 +434,48 @@ export class SceneGarage {
       liste.push({ couleur: dv.couleur, looks: dv.looks, modele: modeleVoiture(dv.profil, dv.id), active: v === active });
     }
     return liste;
+  }
+
+  /** Ce que fait la personne à son poste : étincelles, écran qui clignote, pièces, Zzz. */
+  dessinerTache(ctx, tache, x, y, dir, t) {
+    if (tache === 'meca') {
+      // Clé dans la main tendue vers le travail, étincelles par moments.
+      const cote = dir === 'gauche' ? -1 : dir === 'droite' ? 1 : 0;
+      const hx = x + cote * 7, hy = y - 7 - (Math.floor(t * 5) % 2);
+      ctx.fillStyle = '#26182e'; ctx.fillRect(hx - 1, hy - 1, 4, 3);
+      ctx.fillStyle = '#c0cbdc'; ctx.fillRect(hx, hy, 2, 1);
+      if (Math.sin(t * 7) > 0.85) {
+        ctx.fillStyle = '#ffe066';
+        for (let i = 0; i < 3; i++) ctx.fillRect(hx + cote * (2 + i * 2) + (i - 1), hy - 2 - i, 1, 1);
+      }
+    } else if (tache === 'ordi') {
+      // L'écran devant lui s'allume de lignes de code.
+      const k = Math.floor(t * 3) % 3;
+      ctx.fillStyle = '#26182e'; ctx.fillRect(x - 6, y - 26, 12, 7);
+      ctx.fillStyle = '#112233'; ctx.fillRect(x - 5, y - 25, 10, 5);
+      ctx.fillStyle = ['#7dd3fc', '#9fe870', '#ffe066'][k];
+      ctx.fillRect(x - 4, y - 24, 3 + k * 2, 1); ctx.fillRect(x - 4, y - 22, 7 - k * 2, 1);
+    } else if (tache === 'vente') {
+      if (Math.sin(t * 1.3) > 0.9) texte(ctx, '+G', x + 9, y - 18 - Math.floor((t * 6) % 4), 8, '#ffe066', 'center');
+    } else if (tache === 'dort') {
+      const k = (t * 0.8) % 1;
+      texte(ctx, 'z', x + 6 + k * 4, y - 18 - k * 8, 8, '#cfe0ff', 'center');
+    }
+  }
+
+  /** Badge du métier au-dessus de la tête, et l'énergie en dessous. */
+  dessinerBadge(ctx, s, x, y) {
+    const b = BADGES[s.metier];
+    if (!b) return;
+    const fond = s.auRepos ? '#5c6a8a' : b.fond;
+    ctx.fillStyle = '#26182e'; ctx.fillRect(x - 5, y - 9, 11, 9);
+    ctx.fillStyle = fond; ctx.fillRect(x - 4, y - 8, 9, 7);
+    ctx.fillStyle = '#ffffff';
+    b.motif.forEach((ligne, j) => { for (let i = 0; i < 5; i++) if (ligne[i] === '#') ctx.fillRect(x - 2 + i, y - 7 + j, 1, 1); });
+    const e = Math.max(0, Math.min(1, (s.energie ?? 100) / 100));
+    ctx.fillStyle = '#26182e'; ctx.fillRect(x - 5, y, 11, 3);
+    ctx.fillStyle = e > 0.5 ? '#5ad16a' : e > 0.25 ? '#f2c14e' : '#e4432d';
+    ctx.fillRect(x - 4, y + 1, Math.max(1, Math.round(9 * e)), 1);
   }
 
   /** La voiture se monte de l'arrière vers l'avant, puis reçoit sa peinture. */
@@ -457,7 +568,6 @@ export function dessinerBatiment(ctx, tiny, b, d, x, y, w, h, t = 0, avecNom = f
       rangee(ctx, tiny, [111, 112, null, 100], x, y + 14);
       rangee(ctx, tiny, [54, 55, 56], x + 8, y + 38);
       tuileTiny(ctx, tiny, 'town', 17, x + w - 16, y + 44);
-      perso(ctx, x + 32, y + 36, 7, 'dos');
       return nom();
     case 'soufflerie':
       piece(ctx, tiny, x, y, w, h, [44, 46, 47, 45]);
@@ -478,7 +588,6 @@ export function dessinerBatiment(ctx, tiny, b, d, x, y, w, h, t = 0, avecNom = f
       piece(ctx, tiny, x, y, w, h, [44, 57, 58, 45]);
       rangee(ctx, tiny, [111, 112, 113, 99], x, y + 14);
       rangee(ctx, tiny, [54, 55, 56], x + 8, y + 40);
-      perso(ctx, x + 22, y + 38, 3, 'dos');
       return nom();
     case 'repos': {
       piece(ctx, tiny, x, y, w, h, [44, 58, 59, 45]);

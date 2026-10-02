@@ -208,7 +208,7 @@ export function recruter(partie, methodeId) {
     for (const k of Object.keys(stats)) stats[k] = Math.max(1, stats[k]);
     const prenom = PRENOMS[Math.floor(alea() * PRENOMS.length)];
     const surnom = alea() < 0.35 ? ` « ${SURNOMS[Math.floor(alea() * SURNOMS.length)]} »` : '';
-    const s = { uid: uid('s'), nom: `${prenom}${surnom}`, metier, stats, niveau: 1, potentiel, trait, energie: 100, moral: 70, impayes: 0, poste: null, apparence: Math.floor(alea() * 6) };
+    const s = { uid: uid('s'), nom: `${prenom}${surnom}`, metier, stats, niveau: 1, potentiel, trait, energie: 100, moral: 70, impayes: 0, poste: null, apparence: Math.floor(alea() * 60), apparenceEtalee: true };
     s.salaire = salaireDe(s);
     liste.push(s);
   }
