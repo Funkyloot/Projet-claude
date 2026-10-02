@@ -14,14 +14,15 @@
 import { chargerAssets } from './assets.js';
 import { genererCircuit } from './circuit.js';
 import { rendreCircuit, miniCarte } from './rendu-circuit.js';
-import { Course, zonesPanneau } from './course.js';
+import { Course, zonesPanneau, HAUTEUR_PANNEAU } from './course.js';
 import { SceneGarage } from './scene-garage.js';
 import { interieur } from './interieurs.js';
 import { definirPlanches, modeleVoiture } from './tiny.js';
 import { Ville } from './ville.js';
 import { Son } from './son.js';
+import { lireReglages, ecrireReglages } from './reglages.js';
 import {
-  Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranPauseVille, ecranResultats, ecranFinGP,
+  Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranPauseVille, ecranReglages, ecranResultats, ecranFinGP,
   ecranConstruction, ecranRang, texteRecompense, ecranCelebration, ecranCeremonie, ecranFinCarriere, ecranCadeau, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
 } from './ecrans.js';
 import * as P from './partie.js';
@@ -43,15 +44,21 @@ class App {
     this.ui = new Interface(document.getElementById('interface'));
     this.toastEl = document.getElementById('toast');
     this.son = new Son();
+    this.reglages = lireReglages();
+    this.son.regler(this.reglages);
+    // Le bouton Paramètres (engrenage de la barre, écran titre) marche partout et ramène où l'on était.
+    this.ui.globales.reglages = () => {
+      const ici = this.dernierEcran;
+      this.montrer(ecranReglages(this, () => this.montrer(ici)));
+    };
     this.partieSauvee = P.charger();
     this.partie = this.partieSauvee || P.nouvellePartie();
-    this.son.actif = this.partie.son;
     this.course = null;
     this.pause = false;
     this.ecran = 'titre';
     this.pointeurs = new Map();
     this.touches = new Set();
-    this.impulsions = { nitro: false, aura: false };
+    this.impulsions = { nitro: false, aura: false, action: false };
 
     this.redimensionner();
     window.addEventListener('resize', () => this.redimensionner());
@@ -79,7 +86,7 @@ class App {
       const p = P.restaurer(distante);
       if (p) {
         this.partieSauvee = p;
-        if (this.ecran === 'titre') { this.partie = p; this.son.actif = p.son; this.titre(); }
+        if (this.ecran === 'titre') { this.partie = p; this.titre(); }
       }
     }
   }
@@ -111,7 +118,17 @@ class App {
 
   // --- Boucle --------------------------------------------------------------------
 
+  /** Les réglages ont changé : volumes, vibrations ; on les garde sur l'appareil. */
+  appliquerReglages() {
+    this.son.regler(this.reglages);
+    ecrireReglages(this.reglages);
+  }
+
   boucle(t) {
+    // Économie de batterie : une image sur deux (le temps écoulé est rattrapé à la suivante).
+    if (this.reglages.economie && (this.imageSautee = !this.imageSautee)) { requestAnimationFrame((tt) => this.boucle(tt)); return; }
+    // La musique suit l'écran : un air pour la course, un pour la ville, un pour le reste.
+    this.son.musique(this.ecran === 'course' ? 'course' : this.ecran === 'ville' ? 'ville' : 'garage');
     const dt = Math.min(0.1, (t - this.dernier) / 1000);
     this.dernier = t;
     const secondes = t / 1000;
@@ -150,6 +167,7 @@ class App {
       ArrowLeft: 'gauche', KeyA: 'gauche', KeyQ: 'gauche',
       ArrowRight: 'droite', KeyD: 'droite',
       ArrowDown: 'frein', KeyS: 'frein',
+      ArrowUp: 'haut', KeyW: 'haut', KeyZ: 'haut',
     };
     window.addEventListener('keydown', (ev) => {
       this.son.reveiller();
@@ -157,7 +175,11 @@ class App {
       if (clavier[ev.code]) { this.touches.add(clavier[ev.code]); ev.preventDefault(); }
       if (ev.repeat) return;
       if (ev.code === 'Escape' || ev.code === 'KeyP') { this.basculerPause(); return; }
-      if (this.ecran === 'ville') return;
+      if (this.ecran === 'ville') {
+        // E ou Entrée : descendre de voiture / y remonter.
+        if (ev.code === 'KeyE' || ev.code === 'Enter') this.impulsions.action = true;
+        return;
+      }
       if (ev.code === 'Space' || ev.code === 'ArrowUp' || ev.code === 'KeyW' || ev.code === 'KeyZ') { this.impulsions.nitro = true; ev.preventDefault(); }
       if (ev.code === 'KeyE' || ev.code === 'ShiftLeft' || ev.code === 'ShiftRight') this.impulsions.aura = true;
     });
@@ -202,8 +224,13 @@ class App {
       const z = zonesPanneau(W, H);
       if (dans(p, z.pause)) { this.basculerPause(); return; }
       if (this.ecran === 'ville') {
+        const aPied = !!this.ville.pieton;
+        // DESCENDRE / À PIED (à la place du compteur), et VOITURE au milieu quand on marche.
+        if (dans(p, z.action) || dans(p, z.portrait) || (aPied && dans(p, z.centre))) { this.impulsions.action = true; return; }
         // Le bouton du milieu freine (et recule si on le garde) : comme les deux côtés à la fois.
         if (dans(p, z.centre)) p.frein = true;
+        // À pied, toucher la carte (au-dessus du panneau) désigne où marcher.
+        if (p.y < H - HAUTEUR_PANNEAU) p.carte = true;
         this.canvas.setPointerCapture?.(ev.pointerId);
         this.pointeurs.set(ev.pointerId, p);
         return;
@@ -215,7 +242,7 @@ class App {
     });
     this.canvas.addEventListener('pointermove', (ev) => {
       const avant = this.pointeurs.get(ev.pointerId);
-      if (avant) this.pointeurs.set(ev.pointerId, { ...position(ev), frein: avant.frein });
+      if (avant) this.pointeurs.set(ev.pointerId, { ...position(ev), frein: avant.frein, carte: avant.carte });
     });
     const lacher = (ev) => this.pointeurs.delete(ev.pointerId);
     this.canvas.addEventListener('pointerup', lacher);
@@ -226,19 +253,30 @@ class App {
 
   entrees() {
     let gauche = this.touches.has('gauche'), droite = this.touches.has('droite');
+    const aPied = this.ecran === 'ville' && this.ville?.pieton;
+    let toucher = null;
+    if (aPied) {
+      // À pied : les flèches font marcher, le doigt sur la carte désigne où aller.
+      for (const p of this.pointeurs.values()) if (p.carte) toucher = { x: p.x, y: p.y };
+      const e = { gauche, droite, haut: this.touches.has('haut'), bas: this.touches.has('frein'), toucher, action: this.impulsions.action };
+      this.impulsions.action = false;
+      return e;
+    }
     if (this.touches.has('frein') && this.ecran === 'ville') { gauche = true; droite = true; }
     for (const p of this.pointeurs.values()) {
       if (p.frein) { gauche = true; droite = true; } else if (p.x < W / 2) gauche = true; else droite = true;
     }
-    const e = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura };
+    const e = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura, action: this.impulsions.action };
     this.impulsions.nitro = false;
     this.impulsions.aura = false;
+    this.impulsions.action = false;
     return e;
   }
 
   // --- Écrans ---------------------------------------------------------------------
 
   montrer(ecran) {
+    if (ecran?.html) this.dernierEcran = ecran;
     // Dans un lieu de la ville : la vue de la pièce en tête de son menu.
     const lieu = this.ecran === 'ville' && this.ville?.entree?.id;
     const image = lieu && ecran?.html && interieur(lieu, this.assets?.tiny);
@@ -322,7 +360,6 @@ class App {
 
   nouvellePartie() {
     this.partie = P.nouvellePartie();
-    this.son.actif = this.partie.son;
     this.sauver();
     this.cadeauPuis(() => this.garage());
   }
@@ -386,6 +423,7 @@ class App {
       entrainerPilote: PL.entrainer, recruterPilotes: PL.recruterPilotes, engagerPilote: PL.engagerPilote,
       renvoyerPilote: PL.renvoyerPilote, choisirTitulaire: PL.choisirTitulaire, choisirSecond: PL.choisirSecond,
       choisirVoitureSecond: PL.choisirVoitureSecond,
+      vendreVoiture: P.vendreVoiture, demonterVoiture: P.demonterVoiture,
     }[nom];
     const ok = f(this.partie, arg);
     if (ok) this.sauver();

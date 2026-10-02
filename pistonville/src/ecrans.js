@@ -35,10 +35,11 @@ export class Interface {
   constructor(racine) {
     this.racine = racine;
     this.actions = {};
+    this.globales = {};       // actions valables sur tous les écrans (le bouton Paramètres)
     this.racine.addEventListener('click', (ev) => {
       const el = ev.target.closest('[data-action]');
       if (!el || el.disabled) return;
-      const f = this.actions[el.dataset.action];
+      const f = this.actions[el.dataset.action] || this.globales[el.dataset.action];
       if (f) { ev.preventDefault(); f(el.dataset); }
     });
   }
@@ -57,6 +58,8 @@ export class Interface {
 
 // --- Petits morceaux réutilisés -------------------------------------------------------
 
+const ICONE_REGLAGES = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M7 1h2v2h2v1h1v1h1v2h2v2h-2v2h-1v1h-1v1H9v2H7v-2H5v-1H4v-1H3V9H1V7h2V5h1V4h1V3h2zM7 6v1H6v2h1v1h2V9h1V7H9V6z"/></svg>';
+
 export function barre(partie) {
   const lic = partie.licence ? `Licence ${partie.licence}` : 'Sans licence';
   const besoin = expPourRang(partie.rang);
@@ -72,6 +75,7 @@ export function barre(partie) {
       <span class="pastille rouge">${partie.fans} fans</span>
       <span class="pastille violet">${partie.recherche} PR</span>
       <span class="pastille rose">${partie.tickets} ticket${partie.tickets > 1 ? 's' : ''}</span>
+      <button class="engrenage" data-action="reglages" aria-label="Paramètres">${ICONE_REGLAGES}</button>
     </div>
   </header>`;
 }
@@ -152,6 +156,7 @@ export function ecranTitre(app) {
         ${reprise ? `<button class="btn btn-principal reprise" data-action="continuer">Continuer la partie<small>${resumeReprise(app.partieSauvee)}</small></button>` : ''}
         <button class="btn ${reprise ? '' : 'btn-principal'}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
+        <button class="btn" data-action="reglages">Paramètres</button>
         <button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>
         ${/^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre à jour le jeu</button>' : ''}
       </div>
@@ -940,6 +945,44 @@ export function ecranChargement(texte) {
   return { classe: 'fond-sombre', html: `<div class="ecran chargement"><p>${e(texte)}</p></div>`, actions: {} };
 }
 
+// --- Paramètres --------------------------------------------------------------------------
+
+/** Musique, effets sonores, vibrations, aide au pilotage, économie de batterie. */
+export function ecranReglages(app, retour) {
+  const r = app.reglages, p = app.partie;
+  const pourcent = (v) => `${Math.round(v * 100)} %`;
+  const volume = (cle, nom) => `<div class="ligne"><span>${nom}</span><span class="rangee">
+      <button class="btn btn-mini" data-action="moins" data-cle="${cle}" ${r[cle] <= 0 ? 'disabled' : ''} aria-label="Moins fort">−</button>
+      <b class="valeur-reglage">${r[cle] > 0 ? pourcent(r[cle]) : 'Coupé'}</b>
+      <button class="btn btn-mini" data-action="plus" data-cle="${cle}" ${r[cle] >= 1 ? 'disabled' : ''} aria-label="Plus fort">+</button></span></div>`;
+  const bascule = (action, nom, actif, detail = '') => `<div class="ligne"><span class="libelle">${nom}${detail ? `<small>${detail}</small>` : ''}</span>
+      <button class="btn btn-mini ${actif ? 'btn-principal' : ''}" data-action="${action}">${actif ? 'Activé' : 'Coupé'}</button></div>`;
+  const changer = (f) => { f(); app.appliquerReglages(); app.montrer(ecranReglages(app, retour)); };
+  return {
+    classe: 'fond-sombre',
+    html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">Paramètres</h2>
+        <div class="contenu">
+          ${volume('musique', 'Musique')}
+          ${volume('effets', 'Effets sonores')}
+          ${bascule('vibrations', 'Vibrations', r.vibrations, 'Le téléphone vibre aux chocs')}
+          ${bascule('aide', 'Aide au pilotage', p.aide, 'La voiture se recentre seule en course')}
+          ${bascule('economie', 'Économie de batterie', r.economie, '30 images par seconde au lieu de 60')}
+        </div>
+      </section>
+      <div class="pile"><button class="btn btn-principal" data-action="retour">Retour</button></div>
+    </div>`,
+    actions: {
+      moins: (d) => changer(() => { r[d.cle] = Math.max(0, Math.round((r[d.cle] - 0.1) * 10) / 10); }),
+      plus: (d) => changer(() => { r[d.cle] = Math.min(1, Math.round((r[d.cle] + 0.1) * 10) / 10); app.son.bip(660, 0.08); }),
+      vibrations: () => changer(() => { r.vibrations = !r.vibrations; if (r.vibrations) app.son.vibrer(40); }),
+      economie: () => changer(() => { r.economie = !r.economie; }),
+      aide: () => changer(() => { p.aide = !p.aide; if (app.course) app.course.aide = p.aide; app.sauver(); }),
+      retour: () => retour(),
+    },
+  };
+}
+
 /** Pause pendant la balade : reprendre, le son, ou rentrer au garage (les gains sont gardés). */
 export function ecranPauseVille(app) {
   const p = app.partie;
@@ -948,7 +991,7 @@ export function ecranPauseVille(app) {
     html: `<div class="ecran">
       <section class="panneau"><h2 class="titre-panneau">Pause</h2>
         <div class="contenu">
-          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p.son ? 'Activé' : 'Coupé'}</button></div>
+          <div class="ligne"><span>Musique, sons, vibrations</span><button class="btn btn-mini" data-action="reglages">Paramètres</button></div>
           <p class="petit">Rentrer maintenant termine la balade : ce que tu as gagné est gardé.</p>
         </div>
       </section>
@@ -959,7 +1002,7 @@ export function ecranPauseVille(app) {
     </div>`,
     actions: {
       reprendre: () => app.reprendre(),
-      son: () => { p.son = !p.son; app.son.actif = p.son; app.sauver(); app.montrer(ecranPauseVille(app)); },
+      reglages: () => app.montrer(ecranReglages(app, () => app.montrer(ecranPauseVille(app)))),
       rentrer: () => { app.reprendre(); app.ville.fini = true; },
     },
   };
@@ -973,7 +1016,7 @@ export function ecranPause(app) {
       <section class="panneau"><h2 class="titre-panneau">Pause</h2>
         <div class="contenu">
           <div class="ligne"><span>Aide au pilotage (la voiture se recentre seule)</span><button class="btn btn-mini" data-action="aide">${p.aide ? 'Activée' : 'Coupée'}</button></div>
-          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p.son ? 'Activé' : 'Coupé'}</button></div>
+          <div class="ligne"><span>Musique, sons, vibrations</span><button class="btn btn-mini" data-action="reglages">Paramètres</button></div>
         </div>
       </section>
       <div class="pile">
@@ -984,7 +1027,7 @@ export function ecranPause(app) {
     actions: {
       reprendre: () => app.reprendre(),
       aide: () => { p.aide = !p.aide; if (app.course) app.course.aide = p.aide; app.sauver(); app.montrer(ecranPause(app)); },
-      son: () => { p.son = !p.son; app.son.actif = p.son; app.sauver(); app.montrer(ecranPause(app)); },
+      reglages: () => app.montrer(ecranReglages(app, () => app.montrer(ecranPause(app)))),
       abandon: () => app.abandonnerCourse(),
     },
   };

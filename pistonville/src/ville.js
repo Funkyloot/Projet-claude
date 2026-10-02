@@ -220,6 +220,8 @@ export class Ville {
     this.fini = false;
     this.defi = null;
     this.carrefourAvant = null;
+    this.pieton = null;                // la pilote, quand elle est descendue de voiture
+    this.vue = { x: 0, y: 0 };         // coin haut-gauche de la vue (pour toucher la carte)
   }
 
   // --- Plan de la ville ----------------------------------------------------------
@@ -481,7 +483,7 @@ export class Ville {
     const entrepot = by % 2 === 0;
     if (entrepot) {
       const m = this.ajouter({ type: 'rect', x: o.x + 8, y: o.y + 6, w: TAILLE_ILOT - 16, h: hauteurBatiment(1) });
-      this.dessin(m.y + m.h, (c) => batimentModerne(c, m.x, m.y, m.w, 1, { facade: '#aab4c8', toit: '#8b9bb4', garage: true, enseigne: '#5c6278', nom: 'ENTREPÔT' }));
+      this.dessin(m.y + m.h, (c) => batimentModerne(c, m.x, m.y, m.w, 1, { facade: '#aab4c8', toit: '#8b9bb4', garage: true, enseigne: '#5c6278', nom: 'DÉPÔT' }));
     }
     const y0 = entrepot ? o.y + 100 : o.y + 20;
     for (let i = 0; i < 4; i++) {
@@ -761,13 +763,20 @@ export class Ville {
     if (this.fini || this.entree) return;
     if (!this.attente) this.temps += dt;   // l'heure ne file pas tant qu'on n'a pas démarré
     const v = this.voiture;
+    if (entrees.action) this.basculerPied();
+    if (this.pieton) { this.majPieton(dt, entrees); return; }
     v.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
     const deux = entrees.gauche && entrees.droite;
     // Les deux côtés : on freine, puis on recule tant qu'on garde les doigts posés.
     if (deux) {
       v.direction = 0;
       this.tenuDeux = (this.tenuDeux || 0) + dt;
-    } else this.tenuDeux = 0;
+    } else {
+      // Frein lâché à l'arrêt (ou après une marche arrière) : la voiture reste garée
+      // jusqu'à ce qu'on touche Gauche ou Droite ; on peut alors descendre.
+      if (this.tenuDeux > 0 && (v.vitesse < 15 || v.recul)) { this.attente = true; this.reculAuto = 0; }
+      this.tenuDeux = 0;
+    }
     // Coincé contre un mur ou une voiture : petite marche arrière automatique.
     if (this.reculAuto > 0) this.reculAuto -= dt;
     else if (!deux && this.contact && v.vitesse < 12 && this.temps > 1) {
@@ -803,6 +812,11 @@ export class Ville {
     this.ramasser(v);
     this.majDefi(dt);
     this.portesDevant(v);
+    this.majCommun(dt);
+  }
+
+  /** Ce qui vit, qu'on soit au volant ou à pied : messages, particules, fans, fin de la balade. */
+  majCommun(dt) {
     for (const m of this.messages) m.vie -= dt;
     this.messages = this.messages.filter((m) => m.vie > 0);
     for (const p of this.particules) { p.x += p.vx * dt; p.y += p.vy * dt; p.vie -= dt; }
@@ -923,21 +937,125 @@ export class Ville {
     }
   }
 
-  portesDevant(v) {
+  /**
+   * Zones jaunes. En voiture, on n'entre que dans le garage (porte de garage) ;
+   * ailleurs, on se gare, on descend et on entre à pied. `marge` : à pied, on
+   * entre dès qu'on touche la zone.
+   */
+  portesDevant(v, aPied = false) {
+    const m = aPied ? 6 : 0;
     let dans = null;
-    for (const p of this.portes) if (v.x > p.x && v.x < p.x + p.w && v.y > p.y && v.y < p.y + p.h) dans = p;
+    for (const p of this.portes) if (v.x > p.x - m && v.x < p.x + p.w + m && v.y > p.y - m && v.y < p.y + p.h + m) dans = p;
     if (!dans) { this.ignorer = null; return; }
     if (dans.id === this.ignorer || this.defi) return;
-    this.entree = dans;
     this.ignorer = dans.id;
+    if (!aPied && dans.id !== 'garage') {
+      this.annonce(`${dans.nom} : arrête-toi et touche DESCENDRE pour entrer à pied`, '#ffe066');
+      return;
+    }
+    this.entree = dans;
     v.vx = 0; v.vy = 0;
     this.son?.bip(660, 0.12);
+  }
+
+  // --- À pied ------------------------------------------------------------------------------
+
+  /** Descendre de voiture (à l'arrêt) ou y remonter (en y retournant à pied si besoin). */
+  basculerPied() {
+    const v = this.voiture;
+    if (this.pieton) {
+      if (Math.hypot(this.pieton.x - v.x, this.pieton.y - v.y) < 40) this.remonter();
+      else { this.pieton.cible = { x: v.x, y: v.y }; this.pieton.versVoiture = true; }
+      return;
+    }
+    if (this.defi) { this.annonce('Termine d\'abord le défi en cours', '#fca5a5'); return; }
+    if (v.vitesse > 15) { this.annonce('Arrête-toi pour descendre', '#cfe0ff'); return; }
+    // On descend du côté libre : à droite de la voiture d'abord (le trottoir), sinon à gauche.
+    const fx = Math.cos(v.angle), fy = Math.sin(v.angle);
+    const cotes = [[-fy, fx], [fy, -fx], [-fx, -fy], [fx, fy]];
+    for (const d of [26, 34, 44]) for (const [nx, ny] of cotes) {
+      const x = v.x + nx * d, y = v.y + ny * d;
+      if (!this.libre(x, y, 5)) continue;
+      v.vx = 0; v.vy = 0; v.frein = 1; v.recul = false; v.direction = 0;
+      this.attente = false;
+      this.pieton = { x, y, dir: 'face', pas: 0, t: 0, cible: null, versVoiture: false };
+      this.ignorer = null;
+      this.son?.bip(520, 0.08);
+      return;
+    }
+    this.annonce('Pas la place de descendre ici', '#fca5a5');
+  }
+
+  remonter() {
+    this.pieton = null;
+    this.son?.bip(780, 0.08);
+  }
+
+  /** La pilote marche vers l'endroit touché (ou au clavier) ; les bâtiments et l'eau l'arrêtent. */
+  majPieton(dt, entrees) {
+    const p = this.pieton, v = this.voiture;
+    if (entrees.toucher) {
+      p.cible = { x: this.vue.x + entrees.toucher.x, y: this.vue.y + entrees.toucher.y };
+      p.versVoiture = false;
+    }
+    let dx = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
+    let dy = (entrees.bas ? 1 : 0) - (entrees.haut ? 1 : 0);
+    if (dx || dy) p.cible = null;
+    else if (p.cible) {
+      dx = p.cible.x - p.x; dy = p.cible.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 3) {
+        p.cible = null; dx = 0; dy = 0;
+      }
+    }
+    // Un poteau, un banc sur le chemin : on fait un pas de côté avant de reprendre la route.
+    if (p.detour && (dx || dy)) {
+      p.detour.t -= dt;
+      if (p.detour.t > 0) { dx = p.detour.dx; dy = p.detour.dy; } else p.detour = null;
+    }
+    const l = Math.hypot(dx, dy);
+    const VITESSE = 80;
+    if (l > 0) {
+      const sx = (dx / l) * VITESSE * dt, sy = (dy / l) * VITESSE * dt;
+      // On glisse le long des murs : on essaie chaque axe séparément.
+      const avant = { x: p.x, y: p.y };
+      if (this.libre(p.x + sx, p.y, 5)) p.x += sx;
+      if (this.libre(p.x, p.y + sy, 5)) p.y += sy;
+      const bouge = Math.hypot(p.x - avant.x, p.y - avant.y) > VITESSE * dt * 0.3;
+      if (!bouge && p.cible) {
+        p.bloque = (p.bloque || 0) + dt;
+        if (p.bloque > 2) { p.cible = null; p.bloque = 0; p.detour = null; }   // vraiment coincée : on s'arrête
+        else if (!p.detour) {
+          // Côté le plus libre, perpendiculaire à la marche.
+          const [nx, ny] = [-dy / l, dx / l];
+          const s = this.libre(p.x + nx * 12, p.y + ny * 12, 5) ? 1 : -1;
+          p.detour = { dx: nx * s, dy: ny * s, t: 0.3 };
+        }
+      } else if (bouge) p.bloque = 0;
+      p.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'droite' : 'gauche') : (dy > 0 ? 'face' : 'dos');
+      p.t += dt;
+      p.pas = bouge ? 1 + (Math.floor(p.t * 8) % 2) : 0;
+    } else p.pas = 0;
+    if (p.versVoiture && Math.hypot(p.x - v.x, p.y - v.y) < 40) { this.remonter(); this.majCommun(dt); return; }
+    // La voiture reste garée ; la ville continue de vivre autour.
+    v.vx = 0; v.vy = 0;
+    this.trafic.maj(dt, this.temps, v);
+    this.pietons.maj(dt, v);
+    this.ramasser(p);
+    this.portesDevant(p, true);
+    this.majCommun(dt);
   }
 
   sortir() {
     const p = this.entree;
     this.entree = null;
     if (!p) return;
+    if (this.pieton) {
+      // À pied : on ressort sur le trottoir, devant la porte ; la voiture attend où on l'a garée.
+      Object.assign(this.pieton, { x: p.x + p.w / 2, y: p.y + p.h + 4, dir: 'face', cible: null, versVoiture: false });
+      this.ignorer = p.id;
+      return;
+    }
     // En sortant, on reprend la voie de droite de la rue, dans le sens de la circulation.
     this.placerDevant(p);
   }
@@ -1125,8 +1243,9 @@ export class Ville {
     const v = this.voiture;
     // Caméra de la course : un peu en avant de la voiture, au-dessus du panneau de conduite.
     const hVue = H - HAUTEUR_PANNEAU;
-    this.camera.x = lerp(this.camera.x, v.x + v.vx * 0.45, 0.12);
-    this.camera.y = lerp(this.camera.y, v.y + v.vy * 0.45, 0.12);
+    const suivi = this.pieton || { x: v.x + v.vx * 0.45, y: v.y + v.vy * 0.45 };
+    this.camera.x = lerp(this.camera.x, suivi.x, 0.12);
+    this.camera.y = lerp(this.camera.y, suivi.y, 0.12);
     const sx = this.secousse ? (Math.random() - 0.5) * this.secousse : 0;
     const camX = Math.round(clamp(this.camera.x - W / 2 + sx, 0, TAILLE_VILLE - W));
     const camY = Math.round(clamp(this.camera.y - hVue / 2 + sx, 0, TAILLE_VILLE - hVue));
@@ -1138,6 +1257,7 @@ export class Ville {
       }
     }
     this.prechauffer(camX, camY, W, hVue);
+    this.vue = { x: camX, y: camY };
     ctx.save();
     ctx.translate(-camX, -camY);
     const visible = (x, y, m = 40) => x > camX - m && x < camX + W + m && y > camY - m && y < camY + hVue + m;
@@ -1155,7 +1275,7 @@ export class Ville {
     for (const p of this.portes) {
       if (!visible(p.x, p.y, 60)) continue;
       const fl = Math.sin(t * 5) > 0 ? 1 : 0;
-      texte(ctx, p.id === 'garage' ? 'RENTRER' : 'ENTRER', p.x + p.w / 2, p.y + p.h / 2 - fl, 9, '#ffe066', 'center');
+      texte(ctx, p.id === 'garage' ? 'RENTRER' : this.pieton ? 'ENTRER' : 'À PIED', p.x + p.w / 2, p.y + p.h / 2 - fl, 9, '#ffe066', 'center');
     }
     // Points de départ des défis (anneaux qui pulsent).
     for (const d of this.defis) {
@@ -1181,6 +1301,14 @@ export class Ville {
     this.trafic.dessiner(ctx, camX, camY, W, H);
 
     dessinerVoiture(ctx, v.modele, v.couleur, v.x, v.y, v.angle);
+    if (this.pieton) {
+      const p = this.pieton;
+      if (p.cible) anneau(ctx, p.cible.x, p.cible.y, 6 + Math.sin(t * 8), '#ffe066');
+      dessinerPerso(ctx, this.tenuePilote || tenue(4), p.x, p.y, p.dir, p.pas);
+      // Repère au-dessus de la pilote, pour la voir parmi les passants.
+      ctx.fillStyle = '#ffe066';
+      ctx.beginPath(); ctx.moveTo(p.x - 4, p.y - 26); ctx.lineTo(p.x + 4, p.y - 26); ctx.lineTo(p.x, p.y - 21); ctx.fill();
+    }
 
     ctx.fillStyle = '#ffe066';
     for (const p of this.particules) ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);
@@ -1309,17 +1437,30 @@ export class Ville {
     }
     if (this.attente && Math.sin(this.temps * 6 + t * 6) > -0.4) {
       ctx.fillStyle = 'rgba(15,23,42,0.85)'; ctx.fillRect(W / 2 - 110, hVue - 40, 220, 26);
-      texte(ctx, 'Touche Gauche ou Droite pour démarrer', W / 2, hVue - 27, 10, '#ffe066', 'center');
+      texte(ctx, 'Garée · Gauche ou Droite pour rouler', W / 2, hVue - 27, 10, '#ffe066', 'center');
     }
 
-    // Panneau de conduite : le même qu'en course, avec le frein au milieu.
+    // Panneau de conduite : le même qu'en course, avec le frein au milieu ; à l'arrêt,
+    // DESCENDRE remplace le compteur. À pied : on touche la carte pour marcher.
     const v = this.voiture;
     const reste = clamp(1 - this.temps / DUREE_BALADE, 0, 1);
-    dessinerPanneau(ctx, W, H, t, {
-      tenue: this.tenuePilote, nom: v.nom, vitesse: v.vitesse, etat: 1 - this.usureDepart - this.gains.usure,
-      jauge: { libelle: this.heure(), valeur: reste, couleur: reste > 0.25 ? '#5ad16a' : '#e4432d', texte: '#ffe066' },
-      centre: { titre: v.recul ? 'RECUL' : 'FREIN', detail: 'tenir : recule', fond: v.frein || v.recul ? '#e4432d' : '#a63d3a' },
-    });
+    const jauge = { libelle: this.heure(), valeur: reste, couleur: reste > 0.25 ? '#5ad16a' : '#e4432d', texte: '#ffe066' };
+    const etat = 1 - this.usureDepart - this.gains.usure;
+    if (this.pieton) {
+      dessinerPanneau(ctx, W, H, t, {
+        tenue: this.tenuePilote, nom: v.nom, vitesse: 0, etat, jauge,
+        action: { titre: 'À PIED', fond: '#3a4a6b' },
+        cotes: [['Touche la carte', 'pour marcher'], ['Zone jaune', 'pour entrer']],
+        centre: { titre: 'VOITURE', detail: 'y retourner', fond: '#2f6fdb' },
+      });
+    } else {
+      const arret = v.vitesse < 15 && !this.defi;
+      dessinerPanneau(ctx, W, H, t, {
+        tenue: this.tenuePilote, nom: v.nom, vitesse: v.vitesse, etat, jauge,
+        action: arret ? { titre: 'DESCENDRE', fond: '#d9822b' } : null,
+        centre: { titre: v.recul ? 'RECUL' : 'FREIN', detail: 'tenir : recule', fond: v.frein || v.recul ? '#e4432d' : '#a63d3a' },
+      });
+    }
   }
 
   /** Gains nets de la balade, à verser dans la partie. */

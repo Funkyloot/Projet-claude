@@ -24,10 +24,24 @@ Tout est dans ce fichier : aucune installation, aucune connexion.
 | Pause | Échap (ou P) | Bouton pause en haut |
 | Départ parfait | n'importe quelle touche pile au feu vert | toucher l'écran pile au feu vert |
 | Freiner, puis reculer (en ville) | ↓ (ou S), ou ← et → ensemble | Bouton FREIN gardé, ou les deux côtés |
+| Descendre de voiture / remonter (en ville) | E ou Entrée | Bouton DESCENDRE (à l'arrêt), puis VOITURE |
+| Marcher (à pied) | flèches | toucher l'endroit où aller sur la carte |
 
 La course et la balade en ville se conduisent pareil, avec le même panneau en
 bas de l'écran (pilote, vitesse, état de la voiture, Gauche / Droite) ; au
-milieu, NITRO en course et FREIN en ville. La voiture accélère toute seule. Garder la direction dans un virage fait
+milieu, NITRO en course et FREIN en ville. La voiture accélère toute seule. En ville, freiner jusqu'à l'arrêt gare la
+voiture ; on peut alors descendre, marcher et entrer à pied dans les lieux
+(zones jaunes : bureau des courses, concession, pièces auto, café, tombola).
+Le garage, lui, s'ouvre aussi en voiture.
+
+**Paramètres** (écran titre, engrenage de la barre, ou pause) : volume de la
+musique et des effets, vibrations, aide au pilotage, économie de batterie.
+Trois petits airs façon arcade (garage, course, ville) sont joués par le jeu
+lui-même, sans fichier son.
+
+**Mes voitures** (onglet Voitures) : conduire une autre voiture, la vendre,
+ou la démonter pour des points de recherche ; ses pièces montées reviennent
+dans le stock pour une autre voiture. Garder la direction dans un virage fait
 drifter ; un long drift et chaque dépassement remplissent la jauge d'aura.
 L'aide au pilotage (activée par défaut, réglable dans la pause) recentre
 doucement la voiture quand on ne touche à rien.

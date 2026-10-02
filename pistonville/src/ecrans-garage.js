@@ -19,7 +19,7 @@ import {
   barre, carteVoiture, texteRecompense, ecranAtelier, ecranBoutique, ecranPieces, ecranLabo, ecranBureau,
   ecranObjectifs, ecranAide, ecranCelebration,
 } from './ecrans.js';
-import { voitureActive, peutSortir, objectifsActifs, peutCourir, grandPrix } from './partie.js';
+import { voitureActive, decrireVoiture, valeurVoiture, raisonGarder, peutSortir, objectifsActifs, peutCourir, grandPrix } from './partie.js';
 import { spritePerso, tenue } from './tiny.js';
 import {
   engagement, tenuePilote, indemnitePilote, expPilote, STATS_PILOTE,
@@ -485,6 +485,7 @@ export function ecranVoitures(app) {
       <nav class="grille-actions">
         <button class="btn ${v ? '' : 'btn-principal'}" data-action="boutique">Construire / acheter</button>
         <button class="btn" data-action="atelier" ${v ? '' : 'disabled'}>Atelier</button>
+        <button class="btn" data-action="mesVoitures" ${p.garage.length ? '' : 'disabled'}>Mes voitures (${p.garage.length})</button>
         <button class="btn" data-action="pieces">Pièces</button>
         <button class="btn" data-action="labo">Labo</button>
       </nav>
@@ -494,10 +495,61 @@ export function ecranVoitures(app) {
       ...actionsOnglets(app),
       boutique: () => app.montrer(ecranBoutique(app, () => app.montrer(ecranVoitures(app)))),
       atelier: () => app.montrer(ecranAtelier(app)),
+      mesVoitures: () => app.montrer(ecranMesVoitures(app)),
       pieces: () => app.montrer(ecranPieces(app, { retour: () => app.montrer(ecranVoitures(app)) })),
       labo: () => app.montrer(ecranLabo(app, () => app.montrer(ecranVoitures(app)))),
       aide: () => app.montrer(ecranAide(app, 'garage')),
       titre: () => app.titre(),
+    },
+  };
+}
+
+/**
+ * Mes voitures : choisir celle qu'on conduit, vendre celles qui ne servent
+ * plus, ou les démonter (pièces gardées, ferraille et points de recherche).
+ * Vendre et démonter demandent une confirmation.
+ */
+export function ecranMesVoitures(app, confirmer = null) {
+  const p = app.partie;
+  const cartes = p.garage.map((g) => {
+    const v = decrireVoiture(p, g);
+    const val = valeurVoiture(p, g.uid);
+    const raison = raisonGarder(p, g.uid);
+    const active = g.uid === p.voitureActive;
+    const pieces = val.pieces ? `${val.pieces} pièce${val.pieces > 1 ? 's' : ''} montée${val.pieces > 1 ? 's' : ''} : elle${val.pieces > 1 ? 's' : ''} retourne${val.pieces > 1 ? 'nt' : ''} dans ton stock.` : 'Aucune pièce montée.';
+    let boutons;
+    if (confirmer?.uid === g.uid) {
+      boutons = confirmer.quoi === 'vendre'
+        ? `<p class="petit">Vendre pour ${formatArgent(val.vente)} ? ${pieces}</p>
+           <div class="rangee"><button class="btn btn-mini btn-rouge" data-action="vendre" data-uid="${g.uid}">Confirmer la vente</button><button class="btn btn-mini" data-action="annuler">Annuler</button></div>`
+        : `<p class="petit">Démonter : ${formatArgent(val.ferraille)} de ferraille et +${val.recherche} PR. ${pieces}</p>
+           <div class="rangee"><button class="btn btn-mini btn-rouge" data-action="demonter" data-uid="${g.uid}">Confirmer le démontage</button><button class="btn btn-mini" data-action="annuler">Annuler</button></div>`;
+    } else {
+      boutons = `<div class="rangee">
+        ${active ? '<span class="etat">Au volant</span>' : `<button class="btn btn-mini btn-principal" data-action="conduire" data-uid="${g.uid}">Conduire</button>`}
+        <button class="btn btn-mini" data-action="demanderVente" data-uid="${g.uid}" ${raison ? 'disabled' : ''}>Vendre · ${formatArgent(val.vente)}</button>
+        <button class="btn btn-mini" data-action="demanderDemontage" data-uid="${g.uid}" ${raison ? 'disabled' : ''}>Démonter · +${val.recherche} PR</button>
+      </div>${raison ? `<p class="petit">${e(raison)}</p>` : ''}`;
+    }
+    return `<section class="panneau">${carteVoiture(v, { compacte: true })}<div class="contenu">${boutons}</div></section>`;
+  }).join('');
+  const redessiner = (c = null) => app.montrer(ecranMesVoitures(app, c));
+  return {
+    classe: 'garage plein',
+    html: `${barre(p)}<div class="defile">
+      <h2 class="titre-section">Mes voitures</h2>
+      <p class="astuce">Vendre rapporte de l'argent ; démonter rapporte des points de recherche. Dans les deux cas, les pièces montées sont gardées pour une autre voiture.</p>
+      ${cartes}
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
+    actions: {
+      conduire: (d) => { p.voitureActive = d.uid; if (p.voitureSecond === d.uid) p.voitureSecond = null; app.sauver(); redessiner(); },
+      demanderVente: (d) => redessiner({ uid: d.uid, quoi: 'vendre' }),
+      demanderDemontage: (d) => redessiner({ uid: d.uid, quoi: 'demonter' }),
+      annuler: () => redessiner(),
+      vendre: (d) => { const r = app.action('vendreVoiture', d.uid); if (r) { app.son.caisse(); app.toast(`Vendue ${formatArgent(r.vente)} !`); } redessiner(); },
+      demonter: (d) => { const r = app.action('demonterVoiture', d.uid); if (r) { app.son.caisse(); app.toast(`Démontée : +${r.recherche} PR, ${formatArgent(r.ferraille)} de ferraille.`); } redessiner(); },
+      retour: () => app.montrer(ecranVoitures(app)),
     },
   };
 }

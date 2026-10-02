@@ -769,6 +769,7 @@ export function zonesPanneau(W, H) {
     gauche: { x: 8, y: y0 + 50, w: W / 2 - 46, h: 54 },
     droite: { x: W / 2 + 38, y: y0 + 50, w: W / 2 - 46, h: 54 },
     pause: { x: W / 2 - 14, y: 6, w: 28, h: 22 },
+    action: { x: W - 104, y: y0 + 6, w: 96, h: 26 },   // en ville : descendre / remonter
   };
 }
 
@@ -792,8 +793,16 @@ export function dessinerPanneau(ctx, W, H, t, o) {
   ctx.restore();
 
   texte(ctx, o.nom, 54, y0 + 16, 11, '#f4f1e8', 'left');
-  texte(ctx, `${kmh(o.vitesse)}`, W - 52, y0 + 22, 20, '#ffe066', 'right');
-  texte(ctx, 'km/h', W - 10, y0 + 22, 9, '#ffe066', 'right');
+  if (o.action) {
+    // Un bouton à la place du compteur (en ville : DESCENDRE à l'arrêt, puis REMONTER).
+    const a = z.action;
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(a.x - 2, a.y - 2, a.w + 4, a.h + 4);
+    ctx.fillStyle = o.action.fond; ctx.fillRect(a.x, a.y, a.w, a.h);
+    texte(ctx, o.action.titre, a.x + a.w / 2, a.y + a.h / 2 + 1, 11, '#ffffff', 'center');
+  } else {
+    texte(ctx, `${kmh(o.vitesse)}`, W - 52, y0 + 22, 20, '#ffe066', 'right');
+    texte(ctx, 'km/h', W - 10, y0 + 22, 9, '#ffe066', 'right');
+  }
 
   // Jauge en six cases (aura en course, heure qui file en ville).
   const g = o.jauge;
@@ -814,6 +823,13 @@ export function dessinerPanneau(ctx, W, H, t, o) {
     ctx.fillStyle = '#9fb3d9';
     for (let i = r.x; i < r.x + r.w; i += 6) { ctx.fillRect(i, r.y, 3, 1); ctx.fillRect(i, r.y + r.h - 1, 3, 1); }
     for (let i = r.y; i < r.y + r.h; i += 6) { ctx.fillRect(r.x, i, 1, 3); ctx.fillRect(r.x + r.w - 1, i, 1, 3); }
+    if (o.cotes) {
+      // À pied : pas de direction, une consigne à la place.
+      const [l1, l2] = o.cotes[fleche < 0 ? 0 : 1];
+      texte(ctx, l1, r.x + r.w / 2, r.y + r.h / 2 - 7, 9, '#f4f1e8', 'center');
+      texte(ctx, l2, r.x + r.w / 2, r.y + r.h / 2 + 8, 9, '#9fb3d9', 'center');
+      continue;
+    }
     const cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 6;
     ctx.fillStyle = '#f4f1e8';
     // Flèche pointée vers le côté où l'on tourne : pointe à l'extérieur, tige vers le centre.

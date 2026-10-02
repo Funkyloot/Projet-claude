@@ -302,6 +302,56 @@ export function reparer(partie) {
   return true;
 }
 
+// --- Se séparer d'une voiture : la vendre ou la démonter -------------------------------------
+
+/**
+ * Ce que rapporte une voiture : à la revente, une part de son prix neuf selon
+ * sa qualité, ses réglages payés et son état ; au démontage, de la ferraille
+ * et des points de recherche (le labo étudie le moteur). Dans les deux cas,
+ * les pièces montées reviennent dans le stock, prêtes pour une autre voiture.
+ */
+export function valeurVoiture(partie, vuid) {
+  const v = partie.garage.find((g) => g.uid === vuid);
+  if (!v) return null;
+  const m = modele(v.modele);
+  const reglages = Object.values(v.ameliorations || {}).reduce((t, n) => t + n, 0);
+  const etat = 1 - 0.5 * (v.usure || 0);
+  const vente = Math.round((m.prix * (0.35 + 0.05 * (v.qualite || 0)) + reglages * 450) * etat / 10) * 10;
+  const ferraille = Math.round(m.prix * 0.08 / 10) * 10;
+  const recherche = Math.round(8 + m.prix / 1500 + 4 * (v.qualite || 0) + 2 * reglages);
+  return { vente, ferraille, recherche, pieces: Object.keys(v.pieces || {}).length };
+}
+
+/** Pourquoi on ne peut pas se séparer de cette voiture (ou null). */
+export function raisonGarder(partie, vuid) {
+  if (partie.garage.length <= 1) return 'C\'est ta seule voiture';
+  if (partie.gp && (vuid === partie.voitureActive || vuid === partie.voitureSecond)) return 'Elle est engagée dans le Grand Prix';
+  return null;
+}
+
+function retirerVoiture(partie, vuid) {
+  partie.garage = partie.garage.filter((g) => g.uid !== vuid);   // ses pièces restent dans l'inventaire
+  if (partie.voitureActive === vuid) partie.voitureActive = partie.garage[0]?.uid || null;
+  if (partie.voitureSecond === vuid || partie.voitureSecond === partie.voitureActive) partie.voitureSecond = null;
+}
+
+export function vendreVoiture(partie, vuid) {
+  const val = valeurVoiture(partie, vuid);
+  if (!val || raisonGarder(partie, vuid)) return false;
+  partie.argent += val.vente;
+  retirerVoiture(partie, vuid);
+  return val;
+}
+
+export function demonterVoiture(partie, vuid) {
+  const val = valeurVoiture(partie, vuid);
+  if (!val || raisonGarder(partie, vuid)) return false;
+  partie.argent += val.ferraille;
+  partie.recherche += val.recherche;
+  retirerVoiture(partie, vuid);
+  return val;
+}
+
 // --- Pièces, labo, tombola -----------------------------------------------------------
 
 export const prixPiece = (pc, remise = 0) => Math.round(pc.prix * (1 - remise) / 10) * 10;

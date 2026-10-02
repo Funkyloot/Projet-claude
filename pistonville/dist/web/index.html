@@ -713,6 +713,16 @@ body {
 .choix:disabled { opacity: 0.5; cursor: default; }
 .classement tr.moi.second td { background: #ffe9a8; }
 
+/* Mes voitures : boutons côte à côte, qui passent à la ligne sur petit écran. */
+.rangee { display: flex; flex-wrap: wrap; gap: calc(var(--u) * 6); align-items: center; }
+
+/* Bouton Paramètres (engrenage) au bout de la barre d'état. */
+.engrenage { margin-left: auto; width: calc(var(--u) * 22); height: calc(var(--u) * 22); padding: calc(var(--u) * 3); border: 0; border-radius: calc(var(--u) * 4); background: #3a4a6b; color: #f4f1e8; cursor: pointer; }
+.engrenage svg { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.valeur-reglage { min-width: calc(var(--u) * 46); text-align: center; }
+.libelle { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.libelle small { font-size: calc(var(--u) * 11); opacity: 0.75; }
+
 </style>
 </head>
 <body>
@@ -3268,7 +3278,9 @@ body {
       centre: { x: W3 / 2 - 34, y: y0 + 50, w: 68, h: 54 },
       gauche: { x: 8, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
       droite: { x: W3 / 2 + 38, y: y0 + 50, w: W3 / 2 - 46, h: 54 },
-      pause: { x: W3 / 2 - 14, y: 6, w: 28, h: 22 }
+      pause: { x: W3 / 2 - 14, y: 6, w: 28, h: 22 },
+      action: { x: W3 - 104, y: y0 + 6, w: 96, h: 26 }
+      // en ville : descendre / remonter
     };
   }
   function dessinerPanneau(ctx, W3, H3, t, o3) {
@@ -3289,8 +3301,17 @@ body {
     ctx.drawImage(spritePerso(o3.tenue || { base: PERSONNES.bandeau, haut: "#e4432d" }, "face", 0), -8, -8);
     ctx.restore();
     texte(ctx, o3.nom, 54, y0 + 16, 11, "#f4f1e8", "left");
-    texte(ctx, `${kmh(o3.vitesse)}`, W3 - 52, y0 + 22, 20, "#ffe066", "right");
-    texte(ctx, "km/h", W3 - 10, y0 + 22, 9, "#ffe066", "right");
+    if (o3.action) {
+      const a = z.action;
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(a.x - 2, a.y - 2, a.w + 4, a.h + 4);
+      ctx.fillStyle = o3.action.fond;
+      ctx.fillRect(a.x, a.y, a.w, a.h);
+      texte(ctx, o3.action.titre, a.x + a.w / 2, a.y + a.h / 2 + 1, 11, "#ffffff", "center");
+    } else {
+      texte(ctx, `${kmh(o3.vitesse)}`, W3 - 52, y0 + 22, 20, "#ffe066", "right");
+      texte(ctx, "km/h", W3 - 10, y0 + 22, 9, "#ffe066", "right");
+    }
     const g = o3.jauge;
     texte(ctx, g.libelle, 54, y0 + 33, 9, g.texte || "#9fb3d9", "left");
     for (let i = 0; i < 6; i++) {
@@ -3315,6 +3336,12 @@ body {
       for (let i = r.y; i < r.y + r.h; i += 6) {
         ctx.fillRect(r.x, i, 1, 3);
         ctx.fillRect(r.x + r.w - 1, i, 1, 3);
+      }
+      if (o3.cotes) {
+        const [l1, l2] = o3.cotes[fleche < 0 ? 0 : 1];
+        texte(ctx, l1, r.x + r.w / 2, r.y + r.h / 2 - 7, 9, "#f4f1e8", "center");
+        texte(ctx, l2, r.x + r.w / 2, r.y + r.h / 2 + 8, 9, "#9fb3d9", "center");
+        continue;
       }
       const cx = r.x + r.w / 2, cy = r.y + r.h / 2 - 6;
       ctx.fillStyle = "#f4f1e8";
@@ -5667,6 +5694,42 @@ body {
     partie.garage.find((g) => g.uid === partie.voitureActive).usure = 0;
     return true;
   }
+  function valeurVoiture(partie, vuid) {
+    const v2 = partie.garage.find((g) => g.uid === vuid);
+    if (!v2) return null;
+    const m = modele(v2.modele);
+    const reglages = Object.values(v2.ameliorations || {}).reduce((t, n) => t + n, 0);
+    const etat = 1 - 0.5 * (v2.usure || 0);
+    const vente = Math.round((m.prix * (0.35 + 0.05 * (v2.qualite || 0)) + reglages * 450) * etat / 10) * 10;
+    const ferraille = Math.round(m.prix * 0.08 / 10) * 10;
+    const recherche = Math.round(8 + m.prix / 1500 + 4 * (v2.qualite || 0) + 2 * reglages);
+    return { vente, ferraille, recherche, pieces: Object.keys(v2.pieces || {}).length };
+  }
+  function raisonGarder(partie, vuid) {
+    if (partie.garage.length <= 1) return "C'est ta seule voiture";
+    if (partie.gp && (vuid === partie.voitureActive || vuid === partie.voitureSecond)) return "Elle est engag\xE9e dans le Grand Prix";
+    return null;
+  }
+  function retirerVoiture(partie, vuid) {
+    partie.garage = partie.garage.filter((g) => g.uid !== vuid);
+    if (partie.voitureActive === vuid) partie.voitureActive = partie.garage[0]?.uid || null;
+    if (partie.voitureSecond === vuid || partie.voitureSecond === partie.voitureActive) partie.voitureSecond = null;
+  }
+  function vendreVoiture(partie, vuid) {
+    const val = valeurVoiture(partie, vuid);
+    if (!val || raisonGarder(partie, vuid)) return false;
+    partie.argent += val.vente;
+    retirerVoiture(partie, vuid);
+    return val;
+  }
+  function demonterVoiture(partie, vuid) {
+    const val = valeurVoiture(partie, vuid);
+    if (!val || raisonGarder(partie, vuid)) return false;
+    partie.argent += val.ferraille;
+    partie.recherche += val.recherche;
+    retirerVoiture(partie, vuid);
+    return val;
+  }
   var prixPiece = (pc, remise = 0) => Math.round(pc.prix * (1 - remise) / 10) * 10;
   function promoDuJour(partie) {
     const dispo = PIECES.filter((x) => x.recherche <= partie.labo);
@@ -7967,6 +8030,8 @@ body {
       this.fini = false;
       this.defi = null;
       this.carrefourAvant = null;
+      this.pieton = null;
+      this.vue = { x: 0, y: 0 };
     }
     // --- Plan de la ville ----------------------------------------------------------
     construire() {
@@ -8248,7 +8313,7 @@ body {
       const entrepot = by % 2 === 0;
       if (entrepot) {
         const m = this.ajouter({ type: "rect", x: o3.x + 8, y: o3.y + 6, w: TAILLE_ILOT - 16, h: hauteurBatiment(1) });
-        this.dessin(m.y + m.h, (c3) => batimentModerne(c3, m.x, m.y, m.w, 1, { facade: "#aab4c8", toit: "#8b9bb4", garage: true, enseigne: "#5c6278", nom: "ENTREP\xD4T" }));
+        this.dessin(m.y + m.h, (c3) => batimentModerne(c3, m.x, m.y, m.w, 1, { facade: "#aab4c8", toit: "#8b9bb4", garage: true, enseigne: "#5c6278", nom: "D\xC9P\xD4T" }));
       }
       const y0 = entrepot ? o3.y + 100 : o3.y + 20;
       for (let i = 0; i < 4; i++) {
@@ -8523,12 +8588,23 @@ body {
       if (this.fini || this.entree) return;
       if (!this.attente) this.temps += dt;
       const v2 = this.voiture;
+      if (entrees.action) this.basculerPied();
+      if (this.pieton) {
+        this.majPieton(dt, entrees);
+        return;
+      }
       v2.direction = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
       const deux = entrees.gauche && entrees.droite;
       if (deux) {
         v2.direction = 0;
         this.tenuDeux = (this.tenuDeux || 0) + dt;
-      } else this.tenuDeux = 0;
+      } else {
+        if (this.tenuDeux > 0 && (v2.vitesse < 15 || v2.recul)) {
+          this.attente = true;
+          this.reculAuto = 0;
+        }
+        this.tenuDeux = 0;
+      }
       if (this.reculAuto > 0) this.reculAuto -= dt;
       else if (!deux && this.contact && v2.vitesse < 12 && this.temps > 1) {
         this.coince = (this.coince || 0) + dt;
@@ -8569,6 +8645,10 @@ body {
       this.ramasser(v2);
       this.majDefi(dt);
       this.portesDevant(v2);
+      this.majCommun(dt);
+    }
+    /** Ce qui vit, qu'on soit au volant ou à pied : messages, particules, fans, fin de la balade. */
+    majCommun(dt) {
       for (const m of this.messages) m.vie -= dt;
       this.messages = this.messages.filter((m) => m.vie > 0);
       for (const p3 of this.particules) {
@@ -8711,24 +8791,145 @@ body {
         if (n === AFFICHES) this.gagner({ argent: 1e4 }, "Toutes les affiches ! +10 000 G");
       }
     }
-    portesDevant(v2) {
+    /**
+     * Zones jaunes. En voiture, on n'entre que dans le garage (porte de garage) ;
+     * ailleurs, on se gare, on descend et on entre à pied. `marge` : à pied, on
+     * entre dès qu'on touche la zone.
+     */
+    portesDevant(v2, aPied = false) {
+      const m = aPied ? 6 : 0;
       let dans2 = null;
-      for (const p3 of this.portes) if (v2.x > p3.x && v2.x < p3.x + p3.w && v2.y > p3.y && v2.y < p3.y + p3.h) dans2 = p3;
+      for (const p3 of this.portes) if (v2.x > p3.x - m && v2.x < p3.x + p3.w + m && v2.y > p3.y - m && v2.y < p3.y + p3.h + m) dans2 = p3;
       if (!dans2) {
         this.ignorer = null;
         return;
       }
       if (dans2.id === this.ignorer || this.defi) return;
-      this.entree = dans2;
       this.ignorer = dans2.id;
+      if (!aPied && dans2.id !== "garage") {
+        this.annonce(`${dans2.nom} : arr\xEAte-toi et touche DESCENDRE pour entrer \xE0 pied`, "#ffe066");
+        return;
+      }
+      this.entree = dans2;
       v2.vx = 0;
       v2.vy = 0;
       this.son?.bip(660, 0.12);
+    }
+    // --- À pied ------------------------------------------------------------------------------
+    /** Descendre de voiture (à l'arrêt) ou y remonter (en y retournant à pied si besoin). */
+    basculerPied() {
+      const v2 = this.voiture;
+      if (this.pieton) {
+        if (Math.hypot(this.pieton.x - v2.x, this.pieton.y - v2.y) < 40) this.remonter();
+        else {
+          this.pieton.cible = { x: v2.x, y: v2.y };
+          this.pieton.versVoiture = true;
+        }
+        return;
+      }
+      if (this.defi) {
+        this.annonce("Termine d'abord le d\xE9fi en cours", "#fca5a5");
+        return;
+      }
+      if (v2.vitesse > 15) {
+        this.annonce("Arr\xEAte-toi pour descendre", "#cfe0ff");
+        return;
+      }
+      const fx = Math.cos(v2.angle), fy = Math.sin(v2.angle);
+      const cotes = [[-fy, fx], [fy, -fx], [-fx, -fy], [fx, fy]];
+      for (const d2 of [26, 34, 44]) for (const [nx, ny] of cotes) {
+        const x = v2.x + nx * d2, y = v2.y + ny * d2;
+        if (!this.libre(x, y, 5)) continue;
+        v2.vx = 0;
+        v2.vy = 0;
+        v2.frein = 1;
+        v2.recul = false;
+        v2.direction = 0;
+        this.attente = false;
+        this.pieton = { x, y, dir: "face", pas: 0, t: 0, cible: null, versVoiture: false };
+        this.ignorer = null;
+        this.son?.bip(520, 0.08);
+        return;
+      }
+      this.annonce("Pas la place de descendre ici", "#fca5a5");
+    }
+    remonter() {
+      this.pieton = null;
+      this.son?.bip(780, 0.08);
+    }
+    /** La pilote marche vers l'endroit touché (ou au clavier) ; les bâtiments et l'eau l'arrêtent. */
+    majPieton(dt, entrees) {
+      const p3 = this.pieton, v2 = this.voiture;
+      if (entrees.toucher) {
+        p3.cible = { x: this.vue.x + entrees.toucher.x, y: this.vue.y + entrees.toucher.y };
+        p3.versVoiture = false;
+      }
+      let dx = (entrees.droite ? 1 : 0) - (entrees.gauche ? 1 : 0);
+      let dy = (entrees.bas ? 1 : 0) - (entrees.haut ? 1 : 0);
+      if (dx || dy) p3.cible = null;
+      else if (p3.cible) {
+        dx = p3.cible.x - p3.x;
+        dy = p3.cible.y - p3.y;
+        const d2 = Math.hypot(dx, dy);
+        if (d2 < 3) {
+          p3.cible = null;
+          dx = 0;
+          dy = 0;
+        }
+      }
+      if (p3.detour && (dx || dy)) {
+        p3.detour.t -= dt;
+        if (p3.detour.t > 0) {
+          dx = p3.detour.dx;
+          dy = p3.detour.dy;
+        } else p3.detour = null;
+      }
+      const l = Math.hypot(dx, dy);
+      const VITESSE = 80;
+      if (l > 0) {
+        const sx = dx / l * VITESSE * dt, sy = dy / l * VITESSE * dt;
+        const avant = { x: p3.x, y: p3.y };
+        if (this.libre(p3.x + sx, p3.y, 5)) p3.x += sx;
+        if (this.libre(p3.x, p3.y + sy, 5)) p3.y += sy;
+        const bouge = Math.hypot(p3.x - avant.x, p3.y - avant.y) > VITESSE * dt * 0.3;
+        if (!bouge && p3.cible) {
+          p3.bloque = (p3.bloque || 0) + dt;
+          if (p3.bloque > 2) {
+            p3.cible = null;
+            p3.bloque = 0;
+            p3.detour = null;
+          } else if (!p3.detour) {
+            const [nx, ny] = [-dy / l, dx / l];
+            const s2 = this.libre(p3.x + nx * 12, p3.y + ny * 12, 5) ? 1 : -1;
+            p3.detour = { dx: nx * s2, dy: ny * s2, t: 0.3 };
+          }
+        } else if (bouge) p3.bloque = 0;
+        p3.dir = Math.abs(dx) > Math.abs(dy) ? dx > 0 ? "droite" : "gauche" : dy > 0 ? "face" : "dos";
+        p3.t += dt;
+        p3.pas = bouge ? 1 + Math.floor(p3.t * 8) % 2 : 0;
+      } else p3.pas = 0;
+      if (p3.versVoiture && Math.hypot(p3.x - v2.x, p3.y - v2.y) < 40) {
+        this.remonter();
+        this.majCommun(dt);
+        return;
+      }
+      v2.vx = 0;
+      v2.vy = 0;
+      this.trafic.maj(dt, this.temps, v2);
+      this.pietons.maj(dt, v2);
+      this.ramasser(p3);
+      this.portesDevant(p3, true);
+      this.majCommun(dt);
     }
     sortir() {
       const p3 = this.entree;
       this.entree = null;
       if (!p3) return;
+      if (this.pieton) {
+        Object.assign(this.pieton, { x: p3.x + p3.w / 2, y: p3.y + p3.h + 4, dir: "face", cible: null, versVoiture: false });
+        this.ignorer = p3.id;
+        return;
+      }
       this.placerDevant(p3);
     }
     message(texteMsg, couleur, ancre) {
@@ -8950,8 +9151,9 @@ body {
     dessiner(ctx, W3, H3, t) {
       const v2 = this.voiture;
       const hVue = H3 - HAUTEUR_PANNEAU;
-      this.camera.x = lerp(this.camera.x, v2.x + v2.vx * 0.45, 0.12);
-      this.camera.y = lerp(this.camera.y, v2.y + v2.vy * 0.45, 0.12);
+      const suivi = this.pieton || { x: v2.x + v2.vx * 0.45, y: v2.y + v2.vy * 0.45 };
+      this.camera.x = lerp(this.camera.x, suivi.x, 0.12);
+      this.camera.y = lerp(this.camera.y, suivi.y, 0.12);
       const sx = this.secousse ? (Math.random() - 0.5) * this.secousse : 0;
       const camX = Math.round(clamp(this.camera.x - W3 / 2 + sx, 0, TAILLE_VILLE - W3));
       const camY = Math.round(clamp(this.camera.y - hVue / 2 + sx, 0, TAILLE_VILLE - hVue));
@@ -8962,6 +9164,7 @@ body {
         }
       }
       this.prechauffer(camX, camY, W3, hVue);
+      this.vue = { x: camX, y: camY };
       ctx.save();
       ctx.translate(-camX, -camY);
       const visible = (x, y, m = 40) => x > camX - m && x < camX + W3 + m && y > camY - m && y < camY + hVue + m;
@@ -8977,7 +9180,7 @@ body {
       for (const p3 of this.portes) {
         if (!visible(p3.x, p3.y, 60)) continue;
         const fl = Math.sin(t * 5) > 0 ? 1 : 0;
-        texte(ctx, p3.id === "garage" ? "RENTRER" : "ENTRER", p3.x + p3.w / 2, p3.y + p3.h / 2 - fl, 9, "#ffe066", "center");
+        texte(ctx, p3.id === "garage" ? "RENTRER" : this.pieton ? "ENTRER" : "\xC0 PIED", p3.x + p3.w / 2, p3.y + p3.h / 2 - fl, 9, "#ffe066", "center");
       }
       for (const d2 of this.defis) {
         if (d2.fait || this.defi || !visible(d2.x, d2.y)) continue;
@@ -9001,6 +9204,17 @@ body {
       }
       this.trafic.dessiner(ctx, camX, camY, W3, H3);
       dessinerVoiture(ctx, v2.modele, v2.couleur, v2.x, v2.y, v2.angle);
+      if (this.pieton) {
+        const p3 = this.pieton;
+        if (p3.cible) anneau(ctx, p3.cible.x, p3.cible.y, 6 + Math.sin(t * 8), "#ffe066");
+        dessinerPerso(ctx, this.tenuePilote || tenue(4), p3.x, p3.y, p3.dir, p3.pas);
+        ctx.fillStyle = "#ffe066";
+        ctx.beginPath();
+        ctx.moveTo(p3.x - 4, p3.y - 26);
+        ctx.lineTo(p3.x + 4, p3.y - 26);
+        ctx.lineTo(p3.x, p3.y - 21);
+        ctx.fill();
+      }
       ctx.fillStyle = "#ffe066";
       for (const p3 of this.particules) ctx.fillRect(Math.round(p3.x), Math.round(p3.y), 2, 2);
       for (const m of this.messages) {
@@ -9147,18 +9361,35 @@ body {
       if (this.attente && Math.sin(this.temps * 6 + t * 6) > -0.4) {
         ctx.fillStyle = "rgba(15,23,42,0.85)";
         ctx.fillRect(W3 / 2 - 110, hVue - 40, 220, 26);
-        texte(ctx, "Touche Gauche ou Droite pour d\xE9marrer", W3 / 2, hVue - 27, 10, "#ffe066", "center");
+        texte(ctx, "Gar\xE9e \xB7 Gauche ou Droite pour rouler", W3 / 2, hVue - 27, 10, "#ffe066", "center");
       }
       const v2 = this.voiture;
       const reste = clamp(1 - this.temps / DUREE_BALADE, 0, 1);
-      dessinerPanneau(ctx, W3, H3, t, {
-        tenue: this.tenuePilote,
-        nom: v2.nom,
-        vitesse: v2.vitesse,
-        etat: 1 - this.usureDepart - this.gains.usure,
-        jauge: { libelle: this.heure(), valeur: reste, couleur: reste > 0.25 ? "#5ad16a" : "#e4432d", texte: "#ffe066" },
-        centre: { titre: v2.recul ? "RECUL" : "FREIN", detail: "tenir : recule", fond: v2.frein || v2.recul ? "#e4432d" : "#a63d3a" }
-      });
+      const jauge = { libelle: this.heure(), valeur: reste, couleur: reste > 0.25 ? "#5ad16a" : "#e4432d", texte: "#ffe066" };
+      const etat = 1 - this.usureDepart - this.gains.usure;
+      if (this.pieton) {
+        dessinerPanneau(ctx, W3, H3, t, {
+          tenue: this.tenuePilote,
+          nom: v2.nom,
+          vitesse: 0,
+          etat,
+          jauge,
+          action: { titre: "\xC0 PIED", fond: "#3a4a6b" },
+          cotes: [["Touche la carte", "pour marcher"], ["Zone jaune", "pour entrer"]],
+          centre: { titre: "VOITURE", detail: "y retourner", fond: "#2f6fdb" }
+        });
+      } else {
+        const arret = v2.vitesse < 15 && !this.defi;
+        dessinerPanneau(ctx, W3, H3, t, {
+          tenue: this.tenuePilote,
+          nom: v2.nom,
+          vitesse: v2.vitesse,
+          etat,
+          jauge,
+          action: arret ? { titre: "DESCENDRE", fond: "#d9822b" } : null,
+          centre: { titre: v2.recul ? "RECUL" : "FREIN", detail: "tenir : recule", fond: v2.frein || v2.recul ? "#e4432d" : "#a63d3a" }
+        });
+      }
     }
     /** Gains nets de la balade, à verser dans la partie. */
     bilan() {
@@ -9271,11 +9502,66 @@ body {
     }
   }
 
+  // pistonville/src/musique.js
+  var NOTES = { C: 0, "C#": 1, Db: 1, D: 2, "D#": 3, Eb: 3, E: 4, F: 5, "F#": 6, Gb: 6, G: 7, "G#": 8, Ab: 8, A: 9, "A#": 10, Bb: 10, B: 11 };
+  function frequence(nom) {
+    const m = /^([A-G][#b]?)(\d)$/.exec(nom);
+    if (!m) return 440;
+    const demi = NOTES[m[1]] + (Number(m[2]) + 1) * 12;
+    return 440 * 2 ** ((demi - 69) / 12);
+  }
+  var air = (texte2) => texte2.trim().split(/\s+/);
+  var MORCEAUX = {
+    // Au garage : un air enjoué en do majeur, tranquille.
+    garage: {
+      tempo: 112,
+      timbre: "square",
+      melodie: air(`
+      E5 . G5 . C6 - G5 .     A5 - G5 E5 C5 - . .
+      F5 . A5 . C6 - A5 G5    G5 - D5 . G5 - - .
+      C6 B5 C6 G5 E5 - G5 .   A5 G5 A5 E5 C5 - . E5
+      F5 E5 F5 A5 G5 - F5 .   D5 - G5 - B5 - . .`),
+      accords: ["C3", "A2", "F2", "G2", "C3", "A2", "F2", "G2"],
+      basse: [1, 0, 1.5, 0, 1, 0, 1.5, 2],
+      batterie: ["k", "h", "s", "h", "k", "h", "s", "h"]
+    },
+    // En course : la mineur, rapide, arpèges qui poussent.
+    course: {
+      tempo: 152,
+      timbre: "square",
+      melodie: air(`
+      A4 C5 E5 A5 E5 C5 A4 C5   F4 A4 C5 F5 C5 A4 F4 A4
+      C5 E5 G5 C6 G5 E5 C5 E5   B4 D5 G5 B5 D6 - B5 .
+      E6 - D6 C6 B5 - A5 .      C6 - A5 F5 A5 - C6 .
+      G5 - E5 G5 C6 - E6 .      D6 - B5 G5 D6 - - .`),
+      accords: ["A2", "F2", "C3", "G2", "A2", "F2", "C3", "G2"],
+      basse: [1, 1, 2, 1, 1, 1, 2, 1],
+      batterie: ["K", "h", "s", "h", "K", "k", "s", "h"]
+    },
+    // En ville : fa majeur, un peu funky, décalé.
+    ville: {
+      tempo: 124,
+      timbre: "square",
+      melodie: air(`
+      . A5 . C6 A5 . F5 .       . F5 . A5 D6 - C6 .
+      . D6 . F6 D6 . Bb5 .      C6 - Bb5 A5 G5 - . .
+      A5 C6 A5 F5 . F5 G5 A5    F5 - D5 F5 A5 - . .
+      Bb5 - D6 - F6 - D6 .      E6 - D6 C6 G5 - E5 .`),
+      accords: ["F2", "D2", "Bb2", "C3", "F2", "D2", "Bb2", "C3"],
+      basse: [1, 0, 2, 1, 0, 1, 2, 0],
+      batterie: ["k", "h", "s", "k", "h", "k", "s", "h"]
+    }
+  };
+
   // pistonville/src/son.js
   var Son = class {
     constructor() {
       this.ctx = null;
       this.actif = true;
+      this.volumes = { musique: 0.5, effets: 0.8 };
+      this.vibrations = true;
+      this.morceau = null;
+      this.lecture = null;
     }
     reveiller() {
       if (this.ctx || typeof AudioContext === "undefined") return;
@@ -9283,8 +9569,131 @@ body {
         this.ctx = new AudioContext();
       } catch {
         this.ctx = null;
+        return;
+      }
+      this.gEffets = this.ctx.createGain();
+      this.gMusique = this.ctx.createGain();
+      this.gEffets.connect(this.ctx.destination);
+      this.gMusique.connect(this.ctx.destination);
+      this.appliquerVolumes();
+      const n = this.ctx.sampleRate;
+      this.souffleBlanc = this.ctx.createBuffer(1, n, n);
+      const d2 = this.souffleBlanc.getChannelData(0);
+      for (let i = 0; i < n; i++) d2[i] = Math.random() * 2 - 1;
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) this.ctx.suspend?.();
+        else this.ctx.resume?.();
+      });
+      if (this.morceau) this.musique(this.morceau, true);
+    }
+    /** Volumes de 0 à 1 ; `effets` à 0 coupe aussi les bruitages. */
+    regler({ musique, effets: effets2, vibrations }) {
+      if (musique !== void 0) this.volumes.musique = musique;
+      if (effets2 !== void 0) {
+        this.volumes.effets = effets2;
+        this.actif = effets2 > 0;
+      }
+      if (vibrations !== void 0) this.vibrations = vibrations;
+      this.appliquerVolumes();
+    }
+    appliquerVolumes() {
+      if (!this.ctx) return;
+      const t = this.ctx.currentTime;
+      this.gEffets.gain.setTargetAtTime(this.volumes.effets * 1.4, t, 0.05);
+      this.gMusique.gain.setTargetAtTime(this.volumes.musique * 0.9, t, 0.05);
+    }
+    vibrer(ms) {
+      if (this.vibrations && navigator.vibrate) try {
+        navigator.vibrate(ms);
+      } catch {
       }
     }
+    // --- Musique ----------------------------------------------------------------------------
+    /** Joue un air ('garage', 'course', 'ville') en boucle ; null pour arrêter. */
+    musique(nom, forcer = false) {
+      if (nom === this.morceau && !forcer) return;
+      this.morceau = nom;
+      if (!this.ctx) return;
+      clearInterval(this.minuteur);
+      this.lecture = null;
+      if (!nom || !MORCEAUX[nom]) return;
+      this.lecture = { nom, prochain: this.ctx.currentTime + 0.15, pas: 0 };
+      this.minuteur = setInterval(() => this.programmer(), 30);
+      this.programmer();
+    }
+    /** Programme les croches des 0,2 prochaines secondes. */
+    programmer() {
+      const L = this.lecture;
+      if (!L || !this.ctx || this.ctx.state !== "running") return;
+      const m = MORCEAUX[L.nom];
+      const croche = 30 / m.tempo;
+      if (L.prochain < this.ctx.currentTime - 0.1) L.prochain = this.ctx.currentTime + 0.05;
+      while (L.prochain < this.ctx.currentTime + 0.2) {
+        this.jouerPas(m, L.pas, L.prochain, croche);
+        L.prochain += croche;
+        L.pas = (L.pas + 1) % m.melodie.length;
+      }
+    }
+    jouerPas(m, i, t, croche) {
+      const n = m.melodie[i];
+      if (n !== "." && n !== "-") {
+        let duree = 1;
+        while (m.melodie[(i + duree) % m.melodie.length] === "-") duree++;
+        this.voix(frequence(n), t, duree * croche * 0.92, m.timbre || "square", 0.055);
+      }
+      const accord = m.accords[Math.floor(i / 8) % m.accords.length];
+      const b2 = m.basse[i % 8];
+      if (b2) this.voix(frequence(accord) * b2, t, croche * 0.8, "triangle", 0.13);
+      const coup = m.batterie[i % m.batterie.length];
+      if (coup === "k" || coup === "K") this.grosseCaisse(t);
+      if (coup === "s") this.caisseClaire(t);
+      if (coup === "h" || coup === "K") this.charleston(t, 0.025);
+    }
+    voix(freq, t, duree, type, volume) {
+      const o3 = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o3.type = type;
+      o3.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(volume, t + 0.01);
+      g.gain.setValueAtTime(volume, t + duree * 0.6);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + duree);
+      o3.connect(g).connect(this.gMusique);
+      o3.start(t);
+      o3.stop(t + duree + 0.02);
+    }
+    grosseCaisse(t) {
+      const o3 = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      o3.frequency.setValueAtTime(140, t);
+      o3.frequency.exponentialRampToValueAtTime(45, t + 0.12);
+      g.gain.setValueAtTime(0.22, t);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + 0.15);
+      o3.connect(g).connect(this.gMusique);
+      o3.start(t);
+      o3.stop(t + 0.17);
+    }
+    caisseClaire(t) {
+      this.souffle_(t, 0.12, 0.09, "bandpass", 1800);
+      this.voix(190, t, 0.07, "triangle", 0.06);
+    }
+    charleston(t, volume) {
+      this.souffle_(t, 0.035, volume, "highpass", 7e3);
+    }
+    souffle_(t, duree, volume, type, freq) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.souffleBlanc;
+      const f = this.ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(volume, t);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + duree);
+      src.connect(f).connect(g).connect(this.gMusique);
+      src.start(t, Math.random() * 0.5);
+      src.stop(t + duree + 0.01);
+    }
+    // --- Bruitages --------------------------------------------------------------------------
     note(freq, duree, type = "square", volume = 0.06, glisse = 0) {
       if (!this.actif || !this.ctx) return;
       const t = this.ctx.currentTime;
@@ -9295,11 +9704,11 @@ body {
       if (glisse) o3.frequency.exponentialRampToValueAtTime(Math.max(30, freq + glisse), t + duree);
       g.gain.setValueAtTime(volume, t);
       g.gain.exponentialRampToValueAtTime(1e-4, t + duree);
-      o3.connect(g).connect(this.ctx.destination);
+      o3.connect(g).connect(this.gEffets);
       o3.start(t);
       o3.stop(t + duree + 0.02);
     }
-    bruit(duree, volume = 0.08, frequence = 800) {
+    bruit(duree, volume = 0.08, frequence2 = 800) {
       if (!this.actif || !this.ctx) return;
       const t = this.ctx.currentTime;
       const n = Math.floor(this.ctx.sampleRate * duree);
@@ -9310,10 +9719,10 @@ body {
       src.buffer = buffer;
       const f = this.ctx.createBiquadFilter();
       f.type = "lowpass";
-      f.frequency.value = frequence;
+      f.frequency.value = frequence2;
       const g = this.ctx.createGain();
       g.gain.value = volume;
-      src.connect(f).connect(g).connect(this.ctx.destination);
+      src.connect(f).connect(g).connect(this.gEffets);
       src.start(t);
     }
     bip(freq = 440, duree = 0.15) {
@@ -9331,6 +9740,7 @@ body {
     }
     choc(force) {
       this.bruit(0.18, Math.min(0.2, 0.05 + force / 1500), 500);
+      this.vibrer(Math.round(Math.min(80, 15 + force / 4)));
     }
     fanfare() {
       [523, 659, 784, 659, 784, 1047].forEach((f, i) => setTimeout(() => this.note(f, 0.2, "square", 0.045), i * 110));
@@ -9352,6 +9762,23 @@ body {
       [880, 1320].forEach((f, i) => setTimeout(() => this.note(f, 0.12, "square", 0.04), i * 80));
     }
   };
+
+  // pistonville/src/reglages.js
+  var CLE2 = "pistonville-reglages";
+  var DEFAUTS = { musique: 0.5, effets: 0.8, vibrations: true, economie: false };
+  function lireReglages() {
+    try {
+      return { ...DEFAUTS, ...JSON.parse(localStorage.getItem(CLE2) || "{}") };
+    } catch {
+      return { ...DEFAUTS };
+    }
+  }
+  function ecrireReglages(r) {
+    try {
+      localStorage.setItem(CLE2, JSON.stringify(r));
+    } catch {
+    }
+  }
 
   // pistonville/src/icones.js
   var N2 = 20;
@@ -10070,6 +10497,7 @@ body {
       <nav class="grille-actions">
         <button class="btn ${v2 ? "" : "btn-principal"}" data-action="boutique">Construire / acheter</button>
         <button class="btn" data-action="atelier" ${v2 ? "" : "disabled"}>Atelier</button>
+        <button class="btn" data-action="mesVoitures" ${p3.garage.length ? "" : "disabled"}>Mes voitures (${p3.garage.length})</button>
         <button class="btn" data-action="pieces">Pi\xE8ces</button>
         <button class="btn" data-action="labo">Labo</button>
       </nav>
@@ -10079,10 +10507,72 @@ body {
         ...actionsOnglets(app2),
         boutique: () => app2.montrer(ecranBoutique(app2, () => app2.montrer(ecranVoitures(app2)))),
         atelier: () => app2.montrer(ecranAtelier(app2)),
+        mesVoitures: () => app2.montrer(ecranMesVoitures(app2)),
         pieces: () => app2.montrer(ecranPieces(app2, { retour: () => app2.montrer(ecranVoitures(app2)) })),
         labo: () => app2.montrer(ecranLabo(app2, () => app2.montrer(ecranVoitures(app2)))),
         aide: () => app2.montrer(ecranAide(app2, "garage")),
         titre: () => app2.titre()
+      }
+    };
+  }
+  function ecranMesVoitures(app2, confirmer = null) {
+    const p3 = app2.partie;
+    const cartes = p3.garage.map((g) => {
+      const v2 = decrireVoiture(p3, g);
+      const val = valeurVoiture(p3, g.uid);
+      const raison = raisonGarder(p3, g.uid);
+      const active = g.uid === p3.voitureActive;
+      const pieces = val.pieces ? `${val.pieces} pi\xE8ce${val.pieces > 1 ? "s" : ""} mont\xE9e${val.pieces > 1 ? "s" : ""} : elle${val.pieces > 1 ? "s" : ""} retourne${val.pieces > 1 ? "nt" : ""} dans ton stock.` : "Aucune pi\xE8ce mont\xE9e.";
+      let boutons;
+      if (confirmer?.uid === g.uid) {
+        boutons = confirmer.quoi === "vendre" ? `<p class="petit">Vendre pour ${formatArgent(val.vente)} ? ${pieces}</p>
+           <div class="rangee"><button class="btn btn-mini btn-rouge" data-action="vendre" data-uid="${g.uid}">Confirmer la vente</button><button class="btn btn-mini" data-action="annuler">Annuler</button></div>` : `<p class="petit">D\xE9monter : ${formatArgent(val.ferraille)} de ferraille et +${val.recherche} PR. ${pieces}</p>
+           <div class="rangee"><button class="btn btn-mini btn-rouge" data-action="demonter" data-uid="${g.uid}">Confirmer le d\xE9montage</button><button class="btn btn-mini" data-action="annuler">Annuler</button></div>`;
+      } else {
+        boutons = `<div class="rangee">
+        ${active ? '<span class="etat">Au volant</span>' : `<button class="btn btn-mini btn-principal" data-action="conduire" data-uid="${g.uid}">Conduire</button>`}
+        <button class="btn btn-mini" data-action="demanderVente" data-uid="${g.uid}" ${raison ? "disabled" : ""}>Vendre \xB7 ${formatArgent(val.vente)}</button>
+        <button class="btn btn-mini" data-action="demanderDemontage" data-uid="${g.uid}" ${raison ? "disabled" : ""}>D\xE9monter \xB7 +${val.recherche} PR</button>
+      </div>${raison ? `<p class="petit">${e(raison)}</p>` : ""}`;
+      }
+      return `<section class="panneau">${carteVoiture(v2, { compacte: true })}<div class="contenu">${boutons}</div></section>`;
+    }).join("");
+    const redessiner = (c3 = null) => app2.montrer(ecranMesVoitures(app2, c3));
+    return {
+      classe: "garage plein",
+      html: `${barre(p3)}<div class="defile">
+      <h2 class="titre-section">Mes voitures</h2>
+      <p class="astuce">Vendre rapporte de l'argent ; d\xE9monter rapporte des points de recherche. Dans les deux cas, les pi\xE8ces mont\xE9es sont gard\xE9es pour une autre voiture.</p>
+      ${cartes}
+    </div>
+    <div class="pied"><button class="btn" data-action="retour">Retour</button></div>`,
+      actions: {
+        conduire: (d2) => {
+          p3.voitureActive = d2.uid;
+          if (p3.voitureSecond === d2.uid) p3.voitureSecond = null;
+          app2.sauver();
+          redessiner();
+        },
+        demanderVente: (d2) => redessiner({ uid: d2.uid, quoi: "vendre" }),
+        demanderDemontage: (d2) => redessiner({ uid: d2.uid, quoi: "demonter" }),
+        annuler: () => redessiner(),
+        vendre: (d2) => {
+          const r = app2.action("vendreVoiture", d2.uid);
+          if (r) {
+            app2.son.caisse();
+            app2.toast(`Vendue ${formatArgent(r.vente)} !`);
+          }
+          redessiner();
+        },
+        demonter: (d2) => {
+          const r = app2.action("demonterVoiture", d2.uid);
+          if (r) {
+            app2.son.caisse();
+            app2.toast(`D\xE9mont\xE9e : +${r.recherche} PR, ${formatArgent(r.ferraille)} de ferraille.`);
+          }
+          redessiner();
+        },
+        retour: () => app2.montrer(ecranVoitures(app2))
       }
     };
   }
@@ -10093,10 +10583,11 @@ body {
     constructor(racine) {
       this.racine = racine;
       this.actions = {};
+      this.globales = {};
       this.racine.addEventListener("click", (ev) => {
         const el = ev.target.closest("[data-action]");
         if (!el || el.disabled) return;
-        const f = this.actions[el.dataset.action];
+        const f = this.actions[el.dataset.action] || this.globales[el.dataset.action];
         if (f) {
           ev.preventDefault();
           f(el.dataset);
@@ -10115,6 +10606,7 @@ body {
       this.montrer({ html: "" });
     }
   };
+  var ICONE_REGLAGES = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M7 1h2v2h2v1h1v1h1v2h2v2h-2v2h-1v1h-1v1H9v2H7v-2H5v-1H4v-1H3V9H1V7h2V5h1V4h1V3h2zM7 6v1H6v2h1v1h2V9h1V7H9V6z"/></svg>';
   function barre(partie) {
     const lic = partie.licence ? `Licence ${partie.licence}` : "Sans licence";
     const besoin = expPourRang(partie.rang);
@@ -10130,6 +10622,7 @@ body {
       <span class="pastille rouge">${partie.fans} fans</span>
       <span class="pastille violet">${partie.recherche} PR</span>
       <span class="pastille rose">${partie.tickets} ticket${partie.tickets > 1 ? "s" : ""}</span>
+      <button class="engrenage" data-action="reglages" aria-label="Param\xE8tres">${ICONE_REGLAGES}</button>
     </div>
   </header>`;
   }
@@ -10197,6 +10690,7 @@ body {
         ${reprise ? `<button class="btn btn-principal reprise" data-action="continuer">Continuer la partie<small>${resumeReprise(app2.partieSauvee)}</small></button>` : ""}
         <button class="btn ${reprise ? "" : "btn-principal"}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
+        <button class="btn" data-action="reglages">Param\xE8tres</button>
         <button class="lien" data-action="sauvegarde">Transf\xE9rer ma sauvegarde (PC \u2194 t\xE9l\xE9phone)</button>
         ${/^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre \xE0 jour le jeu</button>' : ""}
       </div>
@@ -11020,6 +11514,58 @@ body {
   function ecranChargement(texte2) {
     return { classe: "fond-sombre", html: `<div class="ecran chargement"><p>${e2(texte2)}</p></div>`, actions: {} };
   }
+  function ecranReglages(app2, retour) {
+    const r = app2.reglages, p3 = app2.partie;
+    const pourcent = (v2) => `${Math.round(v2 * 100)} %`;
+    const volume = (cle, nom) => `<div class="ligne"><span>${nom}</span><span class="rangee">
+      <button class="btn btn-mini" data-action="moins" data-cle="${cle}" ${r[cle] <= 0 ? "disabled" : ""} aria-label="Moins fort">\u2212</button>
+      <b class="valeur-reglage">${r[cle] > 0 ? pourcent(r[cle]) : "Coup\xE9"}</b>
+      <button class="btn btn-mini" data-action="plus" data-cle="${cle}" ${r[cle] >= 1 ? "disabled" : ""} aria-label="Plus fort">+</button></span></div>`;
+    const bascule = (action, nom, actif2, detail = "") => `<div class="ligne"><span class="libelle">${nom}${detail ? `<small>${detail}</small>` : ""}</span>
+      <button class="btn btn-mini ${actif2 ? "btn-principal" : ""}" data-action="${action}">${actif2 ? "Activ\xE9" : "Coup\xE9"}</button></div>`;
+    const changer = (f) => {
+      f();
+      app2.appliquerReglages();
+      app2.montrer(ecranReglages(app2, retour));
+    };
+    return {
+      classe: "fond-sombre",
+      html: `<div class="ecran">
+      <section class="panneau"><h2 class="titre-panneau">Param\xE8tres</h2>
+        <div class="contenu">
+          ${volume("musique", "Musique")}
+          ${volume("effets", "Effets sonores")}
+          ${bascule("vibrations", "Vibrations", r.vibrations, "Le t\xE9l\xE9phone vibre aux chocs")}
+          ${bascule("aide", "Aide au pilotage", p3.aide, "La voiture se recentre seule en course")}
+          ${bascule("economie", "\xC9conomie de batterie", r.economie, "30 images par seconde au lieu de 60")}
+        </div>
+      </section>
+      <div class="pile"><button class="btn btn-principal" data-action="retour">Retour</button></div>
+    </div>`,
+      actions: {
+        moins: (d2) => changer(() => {
+          r[d2.cle] = Math.max(0, Math.round((r[d2.cle] - 0.1) * 10) / 10);
+        }),
+        plus: (d2) => changer(() => {
+          r[d2.cle] = Math.min(1, Math.round((r[d2.cle] + 0.1) * 10) / 10);
+          app2.son.bip(660, 0.08);
+        }),
+        vibrations: () => changer(() => {
+          r.vibrations = !r.vibrations;
+          if (r.vibrations) app2.son.vibrer(40);
+        }),
+        economie: () => changer(() => {
+          r.economie = !r.economie;
+        }),
+        aide: () => changer(() => {
+          p3.aide = !p3.aide;
+          if (app2.course) app2.course.aide = p3.aide;
+          app2.sauver();
+        }),
+        retour: () => retour()
+      }
+    };
+  }
   function ecranPauseVille(app2) {
     const p3 = app2.partie;
     return {
@@ -11027,7 +11573,7 @@ body {
       html: `<div class="ecran">
       <section class="panneau"><h2 class="titre-panneau">Pause</h2>
         <div class="contenu">
-          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p3.son ? "Activ\xE9" : "Coup\xE9"}</button></div>
+          <div class="ligne"><span>Musique, sons, vibrations</span><button class="btn btn-mini" data-action="reglages">Param\xE8tres</button></div>
           <p class="petit">Rentrer maintenant termine la balade : ce que tu as gagn\xE9 est gard\xE9.</p>
         </div>
       </section>
@@ -11038,12 +11584,7 @@ body {
     </div>`,
       actions: {
         reprendre: () => app2.reprendre(),
-        son: () => {
-          p3.son = !p3.son;
-          app2.son.actif = p3.son;
-          app2.sauver();
-          app2.montrer(ecranPauseVille(app2));
-        },
+        reglages: () => app2.montrer(ecranReglages(app2, () => app2.montrer(ecranPauseVille(app2)))),
         rentrer: () => {
           app2.reprendre();
           app2.ville.fini = true;
@@ -11059,7 +11600,7 @@ body {
       <section class="panneau"><h2 class="titre-panneau">Pause</h2>
         <div class="contenu">
           <div class="ligne"><span>Aide au pilotage (la voiture se recentre seule)</span><button class="btn btn-mini" data-action="aide">${p3.aide ? "Activ\xE9e" : "Coup\xE9e"}</button></div>
-          <div class="ligne"><span>Son</span><button class="btn btn-mini" data-action="son">${p3.son ? "Activ\xE9" : "Coup\xE9"}</button></div>
+          <div class="ligne"><span>Musique, sons, vibrations</span><button class="btn btn-mini" data-action="reglages">Param\xE8tres</button></div>
         </div>
       </section>
       <div class="pile">
@@ -11075,12 +11616,7 @@ body {
           app2.sauver();
           app2.montrer(ecranPause(app2));
         },
-        son: () => {
-          p3.son = !p3.son;
-          app2.son.actif = p3.son;
-          app2.sauver();
-          app2.montrer(ecranPause(app2));
-        },
+        reglages: () => app2.montrer(ecranReglages(app2, () => app2.montrer(ecranPause(app2)))),
         abandon: () => app2.abandonnerCourse()
       }
     };
@@ -11316,15 +11852,20 @@ body {
       this.ui = new Interface(document.getElementById("interface"));
       this.toastEl = document.getElementById("toast");
       this.son = new Son();
+      this.reglages = lireReglages();
+      this.son.regler(this.reglages);
+      this.ui.globales.reglages = () => {
+        const ici = this.dernierEcran;
+        this.montrer(ecranReglages(this, () => this.montrer(ici)));
+      };
       this.partieSauvee = charger();
       this.partie = this.partieSauvee || nouvellePartie();
-      this.son.actif = this.partie.son;
       this.course = null;
       this.pause = false;
       this.ecran = "titre";
       this.pointeurs = /* @__PURE__ */ new Map();
       this.touches = /* @__PURE__ */ new Set();
-      this.impulsions = { nitro: false, aura: false };
+      this.impulsions = { nitro: false, aura: false, action: false };
       this.redimensionner();
       window.addEventListener("resize", () => this.redimensionner());
       this.brancherEntrees();
@@ -11351,7 +11892,6 @@ body {
           this.partieSauvee = p3;
           if (this.ecran === "titre") {
             this.partie = p3;
-            this.son.actif = p3.son;
             this.titre();
           }
         }
@@ -11385,7 +11925,17 @@ body {
       this.echelle = w / W2;
     }
     // --- Boucle --------------------------------------------------------------------
+    /** Les réglages ont changé : volumes, vibrations ; on les garde sur l'appareil. */
+    appliquerReglages() {
+      this.son.regler(this.reglages);
+      ecrireReglages(this.reglages);
+    }
     boucle(t) {
+      if (this.reglages.economie && (this.imageSautee = !this.imageSautee)) {
+        requestAnimationFrame((tt) => this.boucle(tt));
+        return;
+      }
+      this.son.musique(this.ecran === "course" ? "course" : this.ecran === "ville" ? "ville" : "garage");
       const dt = Math.min(0.1, (t - this.dernier) / 1e3);
       this.dernier = t;
       const secondes = t / 1e3;
@@ -11425,7 +11975,10 @@ body {
         ArrowRight: "droite",
         KeyD: "droite",
         ArrowDown: "frein",
-        KeyS: "frein"
+        KeyS: "frein",
+        ArrowUp: "haut",
+        KeyW: "haut",
+        KeyZ: "haut"
       };
       window.addEventListener("keydown", (ev) => {
         this.son.reveiller();
@@ -11439,7 +11992,10 @@ body {
           this.basculerPause();
           return;
         }
-        if (this.ecran === "ville") return;
+        if (this.ecran === "ville") {
+          if (ev.code === "KeyE" || ev.code === "Enter") this.impulsions.action = true;
+          return;
+        }
         if (ev.code === "Space" || ev.code === "ArrowUp" || ev.code === "KeyW" || ev.code === "KeyZ") {
           this.impulsions.nitro = true;
           ev.preventDefault();
@@ -11494,7 +12050,13 @@ body {
           return;
         }
         if (this.ecran === "ville") {
+          const aPied = !!this.ville.pieton;
+          if (dans2(p3, z.action) || dans2(p3, z.portrait) || aPied && dans2(p3, z.centre)) {
+            this.impulsions.action = true;
+            return;
+          }
           if (dans2(p3, z.centre)) p3.frein = true;
+          if (p3.y < H2 - HAUTEUR_PANNEAU) p3.carte = true;
           this.canvas.setPointerCapture?.(ev.pointerId);
           this.pointeurs.set(ev.pointerId, p3);
           return;
@@ -11512,7 +12074,7 @@ body {
       });
       this.canvas.addEventListener("pointermove", (ev) => {
         const avant = this.pointeurs.get(ev.pointerId);
-        if (avant) this.pointeurs.set(ev.pointerId, { ...position(ev), frein: avant.frein });
+        if (avant) this.pointeurs.set(ev.pointerId, { ...position(ev), frein: avant.frein, carte: avant.carte });
       });
       const lacher = (ev) => this.pointeurs.delete(ev.pointerId);
       this.canvas.addEventListener("pointerup", lacher);
@@ -11522,6 +12084,14 @@ body {
     }
     entrees() {
       let gauche = this.touches.has("gauche"), droite = this.touches.has("droite");
+      const aPied = this.ecran === "ville" && this.ville?.pieton;
+      let toucher = null;
+      if (aPied) {
+        for (const p3 of this.pointeurs.values()) if (p3.carte) toucher = { x: p3.x, y: p3.y };
+        const e4 = { gauche, droite, haut: this.touches.has("haut"), bas: this.touches.has("frein"), toucher, action: this.impulsions.action };
+        this.impulsions.action = false;
+        return e4;
+      }
       if (this.touches.has("frein") && this.ecran === "ville") {
         gauche = true;
         droite = true;
@@ -11533,13 +12103,15 @@ body {
         } else if (p3.x < W2 / 2) gauche = true;
         else droite = true;
       }
-      const e3 = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura };
+      const e3 = { gauche, droite, nitro: this.impulsions.nitro, aura: this.impulsions.aura, action: this.impulsions.action };
       this.impulsions.nitro = false;
       this.impulsions.aura = false;
+      this.impulsions.action = false;
       return e3;
     }
     // --- Écrans ---------------------------------------------------------------------
     montrer(ecran) {
+      if (ecran?.html) this.dernierEcran = ecran;
       const lieu = this.ecran === "ville" && this.ville?.entree?.id;
       const image = lieu && ecran?.html && interieur(lieu, this.assets?.tiny);
       const balise = image && ecran.html.match(/<div class="(?:ecran(?! (?:celebration|chargement))[^"]*|defile)">/);
@@ -11640,7 +12212,6 @@ body {
     }
     nouvellePartie() {
       this.partie = nouvellePartie();
-      this.son.actif = this.partie.son;
       this.sauver();
       this.cadeauPuis(() => this.garage());
     }
@@ -11726,7 +12297,9 @@ body {
         renvoyerPilote,
         choisirTitulaire,
         choisirSecond,
-        choisirVoitureSecond
+        choisirVoitureSecond,
+        vendreVoiture,
+        demonterVoiture
       }[nom];
       const ok = f(this.partie, arg);
       if (ok) this.sauver();
