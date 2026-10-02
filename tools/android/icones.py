@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw
 RACINE = Path(__file__).resolve().parents[2]
 PV = RACINE / 'pistonville'
 FOND = (31, 42, 68, 255)
-MODELE, VUE = 'race', 28    # formule de course rouge, vue de trois quarts arrière (l'icône choisie)
+MODELE, VUE = 'race', 12    # formule de course rouge, vue de trois quarts
 NUIT = (20, 16, 34, 255)
 
 
