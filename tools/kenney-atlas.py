@@ -4,9 +4,9 @@
 Prend les packs Kenney décompressés (Racing Pack, Roguelike Modern City,
 Pixel Vehicle Pack) et
 fabrique, à l'échelle du jeu (une case de 16 px ≈ 1 m, une voiture ≈ 28 px de
-large) :
-  - pistonville/assets/kenney/course.png + src/atlas-course.js : voitures vues
-    de dessus et décor de course (tribunes, tentes, pneus, cônes, barrières…),
+large ; les véhicules eux-mêmes viennent du Car Kit, voir tools/voitures-3d/) :
+  - pistonville/assets/kenney/course.png + src/atlas-course.js : le décor de
+    course (tribunes, tentes, pneus, cônes, barrières…),
     réduits proprement (Lanczos) puis détourés net ;
   - pistonville/assets/kenney/modern-city.png : la planche Roguelike Modern
     City telle quelle (tuiles de 16 px, 37 colonnes).
@@ -26,10 +26,6 @@ ECHELLE = 28 / 71          # largeur d'une voiture Kenney → 28 px de jeu
 
 PNG = SOURCE / 'racing' / 'PNG'
 SPRITES = []
-for i in range(1, 6):
-    SPRITES.append((f'voiture{i}', PNG / 'Cars' / f'car_red_{i}.png', ECHELLE))
-for i in range(1, 6):
-    SPRITES.append((f'petite{i}', PNG / 'Cars' / f'car_red_small_{i}.png', ECHELLE * 1.45))
 OBJETS = {
     'tribune': ('tribune_full', 1), 'tribuneVide': ('tribune_empty', 1),
     'auventRouge': ('tribune_overhang_red', 1), 'auventRaye': ('tribune_overhang_striped', 1),

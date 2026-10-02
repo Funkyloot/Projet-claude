@@ -6,7 +6,7 @@
  * 1 case, une voiture = 2 × 3 cases). Image de 320 × 112 px, mise en cache.
  */
 
-import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, CONTOUR, PERSONNES } from './tiny.js';
+import { tuileTiny, dessinerPerso, tenue, dessinerVoiture, ANGLE_VITRINE, CONTOUR, PERSONNES } from './tiny.js';
 
 const W = 320, H = 112;
 const cache = new Map();
@@ -50,10 +50,10 @@ function table(c, x, y) {
 const DESSINS = {
   concession(c, tiny) {
     piece(c, tiny, 1, [44, 74, 46, 74, 47, 74]);
-    const voitures = [['#e4432d', 52, 'voiture5'], ['#3fa34d', 130, 'voiture3'], ['#8a6ad6', 208, 'voiture2']];
+    const voitures = [['#e4432d', 52, 'race-future'], ['#3fa34d', 130, 'sedan-sports'], ['#8a6ad6', 208, 'hatchback-sports']];
     for (const [coul, x, modele] of voitures) {
       plateau(c, x, 66);
-      dessinerVoitureTiny(c, spriteVoitureTiny(coul, null, [], modele), x, 62, 0);
+      dessinerVoiture(c, modele, coul, x, 62, ANGLE_VITRINE);
       prix(c, x + 26, 78);
     }
     comptoir(c, 256, 64, 52);

@@ -14,6 +14,7 @@ import { creerAlea } from './outils.js';
 import * as G from './garage.js';
 import * as PL from './pilotes.js';
 import { modeleVoiture } from './tiny.js';
+import { ALLONGE } from './circuit.js';
 
 const CLE = 'pistonville.partie.v1';
 const VERSION = 3;
@@ -783,7 +784,8 @@ export const totalObjectifs = () => OBJECTIFS.length;
 
 /** Temps au tour pour le bronze, l'argent et l'or, d'après la longueur du circuit. */
 export function tempsMedailles(def) {
-  return [def.longueur / 140, def.longueur / 160, def.longueur / 180].map((t) => Math.round(t * 10) / 10);
+  const L = def.longueur * ALLONGE;   // la longueur réelle de la piste
+  return [L / 150, L / 172, L / 194].map((t) => Math.round(t * 10) / 10);
 }
 export const NOMS_MEDAILLES = ['', 'bronze', 'argent', 'or'];
 

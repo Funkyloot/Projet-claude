@@ -29,18 +29,23 @@ export async function chargerAssets() {
     chargerImage('assets/kenney/rpg-urban.png'),
     chargerImage('assets/kenney/course.png'),
     chargerImage('assets/kenney/modern-city.png'),
+    chargerImage('assets/kenney/voitures-3d.png'),
+    chargerImage('assets/kenney/voitures-3d-masque.png'),
     ...PROFILS.map((p) => chargerImage(`assets/kenney/profil/${p}.png`)),
     ...TINY.map((p) => chargerImage(`assets/kenney/tiny-${p}/tilemap_packed.png`)),
     // Sans la police, le jeu reste jouable avec la police de secours.
     police.load().then((f) => document.fonts.add(f)).catch(() => null),
   ]);
-  const [urbain, course, ville] = resultats;
+  const [urbain, course, ville, voitures, voituresMasque] = resultats;
   const profilsParNom = {};
-  PROFILS.forEach((p, i) => { profilsParNom[p] = resultats[3 + i]; });
+  PROFILS.forEach((p, i) => { profilsParNom[p] = resultats[5 + i]; });
   const tiny = {};
-  TINY.forEach((p, i) => { tiny[p] = resultats[3 + PROFILS.length + i]; });
+  TINY.forEach((p, i) => { tiny[p] = resultats[5 + PROFILS.length + i]; });
   // Racing Pack (voitures, décor de course) et Roguelike Modern City (ville) rangés avec les planches Tiny.
   tiny.course = course;
   tiny.city = ville;
+  // Car Kit : les véhicules rendus en 3D sous 32 angles, et le masque de leur carrosserie.
+  tiny.voitures = voitures;
+  tiny.voituresMasque = voituresMasque;
   return { urbain, profils: profilsParNom, tiny };
 }

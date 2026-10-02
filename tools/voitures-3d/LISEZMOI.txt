@@ -1,0 +1,11 @@
+Véhicules de Pistonville : Kenney Car Kit (CC0) rendu en sprites.
+
+1. Décompresser le Car Kit ; copier Models/GLB format/*.glb (et leur dossier
+   Textures/) dans modeles/ à côté de index.html.
+2. npm install --no-save three@0.160.0 ; servir ce dossier (python3 -m http.server 8099).
+3. Rendre (modèles, vues, taille, px par unité, inclinaison, dossier) :
+     node rendre.mjs race,race-future,sedan-sports,hatchback-sports 32 128 20 50 rendus
+     node rendre.mjs kart-oodi 32 128 30 50 rendus
+     node rendre.mjs sedan,suv,suv-luxury,taxi,police,van,truck,truck-flat,tractor,delivery,ambulance,firetruck,garbage-truck 32 128 18 50 rendus
+4. python3 assembler.py rendus
+   → assets/kenney/voitures-3d.png, voitures-3d-masque.png et src/atlas-voitures.js

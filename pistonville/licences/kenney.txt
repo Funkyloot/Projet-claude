@@ -1,12 +1,14 @@
 Kenney — tous les graphismes de Pistonville
 https://kenney.nl/assets/rpg-urban-pack           personnages (et anciens décors)
-https://kenney.nl/assets/roguelike-modern-city    ville : bâtiments, voitures de ville, mobilier, eau
-https://kenney.nl/assets/racing-pack              courses : voitures vues de dessus, tribunes, tentes, pneus, feux
+https://kenney.nl/assets/roguelike-modern-city    ville : bâtiments, mobilier, eau
+https://kenney.nl/assets/racing-pack              courses : tribunes, tentes, pneus, feux
+https://kenney.nl/assets/car-kit                  tous les véhicules (modèles 3D rendus sous 32 angles)
 https://kenney.nl/assets/pixel-vehicle-pack       voitures vues de côté (boutique, garage), panneaux
 https://kenney.nl/assets/series:Tiny              Tiny Factory, Town, Ski, Battle, Farm (rien de médiéval)
 
 Planches dans assets/kenney/ (course.png et modern-city.png préparées par
-tools/kenney-atlas.py à partir des packs d'origine).
+tools/kenney-atlas.py à partir des packs d'origine ; voitures-3d.png et
+son masque rendus par tools/voitures-3d/ à partir des modèles du Car Kit).
 
 Licence : Creative Commons Zero (CC0 1.0 Universal)
 https://creativecommons.org/publicdomain/zero/1.0/

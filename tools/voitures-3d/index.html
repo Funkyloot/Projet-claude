@@ -1,0 +1,88 @@
+<!doctype html><meta charset="utf-8">
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const loader = new GLTFLoader();
+const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+// Vue 3/4 du jeu : caméra au sud, inclinée ; nord en haut de l'écran.
+window.rendre = async (chemin, n, taille, pxParUnite, inclinaison) => {
+  const gltf = await loader.loadAsync(chemin);
+  const modele = gltf.scene;
+  modele.traverse((o) => { if (o.isMesh) { o.material.metalness = 0; o.material.roughness = 1; } });
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.6));
+  const soleil = new THREE.DirectionalLight(0xffffff, 1.6);
+  soleil.position.set(-3, 6, 4);
+  scene.add(soleil);
+  const pivot = new THREE.Group();
+  pivot.add(modele);
+  scene.add(pivot);
+  const demi = taille / 2 / pxParUnite;
+  const cam = new THREE.OrthographicCamera(-demi, demi, demi, -demi, 0.1, 100);
+  const a = inclinaison * Math.PI / 180;
+  cam.position.set(0, Math.sin(a) * 20, Math.cos(a) * 20);
+  cam.lookAt(0, 0.4, 0);
+  renderer.setSize(taille, taille, false);
+  // Couleur de carrosserie : le texel coloré le plus utilisé (pondéré par l'aire des triangles).
+  const tex = (() => { let m; modele.traverse((o) => { if (o.isMesh && o.material.map) m = o.material.map; }); return m; })();
+  const cv = document.createElement('canvas'); cv.width = tex.image.width; cv.height = tex.image.height;
+  const c2 = cv.getContext('2d'); c2.drawImage(tex.image, 0, 0);
+  const px = c2.getImageData(0, 0, cv.width, cv.height).data;
+  const compte = new Map();
+  modele.traverse((o) => {
+    if (!o.isMesh) return;
+    const g = o.geometry, uv = g.attributes.uv, pos = g.attributes.position, idx = g.index;
+    const nb = idx ? idx.count : pos.count;
+    const A = new THREE.Vector3(), B = new THREE.Vector3(), C = new THREE.Vector3();
+    for (let t = 0; t < nb; t += 3) {
+      const i0 = idx ? idx.getX(t) : t, i1 = idx ? idx.getX(t + 1) : t + 1, i2 = idx ? idx.getX(t + 2) : t + 2;
+      A.fromBufferAttribute(pos, i0); B.fromBufferAttribute(pos, i1); C.fromBufferAttribute(pos, i2);
+      const aire = B.clone().sub(A).cross(C.clone().sub(A)).length();
+      const u = (uv.getX(i0) + uv.getX(i1) + uv.getX(i2)) / 3, v = (uv.getY(i0) + uv.getY(i1) + uv.getY(i2)) / 3;
+      const x = Math.min(cv.width - 1, Math.floor(u * cv.width)), y = Math.min(cv.height - 1, Math.floor(v * cv.height));
+      const k = (y * cv.width + x) * 4;
+      const r = px[k], gg = px[k + 1], b = px[k + 2];
+      const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b);
+      if (!mx || (mx - mn) / mx < 0.3) continue;
+      const cle = (r << 16) | (gg << 8) | b;
+      compte.set(cle, (compte.get(cle) || 0) + aire);
+    }
+  });
+  let corps = 0, max = -1;
+  for (const [k, a] of compte) if (a > max) { max = a; corps = k; }
+  const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const cible = new THREE.Vector3(lin(corps >> 16), lin((corps >> 8) & 255), lin(corps & 255));
+  const originaux = new Map();
+  const masque = new THREE.ShaderMaterial({
+    uniforms: { map: { value: tex }, cible: { value: cible } },
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    // Même teinte que la carrosserie (à 14° près), assez saturée : les nuances de la carrosserie en font partie.
+    fragmentShader: `uniform sampler2D map; uniform vec3 cible; varying vec2 vUv;
+      vec3 hsv(vec3 c) { vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0); vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+        vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r)); float d = q.x - min(q.w, q.y);
+        return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + 1e-10)), d / (q.x + 1e-10), q.x); }
+      void main(){ vec3 a = hsv(pow(texture2D(map, vUv).rgb, vec3(1.0 / 2.2))), b = hsv(pow(cible, vec3(1.0 / 2.2)));
+        float dh = abs(a.x - b.x); dh = min(dh, 1.0 - dh);
+        gl_FragColor = vec4(vec3(dh < 0.04 && a.y > 0.3 && a.z > 0.25 ? 1.0 : 0.0), 1.0); }`,
+  });
+  modele.traverse((o) => { if (o.isMesh) originaux.set(o, o.material); });
+  const images = [], masques = [];
+  for (let i = 0; i < n; i++) {
+    const ang = (i / n) * Math.PI * 2;        // angle du jeu : 0 = est, sens horaire (y vers le bas)
+    // Le modèle regarde vers +Z (vers la caméra = sud). Direction voulue : (cos, sin) en (x, z).
+    pivot.rotation.y = Math.atan2(Math.cos(ang), Math.sin(ang));
+    renderer.render(scene, cam);
+    images.push(renderer.domElement.toDataURL('image/png'));
+    for (const o of originaux.keys()) o.material = masque;
+    renderer.render(scene, cam);
+    masques.push(renderer.domElement.toDataURL('image/png'));
+    for (const [o, m] of originaux) o.material = m;
+  }
+  return { images, masques, corps: '#' + corps.toString(16).padStart(6, '0') };
+};
+window.pret = true;
+</script>

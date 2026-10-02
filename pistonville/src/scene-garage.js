@@ -9,7 +9,7 @@
  */
 
 import { DIRECTION, bulle, police } from './sprites.js';
-import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, modeleVoiture, CONTOUR as CONTOUR_TINY } from './tiny.js';
+import { tuileTiny, dessinerPerso, tenue, dessinerVoiture, modeleVoiture, CONTOUR as CONTOUR_TINY } from './tiny.js';
 import { texte } from './course.js';
 import { decrireVoiture } from './partie.js';
 import { batiment, COLONNES_TERRAIN, combosActifs, raisonPlacement, effets } from './garage.js';
@@ -235,7 +235,7 @@ export class SceneGarage {
     // taille du terrain : il est dessiné une fois dans une image, puis recopié.
     const fond = this.fondGarage(W, H, L);
     ctx.drawImage(fond, 0, -this.scroll);
-    dessinerVoitureTiny(ctx, spriteVoitureTiny('#4f7ddb', null, [], 'voiture4'), Math.round(this.passant), o.y - 96 + 22, 0);
+    dessinerVoiture(ctx, 'van', '#4f7ddb', Math.round(this.passant), o.y - 96 + 22, 0);
 
     // Grille en mode construction.
     if (this.placement) {
@@ -261,7 +261,7 @@ export class SceneGarage {
         if (i === 0 && this.construction) this.dessinerChantier(ctx, x + w / 2, y + h / 2, t);
         else if (voitures[i]) {
           const v = voitures[i];
-          dessinerVoitureTiny(ctx, spriteVoitureTiny(v.couleur, null, v.looks, v.modele), x + w / 2, y + h / 2 - 3, Math.PI / 2);
+          dessinerVoiture(ctx, v.modele, v.couleur, x + w / 2, y + h / 2 - 3, Math.PI / 2);
         }
       }
       if (enCombo.has(b.uid)) { ctx.fillStyle = Math.sin(t * 4) > 0 ? '#ffe066' : '#f39c33'; ctx.fillRect(x + w - 7, y + 2, 5, 5); }
@@ -372,11 +372,10 @@ export class SceneGarage {
     const c = this.construction;
     const avance = Math.min(1, c.t / c.duree);
     const modele = modeleVoiture(c.voiture.profil, c.voiture.id);
-    const s = spriteVoitureTiny(avance > 0.85 ? c.voiture.couleur : '#9ea3ac', null, [], modele);
     const h = Math.ceil(60 * Math.min(1, avance / 0.8));
     ctx.save();
     ctx.beginPath(); ctx.rect(cx - 32, cy + 30 - h, 64, h); ctx.clip();
-    dessinerVoitureTiny(ctx, s, cx, cy - 3, Math.PI / 2);
+    dessinerVoiture(ctx, modele, avance > 0.85 ? c.voiture.couleur : '#9ea3ac', cx, cy - 3, Math.PI / 2);
     ctx.restore();
     if (avance < 0.85) { ctx.fillStyle = Math.sin(t * 30) > 0 ? '#ffe066' : '#ffffff'; ctx.fillRect(cx - 16, cy + 30 - h, 32, 1); }
   }

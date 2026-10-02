@@ -3,12 +3,13 @@
  * Échelle commune au garage, à la ville et aux courses : 1 case de 16 px ≈ 1 m.
  *   - une personne tient dans 1 case ;
  *   - une voiture fait 2 cases de large et 3 de long (28 × 46 px) ;
- * Les packs Kenney n'ont ni voitures ni personnages modernes : on les dessine
- * ici, avec la même palette et le même contour, et on les met en cache.
+ * Tout vient des packs Kenney (CC0) : personnages RPG Urban, véhicules du Car
+ * Kit (rendus en 3D), tuiles Tiny et Roguelike Modern City.
  */
 
 import { melangerCouleur } from './outils.js';
 import { ATLAS_COURSE } from './atlas-course.js';
+import { ATLAS_VOITURES, VUES } from './atlas-voitures.js';
 
 export const CASE_TINY = 16;
 export const CONTOUR = '#26182e';
@@ -111,24 +112,32 @@ export function dessinerPerso(ctx, t, x, y, dir = 'face', pas = 0) {
   ctx.drawImage(spritePerso(t, dir, pas), Math.round(x) - 8, Math.round(y) - 15);
 }
 
-// --- Voitures (Kenney Racing Pack) --------------------------------------------------------
+// --- Véhicules (Kenney Car Kit, rendus en 3D sous 32 angles) ------------------------------
+//
+// Les modèles 3D du Car Kit sont pré-rendus en vue de 3/4 (caméra au sud,
+// inclinée à 50°) sous 32 angles : on choisit l'image la plus proche du cap
+// de la voiture, sans la faire tourner. La même planche sert en course, en
+// ville et dans les menus. La carrosserie (masque blanc à part) se repeint à
+// la couleur de l'écurie en gardant l'ombrage du rendu.
 
-export const VOITURE_LARGEUR = 28;
-export const VOITURE_LONGUEUR = 46;
-const cacheVoitures = new Map();
 
-/** Modèle Kenney (Racing Pack) de chaque voiture, d'après son image de profil. */
+/** Voitures de course, d'après l'image de profil du véhicule. */
 const MODELES = {
-  rounded_yellow: 'voiture2', sedan_blue: 'voiture1', sedan_vintage: 'voiture1', convertible: 'voiture2',
-  sports_green: 'voiture3', sports_red: 'voiture3', sports_yellow: 'voiture5', sports_convertible: 'voiture5',
-  sports_race: 'voiture5', suv: 'voiture4', buggy: 'voiture4', formula: 'petite3', kart: 'petite2',
+  rounded_yellow: 'hatchback-sports', sedan_blue: 'sedan', sedan_vintage: 'sedan', convertible: 'sedan-sports',
+  sports_green: 'sedan-sports', sports_red: 'sedan-sports', sports_yellow: 'hatchback-sports',
+  sports_convertible: 'race-future', sports_race: 'race-future', suv: 'suv', buggy: 'suv-luxury',
+  formula: 'race', kart: 'kart-oodi',
 };
+const COURSE = ['race', 'race-future', 'sedan-sports', 'hatchback-sports'];
 export function modeleVoiture(profil, id = '') {
   if (MODELES[profil]) return MODELES[profil];
   let h = 7;
   for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  return `voiture${1 + (h % 5)}`;
+  return COURSE[h % COURSE.length];
 }
+
+/** Ces modèles gardent leurs couleurs d'origine (taxi, secours, engins). */
+const LIVREES = new Set(['taxi', 'police', 'ambulance', 'firetruck', 'garbage-truck', 'delivery', 'tractor']);
 
 const enHsv = (r, g, b) => {
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
@@ -143,135 +152,120 @@ const enRgb = (h, s, v) => {
 };
 
 /**
- * Repeint la carrosserie (rouge-orangé chez Kenney) dans la couleur voulue en
- * gardant les ombres et les reflets du dessin d'origine.
+ * Repeint les pixels du masque dans la couleur voulue. La référence est la
+ * teinte la plus fréquente de la carrosserie : ses ombres et reflets sont
+ * reportés sur la nouvelle couleur.
  */
-function repeindre(ctx, w, h, couleur, teinte = [340, 40]) {
+function repeindre(ctx, w, h, couleur, masque) {
   const [th, ts, tv] = enHsv(...[1, 3, 5].map((i) => parseInt(couleur.slice(i, i + 2), 16)));
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
-  const dans = (hh) => (teinte[0] > teinte[1] ? hh >= teinte[0] || hh <= teinte[1] : hh >= teinte[0] && hh <= teinte[1]);
-  // Référence : la couleur la plus fréquente de la carrosserie d'origine.
   const compte = new Map();
   for (let i = 0; i < d.length; i += 4) {
-    if (!d[i + 3]) continue;
-    const [hh, ss] = enHsv(d[i], d[i + 1], d[i + 2]);
-    if (ss < 0.25 || !dans(hh)) continue;
+    if (!d[i + 3] || masque[i] < 128) continue;
     const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
     compte.set(k, (compte.get(k) || 0) + 1);
   }
   let ref = null, max = 0;
   for (const [k, n] of compte) if (n > max) { max = n; ref = k; }
   if (ref === null) return;
-  const [, REF_S, REF_V] = enHsv(ref >> 16, (ref >> 8) & 255, ref & 255);
+  const [, rs, rv] = enHsv(ref >> 16, (ref >> 8) & 255, ref & 255);
   for (let i = 0; i < d.length; i += 4) {
-    if (!d[i + 3]) continue;
-    const [hh, ss, vv] = enHsv(d[i], d[i + 1], d[i + 2]);
-    if (ss < 0.25 || !dans(hh)) continue;   // vitres, phares, pneus : on n'y touche pas
-    const s2 = Math.min(1, ts * (ss / REF_S)), v2 = Math.min(1, Math.max(0.08, tv * (vv / REF_V)));
+    if (!d[i + 3] || masque[i] < 128) continue;
+    const [, ss, vv] = enHsv(d[i], d[i + 1], d[i + 2]);
+    const s2 = Math.min(1, ts * (rs ? ss / rs : 1)), v2 = Math.min(1, Math.max(0.08, tv * (vv / rv)));
     [d[i], d[i + 1], d[i + 2]] = enRgb(th, s2, v2);
   }
   ctx.putImageData(img, 0, 0);
 }
 
-/**
- * Voiture vue de dessus (Kenney Racing Pack), dans la couleur voulue.
- * modele : 'voiture1' à 'voiture5', 'petite1' à 'petite5' (karts, formules).
- * bande et looks : gardés pour compatibilité (le dessin Kenney ne change pas).
- */
-export function spriteVoitureTiny(couleur, bande = null, looks = [], modele = 'voiture1') {
-  const cle = `${couleur}|${modele}`;
-  if (cacheVoitures.has(cle)) return cacheVoitures.get(cle);
-  const r = ATLAS_COURSE[modele] || ATLAS_COURSE.voiture1;
-  const [sx, sy, w, h] = r;
-  const d = toile(w, h);
-  if (planches.tiny.course) {
-    d.ctx.drawImage(planches.tiny.course, sx, sy, w, h, 0, 0, w, h);
-    if (couleur) repeindre(d.ctx, w, h, couleur);
+/** La ligne d'un modèle (32 vues), repeinte au besoin ; et l'empreinte au sol du modèle. */
+const cacheLignes = new Map();
+function ligneVoiture(modele, couleur) {
+  const m = ATLAS_VOITURES[modele] ? modele : 'sedan';
+  const repeinte = couleur && !LIVREES.has(m);
+  const cle = repeinte ? `${m}|${couleur}` : m;
+  if (cacheLignes.has(cle)) return cacheLignes.get(cle);
+  const [y, w, h, cy] = ATLAS_VOITURES[m];
+  const planche = planches.tiny.voitures;
+  const l = toile(w * VUES, h);
+  if (!planche) return { c: l.c, w, h, cy };
+  l.ctx.drawImage(planche, 0, y, w * VUES, h, 0, 0, w * VUES, h);
+  if (repeinte && planches.tiny.voituresMasque) {
+    const mk = toile(w * VUES, h);
+    mk.ctx.drawImage(planches.tiny.voituresMasque, 0, y, w * VUES, h, 0, 0, w * VUES, h);
+    repeindre(l.ctx, w * VUES, h, couleur, mk.ctx.getImageData(0, 0, w * VUES, h).data);
   }
-  const o = toile(w, h);
-  o.ctx.drawImage(d.c, 0, 0);
-  o.ctx.globalCompositeOperation = 'source-in';
-  o.ctx.fillStyle = 'rgba(20,16,34,0.32)';
-  o.ctx.fillRect(0, 0, w, h);
-  const sprite = { dessus: d.c, ombre: o.c, cx: w / 2, cy: h / 2 };
-  if (planches.tiny.course) cacheVoitures.set(cle, sprite);
-  return sprite;
+  const ligne = { c: l.c, w, h, cy, ...empreinte(m) };
+  cacheLignes.set(cle, ligne);
+  return ligne;
+}
+
+/** Longueur et largeur au sol (en px), mesurées sur les vues de côté et de face. */
+const cacheEmpreintes = new Map();
+function empreinte(m) {
+  if (cacheEmpreintes.has(m)) return cacheEmpreintes.get(m);
+  const [y, w, h] = ATLAS_VOITURES[m];
+  const t = toile(w, h);
+  const mesure = (i) => {
+    t.ctx.clearRect(0, 0, w, h);
+    t.ctx.drawImage(planches.tiny.voitures, i * w, y, w, h, 0, 0, w, h);
+    const d = t.ctx.getImageData(0, 0, w, h).data;
+    let a = w, b = 0;
+    for (let x = 0; x < w; x++) for (let yy = 0; yy < h; yy++) if (d[(yy * w + x) * 4 + 3]) { a = Math.min(a, x); b = Math.max(b, x); break; }
+    return Math.max(4, b - a - 2);
+  };
+  const e = { longueur: mesure(0), largeur: mesure(VUES / 4) };
+  cacheEmpreintes.set(m, e);
+  return e;
 }
 
 /**
- * Dessine une voiture centrée en (x, y), tournée de `angle` (0 = vers la
- * droite ; le dessin Kenney regarde vers le haut). Ombre portée au sol ;
- * `echelle` < 1 pour une vignette.
+ * Dessine un véhicule centré au sol en (x, y), le nez vers `angle` (0 = est,
+ * sens horaire). `couleur` : null garde la couleur d'origine. Ombre portée ;
+ * `echelle` pour les vignettes.
  */
-export function dessinerVoitureTiny(ctx, sprite, x, y, angle, echelle = 1, ombre = true) {
-  const { dessus, cx, cy } = sprite;
-  ctx.save();
-  ctx.translate(Math.round(x), Math.round(y));
-  if (ombre) {
+export function dessinerVoiture(ctx, modele, couleur, x, y, angle, echelle = 1, ombre = true) {
+  const l = ligneVoiture(modele, couleur);
+  const a = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const i = Math.round((a / (Math.PI * 2)) * VUES) % VUES;
+  const px = Math.round(x), py = Math.round(y);
+  if (ombre && l.longueur) {
+    // L'empreinte du véhicule, aplatie par la vue de 3/4, un peu décalée vers le bas.
     ctx.save();
-    ctx.translate(3 * echelle, 4 * echelle);
-    ctx.rotate(angle + Math.PI / 2);
-    ctx.scale(echelle, echelle);
-    ctx.drawImage(sprite.ombre, -cx, -cy);
+    ctx.translate(px + 2 * echelle, py + 3 * echelle);
+    ctx.scale(echelle, echelle * 0.77);
+    ctx.rotate(angle);
+    ctx.fillStyle = 'rgba(20,16,34,0.30)';
+    ctx.beginPath();
+    ctx.roundRect(-l.longueur / 2, -l.largeur / 2, l.longueur, l.largeur, 4);
+    ctx.fill();
     ctx.restore();
   }
-  ctx.rotate(angle + Math.PI / 2);
-  ctx.scale(echelle, echelle);
-  ctx.drawImage(dessus, -cx, -cy);
-  ctx.restore();
+  const w = l.w * echelle, h = l.h * echelle;
+  ctx.drawImage(l.c, i * l.w, 0, l.w, l.h, Math.round(px - w / 2), Math.round(py - (l.cy + 4) * echelle), Math.round(w), Math.round(h));
 }
 
-/** Vignette d'une voiture (vue de dessus, avant en haut) pour les menus, en data URL. */
+/** Vignette d'un véhicule (vue de trois quarts avant) pour les menus, en data URL. */
 const cacheVignettes = new Map();
-export function vignetteVoitureTiny(couleur, bande, looks = [], modele = 'voiture1') {
-  const cle = `${couleur}|${modele}`;
+export function vignetteVoiture(modele, couleur, echelle = 1) {
+  const cle = `${modele}|${couleur}|${echelle}`;
   if (cacheVignettes.has(cle)) return cacheVignettes.get(cle);
-  const { c, ctx } = toile(44, 60);
-  dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, bande, looks, modele), 22, 28, -Math.PI / 2);
+  const { c, ctx } = toile(Math.round(72 * echelle), Math.round(60 * echelle));
+  dessinerVoiture(ctx, modele, couleur, c.width / 2, c.height / 2 + 6 * echelle, ANGLE_VITRINE, echelle);
   const url = c.toDataURL();
-  cacheVignettes.set(cle, url);
+  if (planches.tiny.voitures) cacheVignettes.set(cle, url);
   return url;
 }
+/** L'angle « de vitrine » : la voiture vient vers nous, de trois quarts. */
+export const ANGLE_VITRINE = Math.PI * 0.75;
 
-// --- Voitures de la ville (Kenney Roguelike Modern City) -----------------------------------
-//
-// En ville (vue de 3/4), une voiture se voit de côté quand elle va vers l'est
-// ou l'ouest, et de face ou de dos vers le sud ou le nord : quatre dessins
-// Kenney, à l'échelle des tuiles. La carrosserie verte d'origine est repeinte.
-
-const VUES_VILLE = { gauche: [496, 256, 48, 32], droite: [544, 256, 48, 32], dos: [496, 288, 32, 32], face: [528, 288, 32, 32] };
-const cacheVille = new Map();
-
-export function spriteVoitureVille(couleur, vue) {
-  const cle = `${couleur}|${vue}`;
-  if (cacheVille.has(cle)) return cacheVille.get(cle);
-  const [sx, sy, w, h] = VUES_VILLE[vue] || VUES_VILLE.droite;
-  const d = toile(w, h);
-  if (planches.tiny.city) {
-    d.ctx.drawImage(planches.tiny.city, sx, sy, w, h, 0, 0, w, h);
-    if (couleur) repeindre(d.ctx, w, h, couleur, [100, 180]);
-    cacheVille.set(cle, d.c);
-  }
-  return d.c;
-}
-
-/** Vue d'après l'angle (0 = est) : la plus proche des quatre. */
-export function vueDepuisAngle(angle) {
-  const a = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const q = Math.round(a / (Math.PI / 2)) % 4;
-  return ['droite', 'face', 'gauche', 'dos'][q];
-}
-
-/** Dessine une voiture de ville centrée en (x, y), avec son ombre au sol. */
-export function dessinerVoitureVille(ctx, couleur, x, y, angle) {
-  const vue = vueDepuisAngle(angle);
-  const img = spriteVoitureVille(couleur, vue);
-  const cote = vue === 'gauche' || vue === 'droite';
-  ctx.fillStyle = 'rgba(20,16,34,0.25)';
-  if (cote) ctx.fillRect(Math.round(x) - 17, Math.round(y) + 6, 34, 5);
-  else ctx.fillRect(Math.round(x) - 10, Math.round(y) + 10, 20, 5);
-  ctx.drawImage(img, Math.round(x - img.width / 2), Math.round(y - img.height / 2 - (cote ? 2 : 0)));
+/** Véhicules de la circulation : voitures en ville, engins agricoles et camions à la campagne. */
+const FLOTTE_VILLE = ['sedan', 'sedan', 'suv', 'suv-luxury', 'taxi', 'van', 'hatchback-sports', 'sedan', 'police', 'delivery', 'truck', 'garbage-truck', 'ambulance', 'firetruck'];
+const FLOTTE_CAMPAGNE = ['tractor', 'truck', 'truck-flat', 'sedan', 'suv', 'tractor', 'van', 'delivery'];
+export function vehiculeAuHasard(alea, ville = true) {
+  const f = ville ? FLOTTE_VILLE : FLOTTE_CAMPAGNE;
+  return f[Math.floor(alea() * f.length)];
 }
 
 // --- Tuiles et images Kenney, sans avoir à passer les planches ------------------------------

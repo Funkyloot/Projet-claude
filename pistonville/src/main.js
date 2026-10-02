@@ -479,7 +479,7 @@ class App {
     const gp = P.grandPrix(gpId);
     const manche = this.partie.gp.manche;
     const def = gp.manches[manche];
-    this.circuit = genererCircuit(def, gp.niveau <= 2 ? 120 : 108);
+    this.circuit = genererCircuit(def, gp.niveau <= 2 ? 150 : 132);
     const apercu = miniCarte(this.circuit, 150, 150).canvas.toDataURL();
     this.ecran = 'briefing';
     this.montrer(ecranBriefing(this, gp, manche, apercu));

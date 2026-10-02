@@ -10,7 +10,7 @@ import { situer, pointA, courbureDevant, DEMI, BARRIERE } from './circuit.js';
 import { Voiture, RAYON_VOITURE, DEMI_LONGUEUR, DEMI_LARGEUR } from './voiture.js';
 import { SURFACES, kmh, BOOSTS } from './regles.js';
 import { bulle, police } from './sprites.js';
-import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, spritePerso, tenue, PERSONNES, imageAtlas } from './tiny.js';
+import { dessinerVoiture, dessinerPerso, spritePerso, tenue, PERSONNES, imageAtlas } from './tiny.js';
 
 const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 import { clamp, lerp, angleNorm, formatTemps, ordinal, creerAlea } from './outils.js';
@@ -61,7 +61,7 @@ export class Course {
         v.modele = co.modele;
         v.coequipier = true;
         v.talent = co.talent || 0;
-        v.voie = (this.alea() - 0.5) * 36;
+        v.voie = (this.alea() - 0.5) * DEMI * 0.8;
         v.nitroIA = 1 + Math.floor(this.niveau / 2);
         v.prochaineVoie = this.alea() * 2;
         this.coequipier = v;
@@ -71,7 +71,7 @@ export class Course {
         v.talent = adv.talent || 0;
         v.modele = adv.modele;
         v.rival = !!adv.rival;
-        v.voie = (this.alea() - 0.5) * 36;
+        v.voie = (this.alea() - 0.5) * DEMI * 0.8;
         v.nitroIA = 1 + Math.floor(this.niveau / 2);
         v.prochaineVoie = this.alea() * 2;
       }
@@ -79,7 +79,7 @@ export class Course {
       v.adherenceSol = surface.adherence + bonusSol;
       v.vitesseSol = Math.min(1, surface.vitesse + bonusSol * 0.3);
       const s = this.circuit.longueur - 50 - i * 54;
-      const lat = i % 2 ? -22 : 22;
+      const lat = (i % 2 ? -1 : 1) * DEMI * 0.42;
       const p = pointA(this.circuit, s, lat);
       v.placer(p.x, p.y, p.angle);
       v.s = ((s % this.circuit.longueur) + this.circuit.longueur) % this.circuit.longueur;
@@ -184,8 +184,8 @@ export class Course {
       if (v.prochaineVoie <= 0) {
         v.prochaineVoie = 0.6 + this.alea() * 1.4;
         const devant = this.voitureDevant(v, 110);
-        if (devant) v.voie = devant.voieEstimee > 0 ? -24 : 24;
-        else v.voie = lerp(v.voie, (this.alea() - 0.5) * 36, 0.5);
+        if (devant) v.voie = (devant.voieEstimee > 0 ? -1 : 1) * DEMI * 0.5;
+        else v.voie = lerp(v.voie, (this.alea() - 0.5) * DEMI * 0.8, 0.5);
       }
     }
     const voie = v.voie || 0;
@@ -399,7 +399,7 @@ export class Course {
     const alea = creerAlea(this.circuit.def.graine * 13 + 5);
     const bonus = [];
     for (let s = 260; s < L - 160; s += 200 + alea() * 120) {
-      const voie = [-28, 0, 28][Math.floor(alea() * 3)];
+      const voie = [-0.55, 0, 0.55][Math.floor(alea() * 3)] * DEMI;
       if (alea() < 0.16) {
         const p = pointA(this.circuit, s, voie);
         bonus.push({ type: 'disque', x: p.x, y: p.y, pris: false });
@@ -657,8 +657,7 @@ export class Course {
           ctx.fill();
         }
       }
-      const sprite = spriteVoitureTiny(v.couleur, null, v.looks || [], v.modele);
-      dessinerVoitureTiny(ctx, sprite, v.x, v.y, v.angle);
+      dessinerVoiture(ctx, v.modele, v.couleur, v.x, v.y, v.angle);
     }
 
     for (const v of this.voitures) if (v.rival) texte(ctx, 'RIVAL', v.x, v.y - 30, 7, '#ff8a80', 'center');

@@ -15,18 +15,19 @@
 
 import { creerAlea, entre } from './outils.js';
 
-export const LARGEUR = 96;              // largeur de piste : 6 cases, plus de trois voitures de front
+export const LARGEUR = 160;             // largeur de piste : 10 cases, cinq voitures de front
 export const DEMI = LARGEUR / 2;
 export const VIBREUR = 8;               // bande de vibreurs au bord
 export const BARRIERE = DEMI + 40;      // distance centre → barrière
 export const PUBLIC_DEBUT = BARRIERE + 6;
 export const PUBLIC_FIN = BARRIERE + 76;
-export const MARGE = 340;               // décor autour du circuit
+export const MARGE = 380;               // décor autour du circuit
 
 const PAS = 6;                          // espacement des points du tracé
-const SEPARATION = 196;                 // écart mini entre deux portions (barrières jamais collées)
+const SEPARATION = 2 * BARRIERE + 44;   // écart mini entre deux portions (barrières jamais collées)
+export const ALLONGE = 1.4;                   // la piste a été élargie : les circuits s'allongent d'autant
 const CELLULE = 64;                     // grille d'accélération
-const PORTEE = 230;                     // distance utile autour de la piste
+const PORTEE = 270;                     // distance utile autour de la piste
 
 function catmullRom(ctrl, parSegment) {
   const n = ctrl.length;
@@ -246,7 +247,8 @@ function essayer(alea, def, rayonMin) {
  * Crée un circuit complet à partir de sa description (contenu/grands-prix).
  * `rayonMin` : 3 cases de rayon de plus que la demi-largeur au début du jeu.
  */
-export function genererCircuit(def, rayonMin = 100) {
+export function genererCircuit(origine, rayonMin = 130) {
+  const def = { ...origine, longueur: origine.longueur * ALLONGE };
   let points = null;
   for (let essai = 0; essai < 60 && !points; essai++) {
     points = essayer(creerAlea(def.graine * 7919 + essai * 104729), def, rayonMin);
@@ -284,7 +286,7 @@ export function genererCircuit(def, rayonMin = 100) {
   const largeur = Math.ceil(maxX - minX + MARGE * 2);
   const hauteur = Math.ceil(maxY - minY + MARGE * 2);
 
-  const circuit = { def, points, longueur: L, pas, largeur, hauteur, grille: new Map(), ligneDroite: lg * pas, secours };
+  const circuit = { def: origine, points, longueur: L, pas, largeur, hauteur, grille: new Map(), ligneDroite: lg * pas, secours };
   circuit.interieur = coteInterieur(points);
   indexer(circuit);
   return circuit;

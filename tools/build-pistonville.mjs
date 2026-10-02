@@ -39,6 +39,8 @@ const ajouter = (chemin) => { assets[chemin] = dataUrl(chemin); };
 ajouter('assets/kenney/rpg-urban.png');
 ajouter('assets/kenney/course.png');
 ajouter('assets/kenney/modern-city.png');
+ajouter('assets/kenney/voitures-3d.png');
+ajouter('assets/kenney/voitures-3d-masque.png');
 for (const f of readdirSync(join(RACINE, 'assets/kenney/profil'))) ajouter(`assets/kenney/profil/${f}`);
 for (const p of ['factory', 'town', 'battle', 'ski', 'farm']) ajouter(`assets/kenney/tiny-${p}/tilemap_packed.png`);
 ajouter('assets/police/Jersey10.woff2');

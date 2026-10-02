@@ -12,7 +12,7 @@
 import { DEMI, VIBREUR, BARRIERE, PUBLIC_DEBUT, PUBLIC_FIN, pointA } from './circuit.js';
 import { hash2, creerAlea, rgb, melangerCouleur } from './outils.js';
 import { objet, tuile, PERSONNAGES, directionVers, T } from './sprites.js';
-import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, imageAtlas, tuileVille, pileVille } from './tiny.js';
+import { tuileTiny, dessinerPerso, tenue, dessinerVoiture, imageAtlas, tuileVille, pileVille } from './tiny.js';
 import { batimentModerne, maisonModerne, caisses } from './ville-dessins.js';
 
 // Palette des packs Kenney Tiny (relevée sur leurs tuiles) : tout le jeu a les mêmes couleurs.
@@ -512,7 +512,8 @@ function batir(ctx, planche, g) {
 
 
 export function voitureGaree(c, x, y, couleur, horizontale) {
-  dessinerVoitureTiny(c, spriteVoitureTiny(couleur, null, [], `voiture${1 + (Math.round(x + y) % 5)}`), x, y, horizontale ? 0 : Math.PI / 2);
+  const modele = ['sedan', 'suv', 'van', 'hatchback-sports', 'sedan-sports'][Math.round(x + y) % 5];
+  dessinerVoiture(c, modele, couleur, x, y, horizontale ? 0 : Math.PI / 2);
 }
 
 

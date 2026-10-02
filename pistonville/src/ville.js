@@ -35,7 +35,7 @@ import { texte, recouvrement } from './course.js';
 import { clamp, lerp, creerAlea, hash2, formatTemps } from './outils.js';
 import { Trafic, Pietons, Feux } from './ville-vie.js';
 import { Reseau, CELLULE, LOT, COUR } from './reseau.js';
-import { tuileTiny, dessinerVoitureVille, dessinerPerso, tenue, modeleVoiture, CONTOUR, tuileVille, pileVille, imageAtlas, motifEau, motifTuile } from './tiny.js';
+import { tuileTiny, dessinerVoiture, dessinerPerso, tenue, modeleVoiture, CONTOUR, tuileVille, pileVille, imageAtlas, motifEau, motifTuile } from './tiny.js';
 import {
   batimentModerne, hauteurBatiment, maisonModerne, caisses, lampadaire, banc, poubelle, borne, feuTricolore, fleurs, panneauStop,
 } from './ville-dessins.js';
@@ -497,9 +497,8 @@ export class Ville {
     const ob = horizontale ? { type: 'rect', x: x - 22, y: y - 13, w: 44, h: 26 } : { type: 'rect', x: x - 13, y: y - 22, w: 26, h: 44 };
     ob.voiture = true;
     this.ajouter(ob);
-    const modele = `voiture${1 + Math.floor(this.alea() * 5)}`;
-    void modele;
-    this.dessin(y + 26, (c) => dessinerVoitureVille(c, couleur, x, y, horizontale ? 0 : Math.PI / 2));
+    const modele = ['sedan', 'suv', 'van', 'hatchback-sports', 'suv-luxury'][Math.floor(this.alea() * 5)];
+    this.dessin(y + 26, (c) => dessinerVoiture(c, modele, couleur, x, y, horizontale ? 0 : Math.PI / 2));
   }
 
   /** Mobilier du trottoir : lampadaires, poubelles, bornes ; jamais devant une porte. */
@@ -1176,7 +1175,7 @@ export class Ville {
     }
     this.trafic.dessiner(ctx, camX, camY, W, H);
 
-    dessinerVoitureVille(ctx, v.couleur, v.x, v.y, v.angle);
+    dessinerVoiture(ctx, v.modele, v.couleur, v.x, v.y, v.angle);
 
     ctx.fillStyle = '#ffe066';
     for (const p of this.particules) ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);

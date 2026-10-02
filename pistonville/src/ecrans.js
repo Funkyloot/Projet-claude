@@ -24,7 +24,8 @@ import {
 import { formatArgent, formatTemps, ordinal } from './outils.js';
 import { urlAsset } from './assets.js';
 import { THEMES } from './rendu-circuit.js';
-import { spriteVoitureTiny, dessinerVoitureTiny, spritePerso, tenue, modeleVoiture, VOITURE_LONGUEUR, VOITURE_LARGEUR } from './tiny.js';
+import { ALLONGE } from './circuit.js';
+import { dessinerVoiture, ANGLE_VITRINE, spritePerso, tenue, modeleVoiture } from './tiny.js';
 import { imgPiece } from './icones.js';
 import { engagement, pointsAPlacer } from './pilotes.js';
 
@@ -88,16 +89,16 @@ const etoiles = (n, max = 5) => `<span class="etoiles">${'★'.repeat(n)}<span>$
 
 /** Image de la voiture à l'échelle (vue 3/4, style Kenney Tiny), avec sa peinture et ses pièces. */
 const cacheApercus = new Map();
-export function apercuVoiture(couleur, looks = [], echelle = 3, modele = 'voiture1') {
-  const cle = `${couleur}|${modele}|${echelle}`;
+export function apercuVoiture(couleur, looks = [], echelle = 3, modele = 'sedan') {
+  const cle = `${couleur}|${modele}`;
   if (cacheApercus.has(cle)) return cacheApercus.get(cle);
-  const k = 1;   // une voiture = 60 × 44 px, agrandie en CSS par multiples entiers de l'écran
-  void echelle;
+  void looks; void echelle;
+  // Vue de trois quarts avant (Car Kit), 60 × 48 px, agrandie en CSS par multiples entiers.
   const c = document.createElement('canvas');
-  c.width = (VOITURE_LONGUEUR + 14) * k; c.height = (VOITURE_LARGEUR + 16) * k;
+  c.width = 60; c.height = 48;
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, null, looks, modele), c.width / 2, c.height / 2 - 2 * k, 0, k);
+  dessinerVoiture(ctx, modele, couleur, c.width / 2, c.height / 2 + 2, ANGLE_VITRINE);
   const url = c.toDataURL();
   cacheApercus.set(cle, url);
   return url;
@@ -907,7 +908,7 @@ export function ecranBriefing(app, gp, manche, apercu) {
               <dt>Décor</dt><dd>${theme.nom}</dd>
               <dt>Surface</dt><dd>${SURFACES[def.surface].nom}${bonusSol ? ` <span class="ok">+${Math.round(bonusSol * 100)} %</span>` : ''}</dd>
               <dt>Tours</dt><dd>${def.tours}</dd>
-              <dt>Longueur</dt><dd>${Math.round(def.longueur / 16)} cases</dd>
+              <dt>Longueur</dt><dd>${Math.round((def.longueur * ALLONGE) / 16)} cases</dd>
               <dt>Adversaires</dt><dd>${gp.adversaires}</dd>
               <dt>Record</dt><dd>${(() => { const cle = `${gp.id}#${manche}`; const r = app.partie.meilleursTours[cle]; const m = app.partie.medailles[cle] || 0; return `${r ? `${r.toFixed(1)} s` : '—'} ${m ? `<span class="medaille m${m}">${NOMS_MEDAILLES[m]}</span>` : ''}`; })()}</dd>
               <dt>Médailles</dt><dd class="petit">${tempsMedailles(def).map((t, i) => `<span class="medaille m${i + 1}">${t} s</span>`).join(' ')}</dd>
