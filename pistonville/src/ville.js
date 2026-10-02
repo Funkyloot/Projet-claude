@@ -35,7 +35,7 @@ import { texte, recouvrement } from './course.js';
 import { clamp, lerp, creerAlea, hash2, formatTemps } from './outils.js';
 import { Trafic, Pietons, Feux } from './ville-vie.js';
 import { Reseau, CELLULE, LOT, COUR } from './reseau.js';
-import { tuileTiny, spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, tenue, CONTOUR } from './tiny.js';
+import { tuileTiny, spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, tenue, modeleVoiture, CONTOUR } from './tiny.js';
 import {
   batimentModerne, hauteurBatiment, maisonModerne, conteneur, lampadaire, banc, poubelle, borne, feuTricolore, fleurs,
   palesEolienne, panneauStop,
@@ -209,6 +209,7 @@ export class Ville {
     const physique = { ...p, vmax: Math.min(150, p.vmax * 0.6), accel: p.accel * 0.8 };
     this.voiture = new Voiture({ physique, couleur: o.voiture.couleur, nom: 'moi', joueur: true });
     this.voiture.looks = o.voiture.looks || [];
+    this.voiture.modele = modeleVoiture(o.voiture.profil, o.voiture.id);
     this.voiture.braquageMin = 0.6;   // on peut se dégager d'un mur en braquant
     // Au départ, la voiture sort du garage sur le boulevard, voie de droite.
     this.placerDevant(this.portes.find((g) => g.id === 'garage'));
@@ -532,7 +533,8 @@ export class Ville {
     const ob = horizontale ? { type: 'rect', x: x - 22, y: y - 13, w: 44, h: 26 } : { type: 'rect', x: x - 13, y: y - 22, w: 26, h: 44 };
     ob.voiture = true;
     this.ajouter(ob);
-    this.dessin(y + 22, (c) => dessinerVoitureTiny(c, spriteVoitureTiny(couleur), x, y, horizontale ? 0 : Math.PI / 2));
+    const modele = `voiture${1 + Math.floor(this.alea() * 5)}`;
+    this.dessin(y + 26, (c) => dessinerVoitureTiny(c, spriteVoitureTiny(couleur, null, [], modele), x, y, horizontale ? 0 : Math.PI / 2));
   }
 
   /** Mobilier du trottoir : lampadaires, poubelles, bornes ; jamais devant une porte. */
@@ -1221,7 +1223,7 @@ export class Ville {
     this.trafic.dessiner(ctx, camX, camY, W, H);
     for (const e of this.eoliennes) if (visible(e.x, e.y, 60)) palesEolienne(ctx, e.x, e.y, t * 1.6 + e.phase);
 
-    dessinerVoitureTiny(ctx, spriteVoitureTiny(v.couleur, '#f2c14e', v.looks), v.x, v.y, v.angle);
+    dessinerVoitureTiny(ctx, spriteVoitureTiny(v.couleur, null, v.looks, v.modele), v.x, v.y, v.angle);
 
     ctx.fillStyle = '#ffe066';
     for (const p of this.particules) ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);

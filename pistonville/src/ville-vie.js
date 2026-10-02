@@ -71,7 +71,7 @@ export class Trafic {
       const debut = r.X[t.s] + r.L[t.s] + 30, fin = r.X[t.s + 1] - 30;
       const pos = debut + alea() * Math.max(0, fin - debut);
       const tracteur = o.tracteurs && !t.ville && alea() < 0.4;
-      const v = { dir, k: t.k, n, vmax: tracteur ? 26 + alea() * 8 : 55 + alea() * 30, v: 0, couleur: couleurs[i % couleurs.length], choix: null, klaxon: 0, bloque: 0, tracteur };
+      const v = { modele: `voiture${1 + Math.floor(alea() * 5)}`, dir, k: t.k, n, vmax: tracteur ? 26 + alea() * 8 : 55 + alea() * 30, v: 0, couleur: couleurs[i % couleurs.length], choix: null, klaxon: 0, bloque: 0, tracteur };
       if (t.horizontal) { v.x = pos; v.y = r.voie(dir, t.k, n); } else { v.x = r.voie(dir, t.k, n); v.y = pos; }
       v.angle = Math.atan2(DIRS[dir][1], DIRS[dir][0]);
       this.voitures.push(v);
@@ -180,7 +180,7 @@ export class Trafic {
     for (const c of this.voitures) {
       if (c.x < camX - 40 || c.x > camX + W + 40 || c.y < camY - 40 || c.y > camY + H + 40) continue;
       if (c.tracteur) tracteur(ctx, c.x, c.y, c.angle);
-      else dessinerVoitureTiny(ctx, spriteVoitureTiny(c.couleur), c.x, c.y, c.angle);
+      else dessinerVoitureTiny(ctx, spriteVoitureTiny(c.couleur, null, [], c.modele), c.x, c.y, c.angle);
       // Feux stop quand elle freine.
       if (c.v < c.vmax * 0.5) {
         const fx = Math.cos(c.angle), fy = Math.sin(c.angle);

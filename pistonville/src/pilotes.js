@@ -13,7 +13,7 @@
 import { POTENTIELS } from '../contenu/base/personnel.js';
 import { PILOTES_MAX, TRAITS_PILOTE, RECRUTEMENTS_PILOTES, PRENOMS_PILOTES, NOMS_PILOTES } from '../contenu/base/personnel.js';
 import { creerAlea } from './outils.js';
-import { tenue } from './tiny.js';
+import { PERSONNES } from './tiny.js';
 
 export { PILOTES_MAX, TRAITS_PILOTE, RECRUTEMENTS_PILOTES };
 
@@ -181,5 +181,5 @@ export const pointsAPlacer = (partie) => partie.pilotes.reduce((t, p) => t + p.p
 /** Pour l'IA : un pilote plus doué prend les virages un peu plus vite. */
 export const talentPilote = (p) => -0.04 + 0.006 * p.stats.technique + 0.004 * p.stats.sangfroid + 0.002 * p.niveau;
 
-/** La tenue d'un pilote : combinaison blanche et casque à sa couleur. */
-export const tenuePilote = (p) => ({ ...tenue(p?.apparence ?? 4), casque: p?.casque || '#e4432d', haut: '#f4f1e8' });
+/** La tenue d'un pilote : le sportif au bandeau (Kenney), combinaison à sa couleur. */
+export const tenuePilote = (p) => ({ base: PERSONNES.bandeau, haut: p?.casque || '#e4432d' });

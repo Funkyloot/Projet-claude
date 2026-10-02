@@ -10,7 +10,7 @@ import { situer, pointA, courbureDevant, DEMI, BARRIERE } from './circuit.js';
 import { Voiture, RAYON_VOITURE, DEMI_LONGUEUR, DEMI_LARGEUR } from './voiture.js';
 import { SURFACES, kmh, BOOSTS } from './regles.js';
 import { bulle, police } from './sprites.js';
-import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, spritePerso, tenue } from './tiny.js';
+import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, spritePerso, tenue, PERSONNES } from './tiny.js';
 
 const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 import { clamp, lerp, angleNorm, formatTemps, ordinal, creerAlea } from './outils.js';
@@ -53,10 +53,12 @@ export class Course {
       if (i === placeJoueur) {
         v = new Voiture({ physique: o.joueur.physique, couleur: o.joueur.couleur, nom: o.joueur.pilote, joueur: true });
         v.looks = o.joueur.looks || [];
+        v.modele = o.joueur.modele;
         this.joueur = v;
       } else if (i === placeCo) {
         v = new Voiture({ physique: co.physique, couleur: co.couleur, nom: co.nom, equipe: 'coequipier' });
         v.looks = co.looks || [];
+        v.modele = co.modele;
         v.coequipier = true;
         v.talent = co.talent || 0;
         v.voie = (this.alea() - 0.5) * 36;
@@ -67,6 +69,7 @@ export class Course {
         const adv = o.adversaires[a++];
         v = new Voiture({ physique: adv.physique, couleur: adv.couleur, nom: adv.nom, equipe: adv.equipe });
         v.talent = adv.talent || 0;
+        v.modele = adv.modele;
         v.rival = !!adv.rival;
         v.voie = (this.alea() - 0.5) * 36;
         v.nitroIA = 1 + Math.floor(this.niveau / 2);
@@ -654,7 +657,7 @@ export class Course {
           ctx.fill();
         }
       }
-      const sprite = spriteVoitureTiny(v.couleur, v.joueur ? '#f2c14e' : v.coequipier ? '#f4f6fb' : null, v.looks || []);
+      const sprite = spriteVoitureTiny(v.couleur, null, v.looks || [], v.modele);
       dessinerVoitureTiny(ctx, sprite, v.x, v.y, v.angle);
     }
 
@@ -775,7 +778,7 @@ export class Course {
     ctx.fillRect(pr.x - 2, pr.y - 2, pr.w + 4, pr.h + 4);
     ctx.fillStyle = '#fff6e0'; ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
     ctx.save(); ctx.translate(pr.x + 18, pr.y + 18); ctx.scale(2, 2);
-    ctx.drawImage(spritePerso(this.tenuePilote || { ...tenue(4), casque: '#e4432d', haut: '#f4f1e8' }, 'face', 0), -8, -8);
+    ctx.drawImage(spritePerso(this.tenuePilote || { base: PERSONNES.bandeau, haut: '#e4432d' }, 'face', 0), -8, -8);
     ctx.restore();
 
     texte(ctx, j.nom, 54, y0 + 16, 11, '#f4f1e8', 'left');

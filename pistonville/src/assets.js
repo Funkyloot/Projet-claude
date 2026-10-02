@@ -20,22 +20,27 @@ function chargerImage(chemin) {
 
 export const PROFILS = ['rounded_yellow', 'sedan_blue', 'sports_green', 'sports_red', 'sports_race', 'formula', 'kart', 'buggy', 'suv', 'convertible', 'sports_convertible', 'sports_yellow', 'sedan_vintage'];
 
-/** Planches Kenney « Tiny » (16 px, CC0) : intérieurs, ville, courses. */
+/** Planches Kenney « Tiny » (16 px, CC0) : intérieurs, campagne. */
 export const TINY = ['factory', 'town', 'battle', 'ski', 'farm'];
 
 export async function chargerAssets() {
   const police = new FontFace('Jersey 10', `url(${urlAsset('assets/police/Jersey10.woff2')})`);
   const resultats = await Promise.all([
     chargerImage('assets/kenney/rpg-urban.png'),
+    chargerImage('assets/kenney/course.png'),
+    chargerImage('assets/kenney/modern-city.png'),
     ...PROFILS.map((p) => chargerImage(`assets/kenney/profil/${p}.png`)),
     ...TINY.map((p) => chargerImage(`assets/kenney/tiny-${p}/tilemap_packed.png`)),
     // Sans la police, le jeu reste jouable avec la police de secours.
     police.load().then((f) => document.fonts.add(f)).catch(() => null),
   ]);
-  const urbain = resultats[0];
+  const [urbain, course, ville] = resultats;
   const profilsParNom = {};
-  PROFILS.forEach((p, i) => { profilsParNom[p] = resultats[1 + i]; });
+  PROFILS.forEach((p, i) => { profilsParNom[p] = resultats[3 + i]; });
   const tiny = {};
-  TINY.forEach((p, i) => { tiny[p] = resultats[1 + PROFILS.length + i]; });
+  TINY.forEach((p, i) => { tiny[p] = resultats[3 + PROFILS.length + i]; });
+  // Racing Pack (voitures, décor de course) et Roguelike Modern City (ville) rangés avec les planches Tiny.
+  tiny.course = course;
+  tiny.city = ville;
   return { urbain, profils: profilsParNom, tiny };
 }

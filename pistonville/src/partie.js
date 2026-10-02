@@ -13,6 +13,7 @@ import {
 import { creerAlea } from './outils.js';
 import * as G from './garage.js';
 import * as PL from './pilotes.js';
+import { modeleVoiture } from './tiny.js';
 
 const CLE = 'pistonville.partie.v1';
 const VERSION = 3;
@@ -570,11 +571,11 @@ export function adversaires(gp, manche = 0) {
   };
   for (const e of equipes) {
     const talent = e.talent + (e.id === rival.id ? bonusRival(gp) : 0);
-    liste.push({ equipe: e.id, nom: e.pilote, ecurie: e.nom, couleur: e.couleur, talent: talent * 0.5, rival: e.id === rival.id, physique: voiture(e, talent) });
+    liste.push({ equipe: e.id, nom: e.pilote, ecurie: e.nom, couleur: e.couleur, modele: modeleVoiture(null, e.id), talent: talent * 0.5, rival: e.id === rival.id, physique: voiture(e, talent) });
     if (doublees.has(e.id)) {
       // Le second pilote d'une écurie est un peu moins rapide que son leader.
       const t2 = talent - 0.03;
-      liste.push({ equipe: `${e.id}~2`, nom: e.pilote2 || `${e.pilote} Jr`, ecurie: e.nom, couleur: e.couleur, talent: t2 * 0.5, rival: false, second: true, physique: voiture(e, t2) });
+      liste.push({ equipe: `${e.id}~2`, nom: e.pilote2 || `${e.pilote} Jr`, ecurie: e.nom, couleur: e.couleur, modele: modeleVoiture(null, e.id), talent: t2 * 0.5, rival: false, second: true, physique: voiture(e, t2) });
     }
   }
   return liste;

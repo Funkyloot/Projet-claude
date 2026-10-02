@@ -24,7 +24,7 @@ import {
 import { formatArgent, formatTemps, ordinal } from './outils.js';
 import { urlAsset } from './assets.js';
 import { THEMES } from './rendu-circuit.js';
-import { spriteVoitureTiny, dessinerVoitureTiny, spritePerso, tenue, VOITURE_LONGUEUR, VOITURE_LARGEUR } from './tiny.js';
+import { spriteVoitureTiny, dessinerVoitureTiny, spritePerso, tenue, modeleVoiture, VOITURE_LONGUEUR, VOITURE_LARGEUR } from './tiny.js';
 import { imgPiece } from './icones.js';
 import { engagement, pointsAPlacer } from './pilotes.js';
 
@@ -88,8 +88,8 @@ const etoiles = (n, max = 5) => `<span class="etoiles">${'★'.repeat(n)}<span>$
 
 /** Image de la voiture à l'échelle (vue 3/4, style Kenney Tiny), avec sa peinture et ses pièces. */
 const cacheApercus = new Map();
-export function apercuVoiture(couleur, looks = [], echelle = 3) {
-  const cle = `${couleur}|${looks.join(',')}|${echelle}`;
+export function apercuVoiture(couleur, looks = [], echelle = 3, modele = 'voiture1') {
+  const cle = `${couleur}|${modele}|${echelle}`;
   if (cacheApercus.has(cle)) return cacheApercus.get(cle);
   const k = 1;   // une voiture = 60 × 44 px, agrandie en CSS par multiples entiers de l'écran
   void echelle;
@@ -97,7 +97,7 @@ export function apercuVoiture(couleur, looks = [], echelle = 3) {
   c.width = (VOITURE_LONGUEUR + 14) * k; c.height = (VOITURE_LARGEUR + 16) * k;
   const ctx = c.getContext('2d');
   ctx.imageSmoothingEnabled = false;
-  dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, '#f2c14e', looks), c.width / 2, c.height / 2 - 2 * k, 0, k);
+  dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, null, looks, modele), c.width / 2, c.height / 2 - 2 * k, 0, k);
   const url = c.toDataURL();
   cacheApercus.set(cle, url);
   return url;
@@ -114,7 +114,7 @@ function texteBonus(pc) {
 export function carteVoiture(v, { compacte = false } = {}) {
   const stats = Object.entries(v.stats).map(([k, val]) => barreStat(NOMS_STATS[k], val, COULEURS_STATS[k])).join('');
   const image = v.uid
-    ? `<img class="dessus" src="${apercuVoiture(v.couleur, v.looks)}" alt="">`
+    ? `<img class="dessus" src="${apercuVoiture(v.couleur, v.looks, 3, modeleVoiture(v.profil, v.id))}" alt="">`
     : `<img class="profil" src="${urlAsset(`assets/kenney/profil/${v.profil}.png`)}" alt="">`;
   return `<div class="voiture-carte">
     <div class="voiture-entete"><b>${e(v.nom)}</b>${v.uid ? etoiles(QUALITES[v.qualite].etoiles) : ''}<span class="classe classe-${v.classe}">CLASSE ${v.classe}</span></div>
@@ -535,7 +535,7 @@ function ecranCouleur(app, idModele, retour, enVille) {
     html: `<div class="ecran">
       <section class="panneau">
         <h2 class="titre-panneau">${e(m.nom)}<small>Choisis la couleur de la carrosserie</small></h2>
-        <div class="contenu nuancier grand">${choix.map((c) => `<button class="teinte-voiture" data-action="go" data-couleur="${c}"><img src="${apercuVoiture(c, [], 2)}" alt="${c}"></button>`).join('')}</div>
+        <div class="contenu nuancier grand">${choix.map((c) => `<button class="teinte-voiture" data-action="go" data-couleur="${c}"><img src="${apercuVoiture(c, [], 2, modeleVoiture(m.profil, m.id))}" alt="${c}"></button>`).join('')}</div>
       </section>
       <button class="btn" data-action="retour">Retour</button>
     </div>`,

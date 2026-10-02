@@ -8,10 +8,11 @@
  */
 
 import { melangerCouleur } from './outils.js';
+import { ATLAS_COURSE } from './atlas-course.js';
 
 export const CASE_TINY = 16;
 export const CONTOUR = '#26182e';
-const COLONNES = { factory: 12, town: 12, battle: 18, ski: 12, farm: 12 };
+const COLONNES = { factory: 12, town: 12, battle: 18, ski: 12, farm: 12, city: 37 };
 
 /** Pose la tuile n d'une planche Tiny (planches = { factory, town, … }). */
 export function tuileTiny(ctx, planches, pack, n, x, y) {
@@ -31,18 +32,38 @@ function toile(w, h) {
 
 // --- Personnages modernes ----------------------------------------------------------------
 
-/** Tenues : peau, cheveux, haut, bas, et un détail (casque, blouse, casquette). */
-const PEAUX = ['#f2c9a0', '#e0ac7e', '#b97a52', '#8a5636', '#f6d8bd', '#c8916a'];
-const CHEVEUX = ['#2a1e1e', '#f0c85a', '#6b3e1f', '#c2504d', '#3a3550', '#e8e4d6'];
-const HAUTS = ['#c2504d', '#2f6fdb', '#3fa34d', '#f2c14e', '#8a6ad6', '#e86ca6', '#f39c33', '#4f7ddb'];
-const BAS = ['#3a4a6b', '#2a2838', '#5c6278', '#6b4a32'];
+/*
+ * Personnages : ceux du pack Kenney RPG Urban (CC0), 16 × 16, six personnes
+ * en 4 directions (gauche, face, dos, droite) et 3 images (repos, pas 1, pas 2).
+ * Pour varier les tenues, on change seulement la couleur du haut (ou du bleu
+ * de travail), en gardant le dessin et l'ombrage de Kenney.
+ */
+let planches = { urbain: null, tiny: {} };
+/** À appeler une fois les images chargées (main.js). */
+export function definirPlanches(urbain, tiny) { planches = { urbain, tiny: tiny || {} }; cachePersos.clear(); }
 
+const COLONNES_URBAIN = 27;
+export const PERSONNES = { vert: 23, rouge: 104, lunettes: 185, ouvrier: 266, chauve: 347, bandeau: 428 };
+const DIRECTIONS = { gauche: 0, face: 1, dos: 2, droite: 3 };
+/** Couleur du haut de chaque personnage Kenney (teinte, ombre), celle qu'on peut changer. */
+const VETEMENT = {
+  23: ['#42a379', '#369069'], 104: ['#c2504d', '#a54240'], 185: ['#42a379', '#369069'],
+  266: ['#918eb9', '#7a77a4'], 347: ['#aaa8bd', '#898ca6'], 428: ['#aaa8bd', '#898ca6'],
+};
+const HAUTS = ['#c2504d', '#2f6fdb', '#3fa34d', '#f2c14e', '#8a6ad6', '#e86ca6', '#f39c33', '#4fc3d8', '#f4f6fb'];
+const CIVILS = [23, 104, 185, 347, 428];
+
+/**
+ * La tenue d'un personnage : { base (personnage Kenney), haut (couleur ou null = celle de Kenney) }.
+ * Mécanicien : l'ouvrier au casque de chantier ; ingénieur : blouse blanche ;
+ * commercial : chemise de couleur.
+ */
 export function tenue(apparence = 0, metier = null) {
   const a = Math.abs(apparence | 0);
-  const t = { peau: PEAUX[a % PEAUX.length], cheveux: CHEVEUX[(a * 3 + 1) % CHEVEUX.length], haut: HAUTS[(a * 5 + 2) % HAUTS.length], bas: BAS[(a * 7) % BAS.length], casque: null, blouse: false };
-  if (metier === 'mecano') { t.casque = '#f2c14e'; t.haut = '#2f6fdb'; }
-  if (metier === 'ingenieur') { t.blouse = true; }
-  if (metier === 'commercial') { t.haut = ['#c2504d', '#3fa34d', '#8a6ad6'][a % 3]; }
+  const t = { base: CIVILS[a % CIVILS.length], haut: a % 3 === 0 ? null : HAUTS[(a * 5 + 2) % HAUTS.length] };
+  if (metier === 'mecano') { t.base = PERSONNES.ouvrier; t.haut = a % 2 ? null : '#2f6fdb'; }
+  if (metier === 'ingenieur') { t.base = a % 2 ? PERSONNES.chauve : PERSONNES.lunettes; t.haut = '#f4f6fb'; }
+  if (metier === 'commercial') { t.base = PERSONNES.rouge; t.haut = ['#c2504d', '#3fa34d', '#8a6ad6'][a % 3]; }
   return t;
 }
 
@@ -50,42 +71,37 @@ const cachePersos = new Map();
 
 /**
  * Sprite 16 × 16 d'un personnage. dir : 'face' | 'dos' | 'gauche' | 'droite' ;
- * pas : 0 (immobile), 1 ou 2 (jambes alternées).
+ * pas : 0 (immobile), 1 ou 2 (en marchant). t.tuile = [pack, n] : une tuile
+ * Kenney Tiny (par exemple le fermier de Tiny Farm) à la place.
  */
 export function spritePerso(t, dir = 'face', pas = 0) {
-  const cle = `${t.peau}${t.cheveux}${t.haut}${t.bas}${t.casque}${t.blouse}${dir}${pas}`;
+  const cle = t.tuile ? `t${t.tuile.join()}` : `${t.base}${t.haut}${dir}${pas}`;
   if (cachePersos.has(cle)) return cachePersos.get(cle);
   const { c, ctx } = toile(16, 16);
-  const px = (x, y, w, h, col) => { ctx.fillStyle = col; ctx.fillRect(x, y, w, h); };
-  const haut = t.blouse ? '#f4f1e8' : t.haut;
-  const profil = dir === 'gauche' || dir === 'droite';
-  // Jambes (deux colonnes qui alternent en marchant).
-  const j1 = pas === 1 ? 1 : 0, j2 = pas === 2 ? 1 : 0;
-  px(5, 12, 6, 4 - Math.max(j1, j2), CONTOUR);
-  px(5, 12, 2, 4 - j1, CONTOUR); px(9, 12, 2, 4 - j2, CONTOUR);
-  px(6, 12, 1, 3 - j1, t.bas); px(9, 12, 1, 3 - j2, t.bas);
-  // Corps.
-  px(4, 8, 8, 5, CONTOUR);
-  px(5, 9, 6, 3, haut);
-  if (t.blouse) px(7, 9, 2, 3, t.haut);       // cravate ou tee-shirt sous la blouse
-  if (!profil) { px(3, 9, 1, 3, CONTOUR); px(12, 9, 1, 3, CONTOUR); px(3, 11, 1, 1, t.peau); px(12, 11, 1, 1, t.peau); }
-  else { const bx = dir === 'gauche' ? 7 : 8; px(bx, 9, 1, 3, melangerCouleur(haut, '#000000', 0.25)); }
-  // Tête (grosse, façon Tiny).
-  px(3, 1, 10, 8, CONTOUR);
-  px(4, 2, 8, 6, t.peau);
-  const coiffe = t.casque || t.cheveux;
-  if (dir === 'dos') px(4, 2, 8, 6, coiffe);
-  else if (profil) {
-    px(4, 2, 8, 3, coiffe);
-    if (dir === 'gauche') px(9, 2, 3, 5, coiffe); else px(4, 2, 3, 5, coiffe);
-    px(dir === 'gauche' ? 5 : 10, 5, 1, 1, CONTOUR);
-  } else {
-    px(4, 2, 8, 2, coiffe); px(4, 4, 1, 2, coiffe); px(11, 4, 1, 2, coiffe);
-    px(6, 5, 1, 1, CONTOUR); px(9, 5, 1, 1, CONTOUR);
+  if (t.tuile) {
+    tuileTiny(ctx, planches.tiny, t.tuile[0], t.tuile[1], 0, 0);
+  } else if (planches.urbain) {
+    const base = t.base ?? CIVILS[0];
+    const n = base + (DIRECTIONS[dir] ?? 1) + (pas % 3) * COLONNES_URBAIN;
+    ctx.drawImage(planches.urbain, (n % COLONNES_URBAIN) * 16, Math.floor(n / COLONNES_URBAIN) * 16, 16, 16, 0, 0, 16, 16);
+    if (t.haut && VETEMENT[base]) recolorer(ctx, VETEMENT[base], [t.haut, melangerCouleur(t.haut, '#000000', 0.18)]);
   }
-  if (t.casque) { px(3, 4, 10, 1, CONTOUR); px(5, 2, 3, 1, melangerCouleur(t.casque, '#ffffff', 0.5)); }
-  cachePersos.set(cle, c);
+  if (planches.urbain || t.tuile) cachePersos.set(cle, c);
   return c;
+}
+
+const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+/** Remplace des couleurs exactes du sprite (de → vers), pixel par pixel. */
+function recolorer(ctx, de, vers) {
+  const img = ctx.getImageData(0, 0, 16, 16);
+  const d = img.data, src = de.map(rgb), dst = vers.map(rgb);
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    for (let k = 0; k < src.length; k++) {
+      if (d[i] === src[k][0] && d[i + 1] === src[k][1] && d[i + 2] === src[k][2]) { [d[i], d[i + 1], d[i + 2]] = dst[k]; break; }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
 }
 
 /** Dessine un personnage, pieds en (x, y), avec son ombre. */
@@ -95,139 +111,111 @@ export function dessinerPerso(ctx, t, x, y, dir = 'face', pas = 0) {
   ctx.drawImage(spritePerso(t, dir, pas), Math.round(x) - 8, Math.round(y) - 15);
 }
 
-// --- Voitures à l'échelle ----------------------------------------------------------------
+// --- Voitures (Kenney Racing Pack) --------------------------------------------------------
 
 export const VOITURE_LARGEUR = 28;
 export const VOITURE_LONGUEUR = 46;
 const cacheVoitures = new Map();
 
+/** Modèle Kenney (Racing Pack) de chaque voiture, d'après son image de profil. */
+const MODELES = {
+  rounded_yellow: 'voiture2', sedan_blue: 'voiture1', sedan_vintage: 'voiture1', convertible: 'voiture2',
+  sports_green: 'voiture3', sports_red: 'voiture3', sports_yellow: 'voiture5', sports_convertible: 'voiture5',
+  sports_race: 'voiture5', suv: 'voiture4', buggy: 'voiture4', formula: 'petite3', kart: 'petite2',
+};
+export function modeleVoiture(profil, id = '') {
+  if (MODELES[profil]) return MODELES[profil];
+  let h = 7;
+  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return `voiture${1 + (h % 5)}`;
+}
+
+const enHsv = (r, g, b) => {
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h * 60 + 360) % 360, max ? d / max : 0, max / 255];
+};
+const enRgb = (h, s, v) => {
+  const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+};
+
 /**
- * Voiture vue de dessus, avant vers la DROITE (angle 0), 46 × 28 px, en deux
- * couches : `flanc` (silhouette sombre et roues, posée un peu plus bas pour
- * donner l'épaisseur de la carrosserie en vue 3/4) et `dessus`.
- * looks : apparences données par les pièces (aileron, prise, larges, nitro…).
+ * Repeint la carrosserie (rouge-orangé chez Kenney) dans la couleur voulue en
+ * gardant les ombres et les reflets du dessin d'origine.
  */
-export function spriteVoitureTiny(couleur, bande = null, looks = []) {
-  const cle = `${couleur}|${bande}|${looks.join(',')}`;
+function repeindre(ctx, w, h, couleur) {
+  const [th, ts, tv] = enHsv(...[1, 3, 5].map((i) => parseInt(couleur.slice(i, i + 2), 16)));
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  const REF_S = 0.85, REF_V = 0.9;
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    const [hh, ss, vv] = enHsv(d[i], d[i + 1], d[i + 2]);
+    if (ss < 0.35 || (hh > 40 && hh < 340)) continue;   // vitres, phares, pneus : on n'y touche pas
+    const s2 = Math.min(1, ts * (ss / REF_S)), v2 = Math.min(1, Math.max(0.08, tv * (vv / REF_V)));
+    [d[i], d[i + 1], d[i + 2]] = enRgb(th, s2, v2);
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+/**
+ * Voiture vue de dessus (Kenney Racing Pack), dans la couleur voulue.
+ * modele : 'voiture1' à 'voiture5', 'petite1' à 'petite5' (karts, formules).
+ * bande et looks : gardés pour compatibilité (le dessin Kenney ne change pas).
+ */
+export function spriteVoitureTiny(couleur, bande = null, looks = [], modele = 'voiture1') {
+  const cle = `${couleur}|${modele}`;
   if (cacheVoitures.has(cle)) return cacheVoitures.get(cle);
-  const L = VOITURE_LONGUEUR + 8, l = VOITURE_LARGEUR + 6;     // marge pour aileron et pneus larges
-  const ox = 4, oy = 3;
-  const a = new Set(looks);
-  const fonce = melangerCouleur(couleur, '#000000', 0.38);
-  const clair = melangerCouleur(couleur, '#ffffff', 0.32);
-  const vitre = '#5f91c8', vitreClaire = '#a9d4f2';
-
-  // Flanc : silhouette sombre + roues.
-  const f = toile(L, l);
-  const fx = f.ctx;
-  const larges = a.has('larges') ? 2 : 0;
-  fx.fillStyle = CONTOUR;
-  for (const rx of [ox + 6, ox + VOITURE_LONGUEUR - 15]) {
-    fx.fillRect(rx, oy - 2 - larges, 10, 4 + larges);
-    fx.fillRect(rx, oy + VOITURE_LARGEUR - 2, 10, 4 + larges);
+  const r = ATLAS_COURSE[modele] || ATLAS_COURSE.voiture1;
+  const [sx, sy, w, h] = r;
+  const d = toile(w, h);
+  if (planches.tiny.course) {
+    d.ctx.drawImage(planches.tiny.course, sx, sy, w, h, 0, 0, w, h);
+    if (couleur) repeindre(d.ctx, w, h, couleur);
   }
-  rond(fx, ox, oy, VOITURE_LONGUEUR, VOITURE_LARGEUR, 7, CONTOUR);
-  rond(fx, ox + 1, oy + 1, VOITURE_LONGUEUR - 2, VOITURE_LARGEUR - 2, 6, fonce);
-
-  // Dessus : carrosserie, capot, pare-brise, toit, lunette, phares.
-  const d = toile(L, l);
-  const dx = d.ctx;
-  rond(dx, ox, oy, VOITURE_LONGUEUR, VOITURE_LARGEUR, 7, CONTOUR);
-  rond(dx, ox + 1, oy + 1, VOITURE_LONGUEUR - 2, VOITURE_LARGEUR - 2, 6, couleur);
-  dx.fillStyle = clair; dx.fillRect(ox + 4, oy + 2, VOITURE_LONGUEUR - 10, 2);           // reflet
-  dx.fillStyle = fonce; dx.fillRect(ox + 4, oy + VOITURE_LARGEUR - 4, VOITURE_LONGUEUR - 10, 2);
-  // Habitacle : pare-brise (vers l'avant, à droite), toit, lunette arrière.
-  rond(dx, ox + 12, oy + 4, 22, VOITURE_LARGEUR - 8, 4, CONTOUR);
-  dx.fillStyle = vitre; dx.fillRect(ox + 27, oy + 5, 6, VOITURE_LARGEUR - 10);
-  dx.fillStyle = vitreClaire; dx.fillRect(ox + 28, oy + 6, 2, VOITURE_LARGEUR - 14);
-  dx.fillStyle = vitre; dx.fillRect(ox + 13, oy + 5, 4, VOITURE_LARGEUR - 10);
-  dx.fillStyle = a.has('carbone') ? '#2c2c38' : clair;
-  dx.fillRect(ox + 17, oy + 5, 10, VOITURE_LARGEUR - 10);
-  if (a.has('carbone')) { dx.fillStyle = '#3c3c4a'; for (let i = 0; i < 10; i += 2) dx.fillRect(ox + 17 + i, oy + 5, 1, VOITURE_LARGEUR - 10); }
-  // Bande de course.
-  if (bande) { dx.fillStyle = bande; dx.fillRect(ox + 1, oy + VOITURE_LARGEUR / 2 - 2, VOITURE_LONGUEUR - 2, 4); }
-  // Phares (avant, à droite) et feux (arrière).
-  dx.fillStyle = '#fff4b8'; dx.fillRect(ox + VOITURE_LONGUEUR - 3, oy + 3, 2, 5); dx.fillRect(ox + VOITURE_LONGUEUR - 3, oy + VOITURE_LARGEUR - 8, 2, 5);
-  dx.fillStyle = '#e4432d'; dx.fillRect(ox + 1, oy + 3, 2, 4); dx.fillRect(ox + 1, oy + VOITURE_LARGEUR - 7, 2, 4);
-  // Rétroviseurs.
-  dx.fillStyle = CONTOUR; dx.fillRect(ox + 28, oy - 2, 3, 3); dx.fillRect(ox + 28, oy + VOITURE_LARGEUR - 1, 3, 3);
-  // Pièces visibles.
-  if (a.has('prise') || a.has('turbine')) {
-    dx.fillStyle = CONTOUR; dx.fillRect(ox + 36, oy + 9, 6, VOITURE_LARGEUR - 18);
-    dx.fillStyle = a.has('turbine') ? '#f39c33' : '#5c6278'; dx.fillRect(ox + 37, oy + 10, 4, VOITURE_LARGEUR - 20);
-  }
-  if (a.has('arceau')) { dx.fillStyle = CONTOUR; dx.fillRect(ox + 16, oy + 4, 2, VOITURE_LARGEUR - 8); }
-  if (a.has('nitro1') || a.has('nitro2')) {
-    const ys = a.has('nitro2') ? [oy + 6, oy + VOITURE_LARGEUR - 10] : [oy + VOITURE_LARGEUR / 2 - 2];
-    for (const y of ys) { dx.fillStyle = CONTOUR; dx.fillRect(ox + 5, y - 1, 7, 6); dx.fillStyle = '#2a7fd6'; dx.fillRect(ox + 6, y, 5, 4); dx.fillStyle = '#7fd0ff'; dx.fillRect(ox + 6, y, 5, 1); }
-  }
-  if (a.has('becquet')) { dx.fillStyle = CONTOUR; dx.fillRect(ox + 2, oy + 2, 2, VOITURE_LARGEUR - 4); }
-  if (a.has('aileron') || a.has('aileronGT')) {
-    const gt = a.has('aileronGT');
-    dx.fillStyle = CONTOUR; dx.fillRect(ox - 3, oy - 1, 5, VOITURE_LARGEUR + 2);
-    dx.fillStyle = gt ? (bande || '#f4f1e8') : fonce; dx.fillRect(ox - 2, oy, 3, VOITURE_LARGEUR);
-    dx.fillStyle = CONTOUR; dx.fillRect(ox + 2, oy + 6, 3, 2); dx.fillRect(ox + 2, oy + VOITURE_LARGEUR - 8, 3, 2);
-  }
-  // Ombre : la silhouette du flanc, noircie (sans ctx.filter, absent de certains Safari).
-  const o = toile(L, l);
-  o.ctx.drawImage(f.c, 0, 0);
+  const o = toile(w, h);
+  o.ctx.drawImage(d.c, 0, 0);
   o.ctx.globalCompositeOperation = 'source-in';
   o.ctx.fillStyle = 'rgba(20,16,34,0.32)';
-  o.ctx.fillRect(0, 0, L, l);
-  const sprite = { flanc: f.c, dessus: d.c, ombre: o.c, cx: ox + VOITURE_LONGUEUR / 2, cy: oy + VOITURE_LARGEUR / 2 };
-  cacheVoitures.set(cle, sprite);
+  o.ctx.fillRect(0, 0, w, h);
+  const sprite = { dessus: d.c, ombre: o.c, cx: w / 2, cy: h / 2 };
+  if (planches.tiny.course) cacheVoitures.set(cle, sprite);
   return sprite;
 }
 
-function rond(ctx, x, y, w, h, r, col) {
-  ctx.fillStyle = col;
-  ctx.fillRect(x + r, y, w - 2 * r, h);
-  ctx.fillRect(x, y + r, w, h - 2 * r);
-  for (let i = 0; i < r; i++) {
-    const k = Math.round(r - Math.sqrt(r * r - (r - i - 0.5) ** 2));
-    ctx.fillRect(x + k, y + i, w - 2 * k, 1);
-    ctx.fillRect(x + k, y + h - 1 - i, w - 2 * k, 1);
-  }
-}
-
 /**
- * Dessine une voiture centrée en (x, y), tournée de `angle` (0 = vers la droite).
- * Vue 3/4 : ombre au sol, flanc 3 px plus bas, puis le dessus. `echelle` < 1
- * pour une vignette.
+ * Dessine une voiture centrée en (x, y), tournée de `angle` (0 = vers la
+ * droite ; le dessin Kenney regarde vers le haut). Ombre portée au sol ;
+ * `echelle` < 1 pour une vignette.
  */
 export function dessinerVoitureTiny(ctx, sprite, x, y, angle, echelle = 1, ombre = true) {
-  const { flanc, dessus, cx, cy } = sprite;
+  const { dessus, cx, cy } = sprite;
   ctx.save();
   ctx.translate(Math.round(x), Math.round(y));
   if (ombre) {
     ctx.save();
-    ctx.translate(3 * echelle, 5 * echelle);
-    ctx.rotate(angle);
+    ctx.translate(3 * echelle, 4 * echelle);
+    ctx.rotate(angle + Math.PI / 2);
     ctx.scale(echelle, echelle);
     ctx.drawImage(sprite.ombre, -cx, -cy);
     ctx.restore();
   }
-  for (let k = 3; k >= 1; k--) {
-    ctx.save();
-    ctx.translate(0, k * echelle);
-    ctx.rotate(angle);
-    ctx.scale(echelle, echelle);
-    ctx.drawImage(flanc, -cx, -cy);
-    ctx.restore();
-  }
-  ctx.rotate(angle);
+  ctx.rotate(angle + Math.PI / 2);
   ctx.scale(echelle, echelle);
   ctx.drawImage(dessus, -cx, -cy);
   ctx.restore();
 }
 
-/** Vignette d'une voiture (vue de 3/4, avant en bas) pour les menus, en data URL. */
+/** Vignette d'une voiture (vue de dessus, avant en haut) pour les menus, en data URL. */
 const cacheVignettes = new Map();
-export function vignetteVoitureTiny(couleur, bande, looks = []) {
-  const cle = `${couleur}|${bande}|${looks.join(',')}`;
+export function vignetteVoitureTiny(couleur, bande, looks = [], modele = 'voiture1') {
+  const cle = `${couleur}|${modele}`;
   if (cacheVignettes.has(cle)) return cacheVignettes.get(cle);
   const { c, ctx } = toile(44, 60);
-  dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, bande, looks), 22, 28, Math.PI / 2);
+  dessinerVoitureTiny(ctx, spriteVoitureTiny(couleur, bande, looks, modele), 22, 28, -Math.PI / 2);
   const url = c.toDataURL();
   cacheVignettes.set(cle, url);
   return url;

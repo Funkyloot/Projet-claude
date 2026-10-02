@@ -533,7 +533,7 @@ function conteneur(c, x, y, r) {
 }
 
 export function voitureGaree(c, x, y, couleur, horizontale) {
-  dessinerVoitureTiny(c, spriteVoitureTiny(couleur), x, y, horizontale ? 0 : Math.PI / 2);
+  dessinerVoitureTiny(c, spriteVoitureTiny(couleur, null, [], `voiture${1 + (Math.round(x + y) % 5)}`), x, y, horizontale ? 0 : Math.PI / 2);
 }
 
 function tente(c, x, y, couleur) {

@@ -9,7 +9,7 @@
  */
 
 import { DIRECTION, bulle, police } from './sprites.js';
-import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, CONTOUR as CONTOUR_TINY } from './tiny.js';
+import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, modeleVoiture, CONTOUR as CONTOUR_TINY } from './tiny.js';
 import { texte } from './course.js';
 import { decrireVoiture } from './partie.js';
 import { batiment, COLONNES_TERRAIN, combosActifs, raisonPlacement, effets } from './garage.js';
@@ -235,7 +235,7 @@ export class SceneGarage {
     // taille du terrain : il est dessiné une fois dans une image, puis recopié.
     const fond = this.fondGarage(W, H, L);
     ctx.drawImage(fond, 0, -this.scroll);
-    dessinerVoitureTiny(ctx, spriteVoitureTiny('#4f7ddb'), Math.round(this.passant), o.y - 96 + 22, 0);
+    dessinerVoitureTiny(ctx, spriteVoitureTiny('#4f7ddb', null, [], 'voiture4'), Math.round(this.passant), o.y - 96 + 22, 0);
 
     // Grille en mode construction.
     if (this.placement) {
@@ -261,7 +261,7 @@ export class SceneGarage {
         if (i === 0 && this.construction) this.dessinerChantier(ctx, x + w / 2, y + h / 2, t);
         else if (voitures[i]) {
           const v = voitures[i];
-          dessinerVoitureTiny(ctx, spriteVoitureTiny(v.couleur, v.active ? '#f2c14e' : null, v.looks), x + w / 2, y + h / 2 - 3, Math.PI / 2);
+          dessinerVoitureTiny(ctx, spriteVoitureTiny(v.couleur, null, v.looks, v.modele), x + w / 2, y + h / 2 - 3, Math.PI / 2);
         }
       }
       if (enCombo.has(b.uid)) { ctx.fillStyle = Math.sin(t * 4) > 0 ? '#ffe066' : '#f39c33'; ctx.fillRect(x + w - 7, y + 2, 5, 5); }
@@ -362,7 +362,7 @@ export class SceneGarage {
     for (const v of ordre) {
       if (liste.length >= n) break;
       const dv = decrireVoiture(partie, v);
-      liste.push({ couleur: dv.couleur, looks: dv.looks, active: v === active });
+      liste.push({ couleur: dv.couleur, looks: dv.looks, modele: modeleVoiture(dv.profil, dv.id), active: v === active });
     }
     return liste;
   }
@@ -371,7 +371,8 @@ export class SceneGarage {
   dessinerChantier(ctx, cx, cy, t) {
     const c = this.construction;
     const avance = Math.min(1, c.t / c.duree);
-    const s = avance > 0.85 ? spriteVoitureTiny(c.voiture.couleur, '#f2c14e', c.voiture.looks || []) : spriteVoitureTiny('#9ea3ac', null, []);
+    const modele = modeleVoiture(c.voiture.profil, c.voiture.id);
+    const s = spriteVoitureTiny(avance > 0.85 ? c.voiture.couleur : '#9ea3ac', null, [], modele);
     const h = Math.ceil(60 * Math.min(1, avance / 0.8));
     ctx.save();
     ctx.beginPath(); ctx.rect(cx - 32, cy + 30 - h, 64, h); ctx.clip();

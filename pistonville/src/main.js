@@ -17,6 +17,7 @@ import { rendreCircuit, miniCarte } from './rendu-circuit.js';
 import { Course } from './course.js';
 import { SceneGarage } from './scene-garage.js';
 import { interieur } from './interieurs.js';
+import { definirPlanches, modeleVoiture } from './tiny.js';
 import { Ville } from './ville.js';
 import { Son } from './son.js';
 import {
@@ -65,6 +66,7 @@ class App {
       this.montrer(ecranChargement(`Impossible de charger les images (${err.message}).`));
       return;
     }
+    definirPlanches(this.assets.urbain, this.assets.tiny);   // personnages Kenney RPG Urban
     this.scene = new SceneGarage(this.assets.urbain, this.assets.tiny);
     this.titre();
     this.dernier = performance.now();
@@ -466,7 +468,7 @@ class App {
     if (eng.second) {
       const v2 = P.decrireVoiture(this.partie, eng.voitureSecond, eng.second);
       coequipier = {
-        physique: v2.physique, couleur: v2.couleur, looks: v2.looks, nom: eng.second.nom, surfaces: v2.surfaces,
+        physique: v2.physique, couleur: v2.couleur, looks: v2.looks, nom: eng.second.nom, surfaces: v2.surfaces, modele: modeleVoiture(v2.profil, v2.id),
         talent: PL.talentPilote(eng.second) * 0.5, usure: eng.voitureSecond.usure,
       };
     }
@@ -477,7 +479,7 @@ class App {
       tiny: this.assets.tiny,
       tours: def.tours,
       joueur: {
-        physique: v.physique, couleur: v.couleur, looks: v.looks, pilote: eng.titulaire?.nom || 'Pilote', tenue: PL.tenuePilote(eng.titulaire),
+        physique: v.physique, couleur: v.couleur, looks: v.looks, modele: modeleVoiture(v.profil, v.id), pilote: eng.titulaire?.nom || 'Pilote', tenue: PL.tenuePilote(eng.titulaire),
         nitros: v.nitros, nitroDuree: v.nitroDuree, surfaces: v.surfaces,
       },
       adversaires: this.adversaires,

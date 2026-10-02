@@ -122,7 +122,7 @@ function piece(v, z, culture, graine) {
     v.dessin(y, (c) => {
       c.fillStyle = CONTOUR; c.fillRect(x - 1, y - 22, 3, 22); c.fillRect(x - 10, y - 17, 21, 3);
       c.fillStyle = '#c98a55'; c.fillRect(x - 9, y - 16, 19, 1);
-      dessinerPerso(c, { ...tenue(7), casque: '#d08a3e', haut: '#3fa34d' }, x, y - 6, 'face');
+      dessinerPerso(c, { tuile: ['farm', 109] }, x, y - 6, 'face');
     });
   }
 }
@@ -175,7 +175,7 @@ function ferme(v, i, cotes, g, p, reseau) {
   v.dessin(cour.y + 160, (c) => tracteur(c, cour.x + 170, cour.y + 150, 0));
   v.ajouter({ type: 'rect', x: cour.x + 152, y: cour.y + 139, w: 36, h: 22 });
   for (let k = 0; k < 5; k++) v.animaux.push({ x: cour.x + 30 + k * 18, y: cour.y + 150 + (k % 2) * 14, n: 122, phase: k * 1.7 });
-  v.gens.push({ x: cour.x + 120, y: cour.y + 170, tenue: { ...tenue(g), casque: '#d08a3e', haut: '#3fa34d' }, dir: 'face' });
+  v.gens.push({ x: cour.x + 120, y: cour.y + 170, tenue: { tuile: ['farm', g % 2 ? 108 : 109] }, dir: 'face' });
   // On livre devant la maison, sur le bas-côté.
   v.fermes.push({ x: cour.x + 48, y: bas ? i.y + i.h + 8 : i.y - 8 });
   // Le reste : un pré à côté de la cour, des champs derrière.
@@ -364,7 +364,7 @@ function etang(v, i, cotes, g) {
   v.dessin(py + 12, (c) => {
     c.fillStyle = CONTOUR; c.fillRect(px, py - 7, 44, 14);
     c.fillStyle = '#c98a55'; c.fillRect(px + 1, py - 6, 42, 12);
-    dessinerPerso(c, { ...tenue(g + 2), casque: '#3fa34d' }, px + 10, py, 'gauche');
+    dessinerPerso(c, { tuile: ['farm', 109] }, px + 10, py, 'face');
     c.fillStyle = CONTOUR; c.fillRect(px - 16, py - 18, 22, 1); c.fillRect(px - 16, py - 18, 1, 14);
   });
   // Arbres autour, tables de pique-nique.

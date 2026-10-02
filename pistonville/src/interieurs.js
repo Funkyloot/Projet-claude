@@ -6,7 +6,7 @@
  * 1 case, une voiture = 2 × 3 cases). Image de 320 × 112 px, mise en cache.
  */
 
-import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, CONTOUR } from './tiny.js';
+import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, CONTOUR, PERSONNES } from './tiny.js';
 
 const W = 320, H = 112;
 const cache = new Map();
@@ -50,10 +50,10 @@ function table(c, x, y) {
 const DESSINS = {
   concession(c, tiny) {
     piece(c, tiny, 1, [44, 74, 46, 74, 47, 74]);
-    const voitures = [['#e4432d', 52], ['#3fa34d', 130], ['#8a6ad6', 208]];
-    for (const [coul, x] of voitures) {
+    const voitures = [['#e4432d', 52, 'voiture5'], ['#3fa34d', 130, 'voiture3'], ['#8a6ad6', 208, 'voiture2']];
+    for (const [coul, x, modele] of voitures) {
       plateau(c, x, 66);
-      dessinerVoitureTiny(c, spriteVoitureTiny(coul, coul === '#e4432d' ? '#f4f6fb' : null), x, 62, 0);
+      dessinerVoitureTiny(c, spriteVoitureTiny(coul, null, [], modele), x, 62, 0);
       prix(c, x + 26, 78);
     }
     comptoir(c, 256, 64, 52);
@@ -120,7 +120,7 @@ const DESSINS = {
     for (const [x, y] of [[170, 66], [250, 66], [210, 100]]) {
       table(c, x, y);
       dessinerPerso(c, tenue(x + y), x - 18, y + 6, 'droite');
-      dessinerPerso(c, { ...tenue(x * 3), casque: '#e4432d', haut: '#f4f1e8' }, x + 18, y + 6, 'gauche');
+      dessinerPerso(c, { base: PERSONNES.bandeau, haut: ['#e4432d', '#2f6fdb', '#3fa34d'][(x / 40) % 3 | 0] }, x + 18, y + 6, 'gauche');
     }
   },
 };
