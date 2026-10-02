@@ -8,4 +8,4 @@
  */
 /* global __STORE__ */
 export const STORE = typeof __STORE__ !== 'undefined' && __STORE__ === true;
-export const VERSION_JEU = '1.0.0';
+export const VERSION_JEU = '1.0.1';

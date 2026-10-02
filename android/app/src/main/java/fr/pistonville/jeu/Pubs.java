@@ -24,15 +24,18 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 final class Pubs {
     interface Fin { void apres(boolean recompense); }
+    interface Consentement { void connu(); }
 
     private final Activity activite;
     private final ConsentInformation consentement;
     private final AtomicBoolean demarre = new AtomicBoolean(false);
     private RewardedAd pub;
     private boolean chargement;
+    private final Consentement apresConsentement;
 
-    Pubs(Activity activite) {
+    Pubs(Activity activite, Consentement apresConsentement) {
         this.activite = activite;
+        this.apresConsentement = apresConsentement;
         consentement = UserMessagingPlatform.getConsentInformation(activite);
     }
 
@@ -46,6 +49,7 @@ final class Pubs {
     }
 
     private void demarrer() {
+        apresConsentement.connu();
         if (!consentement.canRequestAds() || demarre.getAndSet(true)) return;
         new Thread(() -> {
             MobileAds.initialize(activite, etat -> {});

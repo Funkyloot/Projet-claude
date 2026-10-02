@@ -78,3 +78,30 @@ Ad ») et ne rapportent rien. Pour de vraies publicités :
 5. Pendant tes propres essais, **ne clique jamais sur tes vraies publicités**
    (AdMob peut suspendre le compte) : ajoute ton téléphone comme appareil de
    test dans AdMob.
+
+## Statistiques de jeu (Google Analytics pour Firebase)
+
+L'appli envoie des événements anonymes (voir `pistonville/src/stats.js`) :
+`course_terminee`, `gp_termine`, `balade_commencee`, `balade_terminee`,
+`lieu_visite`, `onglet`, `jour_suivant`, `bonus_propose`, `bonus_regarde`,
+`bonus_pris`, `pack_vu`, `pack_achat_lance`, `pack_achete`,
+`voiture_vendue`, `voiture_demontee`. Firebase ajoute de lui-même le temps
+de jeu (`user_engagement`), les sessions, la fidélisation et les achats
+(`in_app_purchase`).
+
+Tant que `android/app/google-services.json` n'existe pas, les statistiques
+sont désactivées (l'appli fonctionne normalement). Pour les activer :
+
+1. console.firebase.google.com > Ajouter un projet « Pistonville »
+   (Google Analytics : activé, compte Analytics par défaut).
+2. Ajouter une application **Android**, nom du paquet **`fr.pistonville.jeu`**.
+3. Télécharger **`google-services.json`** et le placer dans `android/app/`.
+4. Dans Analytics > Paramètres de la propriété > Conservation des données :
+   2 mois (c'est ce qu'annonce la politique de confidentialité).
+5. Relier Firebase à AdMob et à Google Play (Paramètres du projet >
+   Intégrations) pour voir revenus publicitaires et achats au même endroit.
+6. Reconstruire, augmenter `versionCode`, envoyer.
+
+Pour voir les événements en direct pendant tes essais :
+`adb shell setprop debug.firebase.analytics.app fr.pistonville.jeu`, puis
+Firebase > Analytics > DebugView.

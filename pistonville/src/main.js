@@ -22,6 +22,7 @@ import { Ville } from './ville.js';
 import { Son } from './son.js';
 import { lireReglages, ecrireReglages } from './reglages.js';
 import * as Soutien from './soutien.js';
+import { signaler, activer as activerStats } from './stats.js';
 import {
   Interface, ecranTitre, ecranGarage, ecranBriefing, ecranChargement, ecranPause, ecranPauseVille, ecranReglages, ecranFondateur, ecranResultats, ecranFinGP,
   ecranConstruction, ecranRang, texteRecompense, ecranCelebration, ecranCeremonie, ecranFinCarriere, ecranCadeau, ecranBureau, ecranBoutique, ecranPieces, ecranTombola, ecranCafe, ecranFinBalade,
@@ -47,6 +48,7 @@ class App {
     this.son = new Son();
     this.reglages = lireReglages();
     this.son.regler(this.reglages);
+    activerStats(this.reglages.statistiques !== false);
     // Le bouton Paramètres (engrenage de la barre, écran titre) marche partout et ramène où l'on était.
     this.ui.globales.reglages = () => {
       const ici = this.dernierEcran;
@@ -141,6 +143,7 @@ class App {
   /** Les réglages ont changé : volumes, vibrations ; on les garde sur l'appareil. */
   appliquerReglages() {
     this.son.regler(this.reglages);
+    activerStats(this.reglages.statistiques !== false);
     ecrireReglages(this.reglages);
   }
 
@@ -412,6 +415,8 @@ class App {
     if (type === 'pub') { Soutien.recevoir(type, valeur); return; }
     if (type === 'fondateur') {
       const nouveau = !this.reglages.fondateur;
+      if (nouveau && this.attenteAchat) signaler('pack_achete', { saison: P.saisonDe(this.partie), rang: this.partie.rang });
+      this.attenteAchat = false;
       this.reglages.fondateur = true;
       ecrireReglages(this.reglages);
       if (this.ecran !== 'titre' && this.offrirFondateur()) { this.sauver(); this.son.fanfare(); }
@@ -423,10 +428,11 @@ class App {
   }
 
   /** Un bonus vidéo : sans publicité pour les fondateurs, sinon après une publicité vue jusqu'au bout. */
-  async bonusVideo(appliquer) {
-    if (this.partie.fondateur) { appliquer(); return; }
+  async bonusVideo(appliquer, lieu = 'course') {
+    if (this.partie.fondateur) { appliquer(); signaler('bonus_pris', { lieu, fondateur: true }); return; }
     this.son.musique(null);
     const ok = await Soutien.regarderPub();
+    signaler('bonus_regarde', { lieu, recompense: ok });
     if (ok) appliquer(); else this.toast('Publicité interrompue : pas de bonus cette fois.');
   }
 
@@ -489,6 +495,10 @@ class App {
 
   jourSuivant() {
     const nouvelles = P.jourSuivant(this.partie);
+    signaler('jour_suivant', {
+      jour: this.partie.jour, saison: P.saisonDe(this.partie), rang: this.partie.rang, licence: this.partie.licence || 'aucune',
+      voitures: this.partie.garage.length, personnel: this.partie.personnel.length, batiments: this.partie.terrain.batiments.length,
+    });
     this.sauver();
     this.garage();
     if (!nouvelles.length) this.toast(`Jour ${this.partie.jour} : rien de neuf au garage.`);
@@ -530,6 +540,7 @@ class App {
 
   sortirEnVille() {
     if (!P.peutSortir(this.partie)) return;
+    signaler('balade_commencee', { saison: P.saisonDe(this.partie) });
     const v = P.voitureActive(this.partie);
     if (!v) return;
     const pilote = PL.titulaire(this.partie);
@@ -548,6 +559,8 @@ class App {
   }
 
   entrerBatiment(porte) {
+    signaler('lieu_visite', { lieu: porte.id });
+    if (this.ville) this.ville.lieuxVisites = (this.ville.lieuxVisites || 0) + 1;
     const retour = () => { this.ville.sortir(); this.pointeurs.clear(); this.touches.clear(); this.ui.vider(); };
     this.pointeurs.clear();
     const ecrans = {
@@ -565,6 +578,11 @@ class App {
   finBalade() {
     this.villeFinie = true;
     const g = this.ville.bilan();
+    const v = this.ville;
+    signaler('balade_terminee', {
+      duree_s: Math.round(v.temps), argent: g.argent, fans: g.fans, defis: (v.defis || []).filter((d) => d.fait).length,
+      descentes: v.descentes || 0, lieux: v.lieuxVisites || 0, amendes: g.amendes, saison: P.saisonDe(this.partie),
+    });
     const rangs = P.finBalade(this.partie, g);
     this.sauver();
     this.son.fanfare();
@@ -684,6 +702,10 @@ class App {
     });
     const gain = P.enregistrerManche(this.partie, resultats, c.bilan());
     this.sauver();
+    signaler('course_terminee', {
+      gp: gp.id, manche: this.partie.gp?.manche ?? 0, place: gain.place, abandon, duree_s: Math.round(c.temps),
+      voiture: P.voitureActive(this.partie)?.id, depassements: c.depassements, saison: P.saisonDe(this.partie), rang: this.partie.rang,
+    });
     const general = P.classementGP(this.partie, noms);
     this.montrer(ecranResultats(this, { gp, manche: this.partie.gp.manche, resultats, general, gain, depassements: c.depassements, drift: c.drift }));
   }
@@ -722,6 +744,7 @@ class App {
     // Le trophée revient à l'écurie : on garde la meilleure de ses deux voitures.
     const place = general.findIndex((x) => x.id === 'joueur' || x.id === 'coequipier') + 1;
     const { gains, fans } = this.partie.gp;
+    signaler('gp_termine', { gp: gp.id, place, saison: P.saisonDe(this.partie), rang: this.partie.rang });
     P.terminerGP(this.partie, place);
     this.sauver();
     this.course = null;

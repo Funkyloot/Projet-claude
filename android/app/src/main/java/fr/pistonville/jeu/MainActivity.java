@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     private WebView vue;
     private Pubs pubs;
     private Achats achats;
+    private Statistiques stats;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -73,7 +74,8 @@ public class MainActivity extends Activity {
                 return !"appassets.androidplatform.net".equals(adresse.getHost());
             }
         });
-        pubs = new Pubs(this);
+        stats = new Statistiques(this);
+        pubs = new Pubs(this, () -> stats.appliquerConsentement());
         achats = new Achats(this, () -> versLeJeu("fondateur", "true"));
         vue.addJavascriptInterface(new Pont(), "PistonvilleAndroid");
         setContentView(vue);
@@ -108,6 +110,8 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void acheterFondateur() { achats.acheter(); }
         @JavascriptInterface public boolean confidentialiteRequise() { return pubs.choixModifiable(); }
         @JavascriptInterface public void ouvrirConfidentialite() { runOnUiThread(() -> pubs.revoirChoix()); }
+        @JavascriptInterface public void evenement(String nom, String json) { stats.evenement(nom, json); }
+        @JavascriptInterface public void statistiques(boolean oui) { stats.activer(oui); }
     }
 
     private void retour() {

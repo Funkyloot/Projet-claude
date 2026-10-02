@@ -63,9 +63,9 @@ Graphismes : Kenney (kenney.nl), sous licence CC0. Police Jersey 10 (SIL Open Fo
 - Catégorie : Course (autre choix possible : Simulation)
 - Étiquettes : Course, Gestion, Pixel art, Hors ligne, Solo
 
-## Notes de version (« Nouveautés ») — version 1.0.0
+## Notes de version (« Nouveautés »)
 
-Première version de Pistonville ! Construis ton garage, embauche ton équipe et gagne les Grands Prix.
+**1.0.1** (première version publiée) : Première version de Pistonville ! Construis ton garage, embauche ton équipe et gagne les Grands Prix. Bonus vidéo facultatifs et Pack du fondateur pour soutenir le jeu.
 
 ## Produit intégré « Pack du fondateur »
 
@@ -94,8 +94,13 @@ Il faut d'abord un **profil de paiement** (Play Console > Configuration > Profil
 - **Publicités** : « **Oui**, mon application contient des publicités » (publicités récompensées AdMob, toujours au choix du joueur).
 - **Identifiant publicitaire** (Contenu de l'appli > ID publicitaire) : « Oui », pour la **publicité ou le marketing**.
 - **Sécurité des données** (formulaire) :
-  - Données collectées : **Identifiants de l'appareil ou autres** (identifiant publicitaire) ; **Activité dans l'appli > interactions** ; **Infos sur l'appli et performances > diagnostics** (journaux de plantage). Raisons : **Publicité ou marketing**, **Statistiques**, **Prévention des fraudes**. Collecte faite par le SDK Google Mobile Ads.
-  - Données partagées : les mêmes, avec Google (fournisseur de publicités).
+  - Données collectées :
+    - **Identifiants de l'appareil ou autres** (identifiant publicitaire, identifiant d'installation Firebase) — raisons : **Statistiques**, **Publicité ou marketing**, **Prévention des fraudes**.
+    - **Activité dans l'appli > Interactions avec l'appli** (courses, balades, onglets, bonus, pack) — raison : **Statistiques** (et Publicité pour AdMob).
+    - **Infos sur l'appli et performances > Diagnostics** — raison : **Statistiques**.
+    - **Infos financières > Historique des achats** : **non**, l'achat est géré par Google Play (rien à déclarer pour Google Play Billing).
+  - Pour chacune : collecte **éphémère : non** ; **obligatoire : non** (le joueur peut couper les statistiques et ne jamais regarder de pub) ; traitement par Google (Firebase, AdMob).
+  - Données partagées : identifiants et interactions, avec Google en tant que fournisseur de publicités.
   - Les données sont-elles chiffrées en transit ? **Oui**.
   - Peut-on demander leur suppression ? Indique que l'identifiant publicitaire se réinitialise dans les réglages Android.
   - Achats : gérés par Google Play, le développeur ne reçoit pas les informations de paiement (rien à déclarer de plus pour Google Play Billing).

@@ -26,6 +26,7 @@ import {
   PILOTES_MAX, TRAITS_PILOTE, RECRUTEMENTS_PILOTES,
 } from './pilotes.js';
 import { formatArgent } from './outils.js';
+import { signaler } from './stats.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -46,12 +47,13 @@ export function ongletsBas(actif) {
 }
 
 export function actionsOnglets(app) {
+  const onglet = (nom, f) => () => { signaler('onglet', { nom }); f(); };
   return {
-    'onglet-garage': () => app.garage(),
-    'onglet-construire': () => app.montrer(ecranConstruire(app)),
-    'onglet-equipe': () => app.montrer(ecranEquipe(app)),
-    'onglet-voitures': () => app.montrer(ecranVoitures(app)),
-    'onglet-courses': () => app.montrer(avecOnglets(app, ecranBureau(app, () => app.garage()), 'courses')),
+    'onglet-garage': onglet('garage', () => app.garage()),
+    'onglet-construire': onglet('construire', () => app.montrer(ecranConstruire(app))),
+    'onglet-equipe': onglet('equipe', () => app.montrer(ecranEquipe(app))),
+    'onglet-voitures': onglet('voitures', () => app.montrer(ecranVoitures(app))),
+    'onglet-courses': onglet('courses', () => app.montrer(avecOnglets(app, ecranBureau(app, () => app.garage()), 'courses'))),
   };
 }
 
@@ -494,8 +496,8 @@ export function ecranVoitures(app) {
     actions: {
       ...actionsOnglets(app),
       boutique: () => app.montrer(ecranBoutique(app, () => app.montrer(ecranVoitures(app)))),
-      atelier: () => app.montrer(ecranAtelier(app)),
-      mesVoitures: () => app.montrer(ecranMesVoitures(app)),
+      atelier: () => { signaler('onglet', { nom: 'atelier' }); app.montrer(ecranAtelier(app)); },
+      mesVoitures: () => { signaler('onglet', { nom: 'mes_voitures' }); app.montrer(ecranMesVoitures(app)); },
       pieces: () => app.montrer(ecranPieces(app, { retour: () => app.montrer(ecranVoitures(app)) })),
       labo: () => app.montrer(ecranLabo(app, () => app.montrer(ecranVoitures(app)))),
       aide: () => app.montrer(ecranAide(app, 'garage')),
@@ -547,8 +549,8 @@ export function ecranMesVoitures(app, confirmer = null) {
       demanderVente: (d) => redessiner({ uid: d.uid, quoi: 'vendre' }),
       demanderDemontage: (d) => redessiner({ uid: d.uid, quoi: 'demonter' }),
       annuler: () => redessiner(),
-      vendre: (d) => { const r = app.action('vendreVoiture', d.uid); if (r) { app.son.caisse(); app.toast(`Vendue ${formatArgent(r.vente)} !`); } redessiner(); },
-      demonter: (d) => { const r = app.action('demonterVoiture', d.uid); if (r) { app.son.caisse(); app.toast(`Démontée : +${r.recherche} PR, ${formatArgent(r.ferraille)} de ferraille.`); } redessiner(); },
+      vendre: (d) => { const r = app.action('vendreVoiture', d.uid); if (r) { signaler('voiture_vendue', { prix: r.vente }); app.son.caisse(); app.toast(`Vendue ${formatArgent(r.vente)} !`); } redessiner(); },
+      demonter: (d) => { const r = app.action('demonterVoiture', d.uid); if (r) { signaler('voiture_demontee', { recherche: r.recherche }); app.son.caisse(); app.toast(`Démontée : +${r.recherche} PR, ${formatArgent(r.ferraille)} de ferraille.`); } redessiner(); },
       retour: () => app.montrer(ecranVoitures(app)),
     },
   };

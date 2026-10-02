@@ -979,6 +979,7 @@ export class Ville {
       v.vx = 0; v.vy = 0; v.frein = 1; v.recul = false; v.direction = 0;
       this.attente = false;
       this.pieton = { x, y, dir: 'face', pas: 0, t: 0, cible: null, versVoiture: false };
+      this.descentes = (this.descentes || 0) + 1;
       this.ignorer = null;
       this.son?.bip(520, 0.08);
       return;

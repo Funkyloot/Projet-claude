@@ -29,6 +29,7 @@ import { dessinerVoiture, ANGLE_VITRINE, spritePerso, tenue, modeleVoiture } fro
 import { imgPiece } from './icones.js';
 import { STORE, VERSION_JEU } from './edition.js';
 import * as Soutien from './soutien.js';
+import { signaler } from './stats.js';
 import { engagement, pointsAPlacer } from './pilotes.js';
 
 const e = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -182,6 +183,7 @@ export function ecranTitre(app) {
 export function ecranFondateur(app) {
   const possede = !!app.reglages.fondateur;
   const prix = Soutien.prixFondateur();
+  if (!possede) signaler('pack_vu', { saison: app.partie ? Math.floor((app.partie.jour - 1) / 28) + 1 : 0, rang: app.partie?.rang || 0 });
   return {
     id: 'fondateur',
     classe: 'fond-sombre',
@@ -205,7 +207,7 @@ export function ecranFondateur(app) {
       </div>
     </div>`,
     actions: {
-      acheter: () => Soutien.acheterFondateur(),
+      acheter: () => { app.attenteAchat = true; signaler('pack_achat_lance', { rang: app.partie?.rang || 0 }); Soutien.acheterFondateur(); },
       retour: () => app.titre(),
     },
   };
@@ -792,7 +794,7 @@ export function ecranFinBalade(app, g, suite) {
         p.argent += Math.max(0, g.argent); p.recherche += g.recherche; g.double = true; app.sauver(); app.son.caisse();
         app.toast('Gains de la balade doublés !');
         app.montrer(ecranFinBalade(app, g, suite));
-      }),
+      }, 'balade'),
     },
     apres: (r) => animerCompteurs(r),
   };
@@ -804,6 +806,7 @@ export function ecranFinBalade(app, g, suite) {
  */
 function boutonBonus(app, possible, texte) {
   if (!possible || !Soutien.dansLAppli()) return '';
+  if (!app.partie.fondateur && Soutien.pubPrete()) signaler('bonus_propose', { lieu: texte.startsWith('Doubler la prime') ? 'course' : 'balade' });
   if (app.partie.fondateur) return `<button class="btn bonus-video" data-action="bonus">★ ${texte} · fondateur</button>`;
   if (!Soutien.pubPrete()) return '';
   return `<button class="btn bonus-video" data-action="bonus">▶ ${texte} · courte pub</button>`;
@@ -1048,6 +1051,7 @@ export function ecranReglages(app, retour) {
           ${bascule('vibrations', 'Vibrations', r.vibrations, 'Le téléphone vibre aux chocs')}
           ${bascule('aide', 'Aide au pilotage', p.aide, 'La voiture se recentre seule en course')}
           ${bascule('economie', 'Économie de batterie', r.economie, '30 images par seconde au lieu de 60')}
+          ${Soutien.dansLAppli() ? bascule('statistiques', 'Statistiques de jeu', r.statistiques !== false, 'Anonymes : aident à améliorer le jeu') : ''}
           ${Soutien.confidentialiteModifiable() ? `<div class="ligne"><span class="libelle">Publicités<small>Revoir ton choix de consentement</small></span><button class="btn btn-mini" data-action="confidentialite">Choix</button></div>` : ''}
         </div>
       </section>
@@ -1059,6 +1063,7 @@ export function ecranReglages(app, retour) {
       vibrations: () => changer(() => { r.vibrations = !r.vibrations; if (r.vibrations) app.son.vibrer(40); }),
       economie: () => changer(() => { r.economie = !r.economie; }),
       confidentialite: () => Soutien.ouvrirConfidentialite(),
+      statistiques: () => changer(() => { r.statistiques = r.statistiques === false; }),
       aide: () => changer(() => { p.aide = !p.aide; if (app.course) app.course.aide = p.aide; app.sauver(); }),
       retour: () => retour(),
     },
@@ -1164,7 +1169,7 @@ export function ecranResultats(app, r) {
         p.argent += g.prime; r.double = true; app.sauver(); app.son.caisse();
         app.toast(`Prime doublée : +${formatArgent(g.prime)} !`);
         app.montrer(ecranResultats(app, r));
-      }),
+      }, 'course'),
     },
     apres: (racine) => {
       animerCompteurs(racine, 1100);

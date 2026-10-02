@@ -6460,10 +6460,10 @@ body {
       if (this.passant > 380) this.passant = -60;
       if (this.construction) {
         this.construction.t += dt;
-        const pont2 = partie?.terrain.batiments.find((b2) => b2.id === "pont");
-        if (pont2 && Math.random() < 0.6) {
+        const pont3 = partie?.terrain.batiments.find((b2) => b2.id === "pont");
+        if (pont3 && Math.random() < 0.6) {
           const o3 = this.origine();
-          this.etincelles.push({ x: o3.x + pont2.x * CASE + 32 + (Math.random() - 0.5) * 30, y: o3.y + pont2.y * CASE + 20 + Math.random() * 30, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, vie: 0.4 });
+          this.etincelles.push({ x: o3.x + pont3.x * CASE + 32 + (Math.random() - 0.5) * 30, y: o3.y + pont3.y * CASE + 20 + Math.random() * 30, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, vie: 0.4 });
         }
       }
       for (const e3 of this.etincelles) {
@@ -9024,6 +9024,7 @@ body {
         v2.direction = 0;
         this.attente = false;
         this.pieton = { x, y, dir: "face", pas: 0, t: 0, cible: null, versVoiture: false };
+        this.descentes = (this.descentes || 0) + 1;
         this.ignorer = null;
         this.son?.bip(520, 0.08);
         return;
@@ -9957,6 +9958,28 @@ body {
     }
   }
 
+  // pistonville/src/stats.js
+  var pont2 = () => typeof window !== "undefined" && window.PistonvilleAndroid || null;
+  function signaler(nom, params = {}) {
+    const p3 = pont2();
+    if (!p3?.evenement) return;
+    const propres = {};
+    for (const [k, v2] of Object.entries(params)) {
+      if (v2 === void 0 || v2 === null) continue;
+      propres[k] = typeof v2 === "number" ? Math.round(v2 * 100) / 100 : typeof v2 === "boolean" ? v2 ? 1 : 0 : String(v2).slice(0, 100);
+    }
+    try {
+      p3.evenement(nom, JSON.stringify(propres));
+    } catch {
+    }
+  }
+  function activer(oui) {
+    try {
+      pont2()?.statistiques?.(!!oui);
+    } catch {
+    }
+  }
+
   // pistonville/src/icones.js
   var N2 = 20;
   var C2 = {
@@ -10198,7 +10221,7 @@ body {
 
   // pistonville/src/edition.js
   var STORE = false;
-  var VERSION_JEU = "1.0.0";
+  var VERSION_JEU = "1.0.1";
 
   // pistonville/src/ecrans-garage.js
   var e = (s2) => String(s2).replace(/[&<>"']/g, (c3) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c3]);
@@ -10215,12 +10238,16 @@ body {
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d2}"/></svg><span>${nom}</span></button>`).join("")}</nav>`;
   }
   function actionsOnglets(app2) {
+    const onglet = (nom, f) => () => {
+      signaler("onglet", { nom });
+      f();
+    };
     return {
-      "onglet-garage": () => app2.garage(),
-      "onglet-construire": () => app2.montrer(ecranConstruire(app2)),
-      "onglet-equipe": () => app2.montrer(ecranEquipe(app2)),
-      "onglet-voitures": () => app2.montrer(ecranVoitures(app2)),
-      "onglet-courses": () => app2.montrer(avecOnglets(app2, ecranBureau(app2, () => app2.garage()), "courses"))
+      "onglet-garage": onglet("garage", () => app2.garage()),
+      "onglet-construire": onglet("construire", () => app2.montrer(ecranConstruire(app2))),
+      "onglet-equipe": onglet("equipe", () => app2.montrer(ecranEquipe(app2))),
+      "onglet-voitures": onglet("voitures", () => app2.montrer(ecranVoitures(app2))),
+      "onglet-courses": onglet("courses", () => app2.montrer(avecOnglets(app2, ecranBureau(app2, () => app2.garage()), "courses")))
     };
   }
   function avecOnglets(app2, ecran, actif2) {
@@ -10687,8 +10714,14 @@ body {
       actions: {
         ...actionsOnglets(app2),
         boutique: () => app2.montrer(ecranBoutique(app2, () => app2.montrer(ecranVoitures(app2)))),
-        atelier: () => app2.montrer(ecranAtelier(app2)),
-        mesVoitures: () => app2.montrer(ecranMesVoitures(app2)),
+        atelier: () => {
+          signaler("onglet", { nom: "atelier" });
+          app2.montrer(ecranAtelier(app2));
+        },
+        mesVoitures: () => {
+          signaler("onglet", { nom: "mes_voitures" });
+          app2.montrer(ecranMesVoitures(app2));
+        },
         pieces: () => app2.montrer(ecranPieces(app2, { retour: () => app2.montrer(ecranVoitures(app2)) })),
         labo: () => app2.montrer(ecranLabo(app2, () => app2.montrer(ecranVoitures(app2)))),
         aide: () => app2.montrer(ecranAide(app2, "garage")),
@@ -10740,6 +10773,7 @@ body {
         vendre: (d2) => {
           const r = app2.action("vendreVoiture", d2.uid);
           if (r) {
+            signaler("voiture_vendue", { prix: r.vente });
             app2.son.caisse();
             app2.toast(`Vendue ${formatArgent(r.vente)} !`);
           }
@@ -10748,6 +10782,7 @@ body {
         demonter: (d2) => {
           const r = app2.action("demonterVoiture", d2.uid);
           if (r) {
+            signaler("voiture_demontee", { recherche: r.recherche });
             app2.son.caisse();
             app2.toast(`D\xE9mont\xE9e : +${r.recherche} PR, ${formatArgent(r.ferraille)} de ferraille.`);
           }
@@ -10893,6 +10928,7 @@ body {
   function ecranFondateur(app2) {
     const possede = !!app2.reglages.fondateur;
     const prix2 = prixFondateur();
+    if (!possede) signaler("pack_vu", { saison: app2.partie ? Math.floor((app2.partie.jour - 1) / 28) + 1 : 0, rang: app2.partie?.rang || 0 });
     return {
       id: "fondateur",
       classe: "fond-sombre",
@@ -10915,7 +10951,11 @@ body {
       </div>
     </div>`,
       actions: {
-        acheter: () => acheterFondateur(),
+        acheter: () => {
+          app2.attenteAchat = true;
+          signaler("pack_achat_lance", { rang: app2.partie?.rang || 0 });
+          acheterFondateur();
+        },
         retour: () => app2.titre()
       }
     };
@@ -11531,13 +11571,14 @@ body {
           app2.son.caisse();
           app2.toast("Gains de la balade doubl\xE9s !");
           app2.montrer(ecranFinBalade(app2, g, suite));
-        })
+        }, "balade")
       },
       apres: (r) => animerCompteurs(r)
     };
   }
   function boutonBonus(app2, possible, texte2) {
     if (!possible || !dansLAppli()) return "";
+    if (!app2.partie.fondateur && pubPrete()) signaler("bonus_propose", { lieu: texte2.startsWith("Doubler la prime") ? "course" : "balade" });
     if (app2.partie.fondateur) return `<button class="btn bonus-video" data-action="bonus">\u2605 ${texte2} \xB7 fondateur</button>`;
     if (!pubPrete()) return "";
     return `<button class="btn bonus-video" data-action="bonus">\u25B6 ${texte2} \xB7 courte pub</button>`;
@@ -11791,6 +11832,7 @@ body {
           ${bascule("vibrations", "Vibrations", r.vibrations, "Le t\xE9l\xE9phone vibre aux chocs")}
           ${bascule("aide", "Aide au pilotage", p3.aide, "La voiture se recentre seule en course")}
           ${bascule("economie", "\xC9conomie de batterie", r.economie, "30 images par seconde au lieu de 60")}
+          ${dansLAppli() ? bascule("statistiques", "Statistiques de jeu", r.statistiques !== false, "Anonymes : aident \xE0 am\xE9liorer le jeu") : ""}
           ${confidentialiteModifiable() ? `<div class="ligne"><span class="libelle">Publicit\xE9s<small>Revoir ton choix de consentement</small></span><button class="btn btn-mini" data-action="confidentialite">Choix</button></div>` : ""}
         </div>
       </section>
@@ -11812,6 +11854,9 @@ body {
           r.economie = !r.economie;
         }),
         confidentialite: () => ouvrirConfidentialite(),
+        statistiques: () => changer(() => {
+          r.statistiques = r.statistiques === false;
+        }),
         aide: () => changer(() => {
           p3.aide = !p3.aide;
           if (app2.course) app2.course.aide = p3.aide;
@@ -11926,7 +11971,7 @@ body {
           app2.son.caisse();
           app2.toast(`Prime doubl\xE9e : +${formatArgent(g.prime)} !`);
           app2.montrer(ecranResultats(app2, r));
-        })
+        }, "course")
       },
       apres: (racine) => {
         animerCompteurs(racine, 1100);
@@ -12120,6 +12165,7 @@ body {
       this.son = new Son();
       this.reglages = lireReglages();
       this.son.regler(this.reglages);
+      activer(this.reglages.statistiques !== false);
       this.ui.globales.reglages = () => {
         const ici = this.dernierEcran;
         this.montrer(ecranReglages(this, () => this.montrer(ici)));
@@ -12218,6 +12264,7 @@ body {
     /** Les réglages ont changé : volumes, vibrations ; on les garde sur l'appareil. */
     appliquerReglages() {
       this.son.regler(this.reglages);
+      activer(this.reglages.statistiques !== false);
       ecrireReglages(this.reglages);
     }
     boucle(t) {
@@ -12535,6 +12582,8 @@ body {
       }
       if (type === "fondateur") {
         const nouveau2 = !this.reglages.fondateur;
+        if (nouveau2 && this.attenteAchat) signaler("pack_achete", { saison: saisonDe(this.partie), rang: this.partie.rang });
+        this.attenteAchat = false;
         this.reglages.fondateur = true;
         ecrireReglages(this.reglages);
         if (this.ecran !== "titre" && this.offrirFondateur()) {
@@ -12549,13 +12598,15 @@ body {
       }
     }
     /** Un bonus vidéo : sans publicité pour les fondateurs, sinon après une publicité vue jusqu'au bout. */
-    async bonusVideo(appliquer) {
+    async bonusVideo(appliquer, lieu = "course") {
       if (this.partie.fondateur) {
         appliquer();
+        signaler("bonus_pris", { lieu, fondateur: true });
         return;
       }
       this.son.musique(null);
       const ok = await regarderPub();
+      signaler("bonus_regarde", { lieu, recompense: ok });
       if (ok) appliquer();
       else this.toast("Publicit\xE9 interrompue : pas de bonus cette fois.");
     }
@@ -12641,6 +12692,15 @@ body {
     }
     jourSuivant() {
       const nouvelles = jourSuivant(this.partie);
+      signaler("jour_suivant", {
+        jour: this.partie.jour,
+        saison: saisonDe(this.partie),
+        rang: this.partie.rang,
+        licence: this.partie.licence || "aucune",
+        voitures: this.partie.garage.length,
+        personnel: this.partie.personnel.length,
+        batiments: this.partie.terrain.batiments.length
+      });
       this.sauver();
       this.garage();
       if (!nouvelles.length) this.toast(`Jour ${this.partie.jour} : rien de neuf au garage.`);
@@ -12680,6 +12740,7 @@ body {
     // --- Ville -------------------------------------------------------------------------
     sortirEnVille() {
       if (!peutSortir(this.partie)) return;
+      signaler("balade_commencee", { saison: saisonDe(this.partie) });
       const v2 = voitureActive(this.partie);
       if (!v2) return;
       const pilote = titulaire(this.partie);
@@ -12702,6 +12763,8 @@ body {
       this.toast("Gare-toi sur une zone jaune pour entrer.");
     }
     entrerBatiment(porte) {
+      signaler("lieu_visite", { lieu: porte.id });
+      if (this.ville) this.ville.lieuxVisites = (this.ville.lieuxVisites || 0) + 1;
       const retour = () => {
         this.ville.sortir();
         this.pointeurs.clear();
@@ -12728,6 +12791,17 @@ body {
     finBalade() {
       this.villeFinie = true;
       const g = this.ville.bilan();
+      const v2 = this.ville;
+      signaler("balade_terminee", {
+        duree_s: Math.round(v2.temps),
+        argent: g.argent,
+        fans: g.fans,
+        defis: (v2.defis || []).filter((d2) => d2.fait).length,
+        descentes: v2.descentes || 0,
+        lieux: v2.lieuxVisites || 0,
+        amendes: g.amendes,
+        saison: saisonDe(this.partie)
+      });
       const rangs = finBalade(this.partie, g);
       this.sauver();
       this.son.fanfare();
@@ -12855,6 +12929,17 @@ body {
       });
       const gain = enregistrerManche(this.partie, resultats, c3.bilan());
       this.sauver();
+      signaler("course_terminee", {
+        gp: gp.id,
+        manche: this.partie.gp?.manche ?? 0,
+        place: gain.place,
+        abandon,
+        duree_s: Math.round(c3.temps),
+        voiture: voitureActive(this.partie)?.id,
+        depassements: c3.depassements,
+        saison: saisonDe(this.partie),
+        rang: this.partie.rang
+      });
       const general = classementGP(this.partie, noms);
       this.montrer(ecranResultats(this, { gp, manche: this.partie.gp.manche, resultats, general, gain, depassements: c3.depassements, drift: c3.drift }));
     }
@@ -12887,6 +12972,7 @@ body {
       const general = classementGP(this.partie, this.noms());
       const place = general.findIndex((x) => x.id === "joueur" || x.id === "coequipier") + 1;
       const { gains, fans } = this.partie.gp;
+      signaler("gp_termine", { gp: gp.id, place, saison: saisonDe(this.partie), rang: this.partie.rang });
       terminerGP(this.partie, place);
       this.sauver();
       this.course = null;
