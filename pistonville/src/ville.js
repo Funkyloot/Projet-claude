@@ -8,7 +8,7 @@
  * parcelles le long d'une boucle de routes départementales (champs, fermes,
  * village, prés, vergers, éoliennes, étang, station-service ; voir
  * ville-campagne.js), et la forêt au bord de la carte. La ville vit :
- * circulation à droite avec feux en ville et STOP à la campagne, tracteurs,
+ * circulation à droite avec feux en ville et STOP à la campagne,
  * piétons sur les trottoirs, coucher de soleil, lampadaires (voir
  * ville-vie.js). Tout ce qui est construit est solide.
  *
@@ -35,10 +35,9 @@ import { texte, recouvrement } from './course.js';
 import { clamp, lerp, creerAlea, hash2, formatTemps } from './outils.js';
 import { Trafic, Pietons, Feux } from './ville-vie.js';
 import { Reseau, CELLULE, LOT, COUR } from './reseau.js';
-import { tuileTiny, spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, tenue, modeleVoiture, CONTOUR } from './tiny.js';
+import { tuileTiny, dessinerVoitureVille, dessinerPerso, tenue, modeleVoiture, CONTOUR, tuileVille, pileVille, imageAtlas, motifEau, motifTuile } from './tiny.js';
 import {
-  batimentModerne, hauteurBatiment, maisonModerne, conteneur, lampadaire, banc, poubelle, borne, feuTricolore, fleurs,
-  palesEolienne, panneauStop,
+  batimentModerne, hauteurBatiment, maisonModerne, caisses, lampadaire, banc, poubelle, borne, feuTricolore, fleurs, panneauStop,
 } from './ville-dessins.js';
 import { CAMPAGNE, remplirParcelle, COULEURS_SOL } from './ville-campagne.js';
 
@@ -149,11 +148,6 @@ const STYLES_BATIMENTS = {
   cafe: { facade: '#f4e6c8', toit: '#8a5a3b', vitrine: '#fff0c8', auvent: '#d08a3e', enseigne: '#8a5a3b' },
 };
 
-function cone(c, x, y) {
-  c.fillStyle = CONTOUR; c.fillRect(x - 6, y - 2, 12, 3); c.fillRect(x - 4, y - 12, 8, 11);
-  c.fillStyle = '#f39c33'; c.fillRect(x - 3, y - 11, 6, 9);
-  c.fillStyle = '#ffffff'; c.fillRect(x - 3, y - 7, 6, 2);
-}
 const centreCarrefour = (kx, ky) => RESEAU.centre(kx, ky);
 
 const AFFICHES = 12;
@@ -182,16 +176,14 @@ export class Ville {
     this.animaux = [];     // vaches, moutons, poules (animés)
     this.gens = [];        // fermiers et villageois immobiles
     this.eaux = [];
-    this.canards = [];
-    this.eoliennes = [];
     this.construire();
     this.morceaux = new Map();
     this.minicarte = this.peindreMiniCarte();
 
     this.reseau = RESEAU;
     this.feux = new Feux(RESEAU, 77, carrefourUrbain);
-    // Plus de circulation en ville qu'à la campagne, et des tracteurs sur les routes de campagne.
-    this.trafic = new Trafic(RESEAU, this.aleaJour, 48, this.feux, { ville: carrefourUrbain, tracteurs: true });
+    // Plus de circulation en ville qu'à la campagne.
+    this.trafic = new Trafic(RESEAU, this.aleaJour, 48, this.feux, { ville: carrefourUrbain });
     // Les piétons font le tour des pâtés de la ville (ceux qui ont un trottoir tout autour).
     const tours = [];
     for (let by = 0; by < N; by++) for (let bx = 0; bx < N; bx++) {
@@ -377,12 +369,11 @@ export class Ville {
       c.fillRect(i.x, cy - 8, i.w, 16); c.fillRect(cx - 8, i.y, 16, i.h);
       c.fillRect(cx - 34, cy - 30, 68, 60);
     });
-    this.ajouter({ type: 'rect', x: cx - 20, y: cy - 16, w: 40, h: 30, eau: true });
-    this.dessin(cy + 14, (c) => {
-      c.fillStyle = CONTOUR; c.fillRect(cx - 21, cy - 17, 42, 32);
-      c.fillStyle = '#c0cbdc'; c.fillRect(cx - 20, cy - 16, 40, 30);
-      c.fillStyle = '#75e3ff'; c.fillRect(cx - 16, cy - 12, 32, 22);
-      c.fillStyle = '#d9f7ff'; c.fillRect(cx - 2, cy - 22, 4, 14); c.fillRect(cx - 6, cy - 12, 12, 2);
+    // Au centre, la statue sur son socle et quatre massifs (Kenney Modern City).
+    this.ajouter({ type: 'rect', x: cx - 8, y: cy - 4, w: 16, h: 14 });
+    this.dessin(cy + 12, (c) => {
+      pileVille(c, [110, 147], cx, cy + 12);
+      for (const [dx, dy] of [[-24, -18], [8, -18], [-24, 14], [8, 14]]) tuileVille(c, 109, cx + dx, cy + dy - 8);
     });
     // Arbres le long des bords, loin des allées et de la fontaine.
     const a = creerAlea(graine * 31 + 7);
@@ -425,34 +416,14 @@ export class Ville {
       c.fillStyle = '#7fc464';
       for (const b of bandes) c.fillRect(cx - b.demi - 14, b.y - 2, (b.demi + 14) * 2, 12);
       for (const b of bandes) { c.fillStyle = '#f3dca2'; c.fillRect(cx - b.demi - 6, b.y, (b.demi + 6) * 2, 8); }
-      for (const b of bandes) { c.fillStyle = '#75e3ff'; c.fillRect(cx - b.demi, b.y, b.demi * 2, 8); }
-      c.fillStyle = '#5fd0f0';
-      for (let k = 0; k < 14; k++) c.fillRect(cx - rx * 0.7 + hash2(k, 1, 17) * rx * 1.4, cy - ry * 0.6 + hash2(1, k, 19) * ry * 1.2, 10, 2);
-      c.fillStyle = '#d9f7ff';
-      for (let k = 0; k < 10; k++) c.fillRect(cx - rx * 0.6 + hash2(k, 2, 23) * rx * 1.2, cy - ry * 0.5 + hash2(2, k, 29) * ry, 6, 1);
-      // Nénuphars près de la rive est.
-      for (let k = 0; k < 5; k++) {
-        const nx = cx + rx * 0.55 + hash2(k, 4, 31) * 20, ny = cy - 20 + k * 12;
-        c.fillStyle = CONTOUR; c.fillRect(nx - 5, ny - 3, 10, 7);
-        c.fillStyle = '#3fa34d'; c.fillRect(nx - 4, ny - 2, 8, 5);
-        if (k % 2) { c.fillStyle = '#e86ca6'; c.fillRect(nx - 1, ny - 1, 2, 2); }
-      }
+      c.fillStyle = motifEau(c);   // l'eau : tuile Kenney Modern City
+      for (const b of bandes) c.fillRect(cx - b.demi, b.y, b.demi * 2, 8);
     });
     for (const b of bandes) this.ajouter({ type: 'rect', x: cx - b.demi, y: b.y, w: b.demi * 2, h: 8, eau: true });
     this.eaux.push({ x: cx - rx, y: cy - ry, w: rx * 2, h: ry * 2 });
-    this.canards.push({ x: cx - 30, y: cy - 10, phase: 1 }, { x: cx + 40, y: cy + 30, phase: 4 });
-    // Ponton à pédalos au sud du lac.
-    const py = cy + ry - 10;
-    this.dessin(py + 30, (c) => {
-      c.fillStyle = CONTOUR; c.fillRect(cx - 9, py - 2, 18, 34);
-      c.fillStyle = '#c98a55'; c.fillRect(cx - 8, py - 1, 16, 32);
-      c.fillStyle = '#a86e40'; for (let k = 0; k < 32; k += 5) c.fillRect(cx - 8, py - 1 + k, 16, 1);
-      for (const [dx, coul] of [[-26, '#e4432d'], [22, '#f2c14e']]) {
-        c.fillStyle = CONTOUR; c.fillRect(cx + dx - 1, py + 3, 14, 12);
-        c.fillStyle = coul; c.fillRect(cx + dx, py + 4, 12, 10);
-        c.fillStyle = '#f4f6fb'; c.fillRect(cx + dx + 3, py + 6, 6, 4);
-      }
-    });
+    // Barques au bord (tuiles Kenney Modern City) au sud du lac.
+    const py = cy + ry - 14;
+    this.dessin(py + 16, (c) => { tuileVille(c, 178, cx - 24, py - 16); tuileVille(c, 215, cx - 24, py); tuileVille(c, 251, cx + 8, py); });
     // Arbres tout autour, hors de l'allée ; bancs face à l'eau.
     const a = creerAlea(991);
     for (let k = 0; k < 70; k++) {
@@ -466,15 +437,10 @@ export class Ville {
       this.ajouter({ type: 'cercle', x: cx + dx, y: cy + dy - 5, r: 6 });
       this.dessin(cy + dy, (c) => banc(c, cx + dx, cy + dy));
     }
-    // Un marchand de glaces sur l'allée nord.
+    // Un marchand de glaces sur l'allée nord (stand Kenney).
     const gx = cx + 40, gy = cy - ry - 20;
-    this.ajouter({ type: 'rect', x: gx - 12, y: gy - 14, w: 24, h: 14 });
-    this.dessin(gy, (c) => {
-      c.fillStyle = CONTOUR; c.fillRect(gx - 13, gy - 24, 26, 24);
-      c.fillStyle = '#f4f6fb'; c.fillRect(gx - 12, gy - 14, 24, 13);
-      c.fillStyle = '#e86ca6'; for (let k = 0; k < 24; k += 6) c.fillRect(gx - 12 + k, gy - 23, 3, 8);
-      c.fillStyle = '#f4f6fb'; for (let k = 3; k < 24; k += 6) c.fillRect(gx - 12 + k, gy - 23, 3, 8);
-    });
+    this.ajouter({ type: 'rect', x: gx - 8, y: gy - 14, w: 16, h: 14 });
+    this.dessin(gy, (c) => pileVille(c, [554, 591], gx, gy));
     this.gens.push({ x: gx + 20, y: gy + 2, tenue: tenue(17), dir: 'face' }, { x: cx - 60, y: cy + ry + 26, tenue: tenue(23), dir: 'dos' });
   }
 
@@ -489,7 +455,7 @@ export class Ville {
       c.beginPath(); c.arc(o.x + 80, o.y + 80, 40, 0, Math.PI * 2); c.stroke();
     });
     this.ajouter({ type: 'cercle', x: o.x + 80, y: o.y + 80, r: 6 });
-    this.dessin(o.y + 86, (c) => cone(c, o.x + 80, o.y + 86));
+    this.dessin(o.y + 86, (c) => imageAtlas(c, 'cone', o.x + 80, o.y + 78));
   }
 
   ilotParking(o) {
@@ -505,13 +471,11 @@ export class Ville {
     }
   }
 
-  /** Zone d'activités, en bordure de ville : entrepôts, conteneurs, camionnettes. */
+  /** Zone d'activités, en bordure de ville : entrepôts et piles de caisses. */
   ilotZone(o, by) {
     this.dessin(-1, (c) => {
-      c.fillStyle = '#b8c0cf'; c.fillRect(o.x, o.y, TAILLE_ILOT, TAILLE_ILOT);
-      c.fillStyle = '#e8e4d6'; for (let x = o.x + 10; x < o.x + TAILLE_ILOT - 10; x += 30) c.fillRect(x, o.y + TAILLE_ILOT - 8, 16, 2);
+      c.fillStyle = motifTuile(c, 'city', 703); c.fillRect(o.x, o.y, TAILLE_ILOT, TAILLE_ILOT);
     });
-    const couleurs = ['#e4432d', '#2f6fdb', '#3fa34d', '#f39c33'];
     const entrepot = by % 2 === 0;
     if (entrepot) {
       const m = this.ajouter({ type: 'rect', x: o.x + 8, y: o.y + 6, w: TAILLE_ILOT - 16, h: hauteurBatiment(1) });
@@ -521,9 +485,9 @@ export class Ville {
     for (let i = 0; i < 4; i++) {
       for (let j = 0; j < (entrepot ? 1 : 2); j++) {
         const x = o.x + 8 + i * 38, y = y0 + j * 64;
-        const coul = couleurs[(i + j + by) % 4];
-        const r = this.ajouter({ type: 'rect', x, y, w: 32, h: 44 });
-        this.dessin(r.y + r.h, (c) => conteneur(c, r.x, r.y, coul));
+        const k = i + j + by;
+        const r = this.ajouter({ type: 'rect', x, y: y + 12, w: 32, h: 32 });
+        this.dessin(r.y + r.h, (c) => caisses(c, r.x, r.y, k));
       }
     }
   }
@@ -534,7 +498,8 @@ export class Ville {
     ob.voiture = true;
     this.ajouter(ob);
     const modele = `voiture${1 + Math.floor(this.alea() * 5)}`;
-    this.dessin(y + 26, (c) => dessinerVoitureTiny(c, spriteVoitureTiny(couleur, null, [], modele), x, y, horizontale ? 0 : Math.PI / 2));
+    void modele;
+    this.dessin(y + 26, (c) => dessinerVoitureVille(c, couleur, x, y, horizontale ? 0 : Math.PI / 2));
   }
 
   /** Mobilier du trottoir : lampadaires, poubelles, bornes ; jamais devant une porte. */
@@ -1173,23 +1138,12 @@ export class Ville {
     ctx.translate(-camX, -camY);
     const visible = (x, y, m = 40) => x > camX - m && x < camX + W + m && y > camY - m && y < camY + H + m;
 
-    // La campagne vit : bêtes qui broutent, canards, fermiers, pales d'éoliennes.
+    // La campagne vit : bêtes qui broutent, fermiers et promeneurs.
     for (const a of this.animaux) {
       if (!visible(a.x, a.y, 24)) continue;
       const b = Math.sin(t * 1.3 + a.phase) > 0.85 ? 1 : 0;
       ctx.fillStyle = 'rgba(38,24,46,0.2)'; ctx.fillRect(Math.round(a.x) - 6, Math.round(a.y) - 2, 12, 3);
       tuileTiny(ctx, this.tiny, 'farm', a.n, a.x - 8, a.y - 15 - b);
-    }
-    for (const d of this.canards) {
-      const x = d.x + Math.sin(t * 0.4 + d.phase) * 30, y = d.y + Math.cos(t * 0.3 + d.phase) * 12;
-      if (!visible(x, y)) continue;
-      for (let k = 0; k < 3; k++) {
-        const cx = Math.round(x - k * 12), cy = Math.round(y + k * 3);
-        ctx.fillStyle = '#26182e'; ctx.fillRect(cx - 4, cy - 3, 8, 5);
-        ctx.fillStyle = k ? '#c98a55' : '#f4f6fb'; ctx.fillRect(cx - 3, cy - 2, 6, 3);
-        ctx.fillStyle = k ? '#3fa34d' : '#f4f6fb'; ctx.fillRect(cx + 1, cy - 5, 3, 3);
-        ctx.fillStyle = '#f39c33'; ctx.fillRect(cx + 4, cy - 4, 2, 1);
-      }
     }
     for (const g of this.gens) if (visible(g.x, g.y, 20)) dessinerPerso(ctx, g.tenue, g.x, g.y, g.dir, Math.sin(t * 2 + g.x) > 0.9 ? 1 : 0);
 
@@ -1221,9 +1175,8 @@ export class Ville {
       if (!f.vu && Math.sin(t * 3 + f.x) > -0.3) bulle(ctx, f.x, f.y - 18, 'Fan !');
     }
     this.trafic.dessiner(ctx, camX, camY, W, H);
-    for (const e of this.eoliennes) if (visible(e.x, e.y, 60)) palesEolienne(ctx, e.x, e.y, t * 1.6 + e.phase);
 
-    dessinerVoitureTiny(ctx, spriteVoitureTiny(v.couleur, null, v.looks, v.modele), v.x, v.y, v.angle);
+    dessinerVoitureVille(ctx, v.couleur, v.x, v.y, v.angle);
 
     ctx.fillStyle = '#ffe066';
     for (const p of this.particules) ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);

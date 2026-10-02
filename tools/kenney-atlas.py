@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """kenney-atlas.py — prépare les planches Kenney de Pistonville (CC0).
 
-Prend les packs Kenney décompressés (Racing Pack, Roguelike Modern City) et
+Prend les packs Kenney décompressés (Racing Pack, Roguelike Modern City,
+Pixel Vehicle Pack) et
 fabrique, à l'échelle du jeu (une case de 16 px ≈ 1 m, une voiture ≈ 28 px de
 large) :
   - pistonville/assets/kenney/course.png + src/atlas-course.js : voitures vues
@@ -11,7 +12,7 @@ large) :
     City telle quelle (tuiles de 16 px, 37 colonnes).
 
 Usage : python3 tools/kenney-atlas.py <dossier des packs décompressés>
-        (sous-dossiers racing/ et roguelike-modern-city/)
+        (sous-dossiers racing/, roguelike-modern-city/ et pvp/)
 """
 import json
 import shutil
@@ -40,6 +41,10 @@ OBJETS = {
 }
 for nom, (fichier, k) in OBJETS.items():
     SPRITES.append((nom, PNG / 'Objects' / f'{fichier}.png', ECHELLE * k))
+# Panneaux du Pixel Vehicle Pack (déjà à l'échelle des pixels du jeu).
+PVP = SOURCE / 'pvp' / 'PNG' / 'Props'
+for nom, fichier in {'stop': 'sign_red', 'panneauBleu': 'sign_blue', 'plaqueRue': 'sign_street'}.items():
+    SPRITES.append((nom, PVP / f'{fichier}.png', 1))
 
 
 def reduire(chemin, echelle):

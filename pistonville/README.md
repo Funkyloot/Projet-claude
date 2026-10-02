@@ -32,6 +32,13 @@ doucement la voiture quand on ne touche à rien.
 
 ## Ce que contient cette version
 
+**Graphismes 100 % Kenney** : personnages RPG Urban partout (piétons,
+personnel, pilotes, public) ; en course, voitures, tribunes, tentes, murs de
+pneus et feux de départ du Racing Pack ; en ville, bâtiments, voitures (vues de
+côté, de face, de dos), feux, lampadaires, bancs et eau de Roguelike Modern
+City ; à la campagne, maisons, grange, mairie, puits, clôtures et cultures de
+Tiny Town et Tiny Farm ; boutique et garage : Pixel Vehicle Pack.
+
 **Nouveau en 0.6** : une grande carte d'environ 5 km de côté, organisée
 comme une vraie carte. La ville au centre, en grands pâtés de quatre lots
 avec une cour, entourée d'un boulevard périphérique et traversée par deux

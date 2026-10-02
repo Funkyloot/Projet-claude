@@ -3,9 +3,10 @@
  * Comme sur une vraie carte, la campagne est faite de grandes parcelles
  * d'un seul tenant le long de quelques routes : champs découpés en
  * pièces de culture, fermes avec leurs bâtiments et leurs prés, un village
- * avec son église et sa place, des vergers, des prés à vaches et à moutons,
- * un parc éolien, un étang au milieu des arbres, une station-service au bord
- * de la nationale, et la forêt tout autour de la carte.
+ * avec sa mairie, son puits et son marché, des vergers, des prés à vaches et
+ * à moutons, un rucher, un étang au milieu des arbres, une station-service
+ * au bord de la nationale, et la forêt tout autour de la carte.
+ * Tout est en tuiles Kenney (Tiny Farm, Tiny Town, Roguelike Modern City).
  *
  * Mêmes règles qu'en ville : rien sur la route, tout est solide sauf les
  * cultures et l'herbe (on peut rouler dans un champ, mais ça secoue).
@@ -18,8 +19,9 @@
 import { tuileTiny, CONTOUR, dessinerPerso, tenue } from './tiny.js';
 import { hash2, creerAlea } from './outils.js';
 import {
-  grange, silo, cloture, tracteur, auventStation, batimentModerne, hauteurBatiment, maisonModerne, eolienne, fleurs, banc, eglise,
+  grange, LARGEUR_GRANGE, HAUTEUR_GRANGE, mairie, puits, pancarte, cloture, batimentModerne, hauteurBatiment, maisonModerne, fleurs, banc,
 } from './ville-dessins.js';
+import { tuileVille, pileVille, imageAtlas, motifEau, motifTuile } from './tiny.js';
 
 const T = 16;
 export const CAMPAGNE = 'BFCPVHWES';
@@ -43,7 +45,7 @@ export function remplirParcelle(v, p, type, reseau) {
   const cotes = { haut: reseau.coteParcelle(p, 'haut'), bas: reseau.coteParcelle(p, 'bas'), gauche: reseau.coteParcelle(p, 'gauche'), droite: reseau.coteParcelle(p, 'droite') };
   const g = p.x0 * 31 + p.y0 * 17;
   sol(v, p, reseau, COULEURS_SOL[type]);
-  ({ B: foret, F: ferme, C: champs, P: pres, V: vergers, H: village, W: eoliennes, E: etang, S: station })[type](v, i, cotes, g, p, reseau);
+  ({ B: foret, F: ferme, C: champs, P: pres, V: vergers, H: village, W: rucher, E: etang, S: station })[type](v, i, cotes, g, p, reseau);
 }
 
 /** Le sol de la parcelle, case par case (elle n'est pas toujours rectangulaire), et un peu d'herbe haute. */
@@ -97,7 +99,7 @@ function foret(v, i, cotes, g, p, reseau) {
 
 // --- Champs -------------------------------------------------------------------------------------
 
-/** Un champ de culture dans le rectangle z : sillons et rangées de plantes, un épouvantail parfois. */
+/** Un champ de culture dans le rectangle z : sillons et rangées de plantes, un fermier parfois. */
 function piece(v, z, culture, graine) {
   const rangs = Math.floor((z.h - 8) / 24), cols = Math.floor(z.w / 16);
   const x0 = z.x + Math.floor((z.w - cols * 16) / 2);
@@ -119,11 +121,7 @@ function piece(v, z, culture, graine) {
   v.champs.push(z);
   if (hash2(graine, z.x, 43) < 0.3 && z.w > 96 && z.h > 96) {
     const x = z.x + z.w / 2, y = z.y + z.h / 2 + 10;
-    v.dessin(y, (c) => {
-      c.fillStyle = CONTOUR; c.fillRect(x - 1, y - 22, 3, 22); c.fillRect(x - 10, y - 17, 21, 3);
-      c.fillStyle = '#c98a55'; c.fillRect(x - 9, y - 16, 19, 1);
-      dessinerPerso(c, { tuile: ['farm', 109] }, x, y - 6, 'face');
-    });
+    v.dessin(y, (c) => dessinerPerso(c, { tuile: ['farm', 109] }, x, y, 'face'));
   }
 }
 
@@ -139,18 +137,18 @@ function champs(v, i, cotes, g) {
     const culture = CULTURES[Math.floor(hash2(g + a, b, 41) * CULTURES.length)];
     piece(v, z, culture, g + a * 7 + b);
   }
-  // Un tracteur garé au bout d'un chemin.
+  // Des ballots de paille au bout d'un chemin.
   if (nx > 1) {
     const x = i.x + w + chemin / 2, y = i.y + 30;
     v.ajouter({ type: 'rect', x: x - 11, y: y - 18, w: 22, h: 36 });
-    v.dessin(y + 18, (c) => tracteur(c, x, y, Math.PI / 2));
+    v.dessin(y + 18, (c) => { tuileTiny(c, v.tiny, 'farm', 96, x - 16, y - 8); tuileTiny(c, v.tiny, 'farm', 97, x, y - 8); });
   }
 }
 
 // --- Ferme -------------------------------------------------------------------------------------
 
 /**
- * La ferme : maison, grange, silo, cour, poules, du côté de la route ; le reste
+ * La ferme : maison, grange, tonneaux, cour, poules, du côté de la route ; le reste
  * en champs et en pré.
  */
 function ferme(v, i, cotes, g, p, reseau) {
@@ -158,21 +156,21 @@ function ferme(v, i, cotes, g, p, reseau) {
   const hauteurCour = 200;
   const cour = { x: i.x, y: bas ? i.y + i.h - hauteurCour : i.y, w: Math.min(i.w, 336), h: hauteurCour };
   v.dessin(-1, (c) => {
-    c.fillStyle = '#eaa56c'; c.fillRect(cour.x + 8, cour.y + 112, cour.w - 16, 80);
-    c.fillStyle = '#d99158'; for (let k = 0; k < 16; k++) c.fillRect(cour.x + 14 + hash2(g, k, 3) * (cour.w - 30), cour.y + 118 + hash2(k, g, 5) * 66, 4, 2);
+    c.fillStyle = motifTuile(c, 'town', 25); c.fillRect(cour.x + 8, cour.y + 112, cour.w - 16, 80);   // terre battue Kenney
   });
-  // Maison de la ferme, grange, silo, ballots.
-  const m = v.ajouter({ type: 'rect', x: cour.x + 12, y: cour.y + 44, w: 72, h: 64 });
+  // Maison de la ferme, grange, ballots.
+  const m = v.ajouter({ type: 'rect', x: cour.x + 16, y: cour.y + 44, w: 64, h: 64 });
   v.dessin(m.y + m.h, (c) => maisonModerne(c, m.x, m.y, m.w, '#c2504d', '#f4e6c8'));
-  const gr = v.ajouter({ type: 'rect', x: cour.x + 104, y: cour.y + 28, w: 112, h: 80 });
-  v.dessin(gr.y + gr.h, (c) => grange(c, gr.x, gr.y, gr.w));
-  v.ajouter({ type: 'rect', x: cour.x + 230, y: cour.y + 40, w: 26, h: 68 });
-  v.dessin(cour.y + 108, (c) => silo(c, cour.x + 243, cour.y + 108));
+  const gr = v.ajouter({ type: 'rect', x: cour.x + 112, y: cour.y + 28, w: LARGEUR_GRANGE, h: HAUTEUR_GRANGE });
+  v.dessin(gr.y + gr.h, (c) => grange(c, gr.x, gr.y));
+  // Tonneaux d'eau et abreuvoir à côté de la grange.
+  v.ajouter({ type: 'rect', x: cour.x + 196, y: cour.y + 92, w: 32, h: 16 });
+  v.dessin(cour.y + 108, (c) => { tuileTiny(c, v.tiny, 'farm', 72, cour.x + 196, cour.y + 92); tuileTiny(c, v.tiny, 'farm', 73, cour.x + 212, cour.y + 92); });
   for (const [dx, dy] of [[280, 130], [298, 130], [280, 150]]) {
     v.ajouter({ type: 'rect', x: cour.x + dx - 8, y: cour.y + dy - 12, w: 16, h: 12 });
     v.dessin(cour.y + dy, (c) => tuileTiny(c, v.tiny, 'farm', 96, cour.x + dx - 8, cour.y + dy - 16));
   }
-  v.dessin(cour.y + 160, (c) => tracteur(c, cour.x + 170, cour.y + 150, 0));
+  v.dessin(cour.y + 160, (c) => { tuileTiny(c, v.tiny, 'farm', 97, cour.x + 154, cour.y + 140); tuileTiny(c, v.tiny, 'farm', 96, cour.x + 170, cour.y + 140); });
   v.ajouter({ type: 'rect', x: cour.x + 152, y: cour.y + 139, w: 36, h: 22 });
   for (let k = 0; k < 5; k++) v.animaux.push({ x: cour.x + 30 + k * 18, y: cour.y + 150 + (k % 2) * 14, n: 122, phase: k * 1.7 });
   v.gens.push({ x: cour.x + 120, y: cour.y + 170, tenue: { tuile: ['farm', g % 2 ? 108 : 109] }, dir: 'face' });
@@ -224,15 +222,10 @@ function pres(v, i, cotes, g) {
       : { x: i.x + (k * i.w) / n, y: i.y, w: i.w / n - 12, h: i.h };
     pre(v, z, g + k * 13, cotes.bas ? 'bas' : 'haut', k % 2 === 1);
   }
-  // Un abri de bois au coin.
+  // Une pancarte et des ballots de foin au coin.
   const ax = i.x + i.w - 60, ay = i.y + 40;
-  v.ajouter({ type: 'rect', x: ax, y: ay - 26, w: 40, h: 26 });
-  v.dessin(ay, (c) => {
-    c.fillStyle = CONTOUR; c.fillRect(ax, ay - 30, 40, 30);
-    c.fillStyle = '#8a5a3b'; c.fillRect(ax + 1, ay - 29, 38, 10);
-    c.fillStyle = '#c98a55'; c.fillRect(ax + 1, ay - 19, 38, 18);
-    c.fillStyle = '#2a2838'; c.fillRect(ax + 12, ay - 15, 16, 14);
-  });
+  v.ajouter({ type: 'rect', x: ax, y: ay - 14, w: 32, h: 14 });
+  v.dessin(ay, (c) => { tuileTiny(c, v.tiny, 'farm', 96, ax, ay - 16); tuileTiny(c, v.tiny, 'farm', 97, ax + 16, ay - 16); pancarte(c, ax - 10, ay); });
 }
 
 // --- Vergers -----------------------------------------------------------------------------------
@@ -272,9 +265,7 @@ function village(v, i, cotes, g) {
   v.dessin(-1, (c) => {
     c.fillStyle = '#e3cfa0';
     for (let y = i.y + i.h - 128 - 24; y > i.y + 60; y -= 128) c.fillRect(i.x, y, i.w, 20);
-    c.fillStyle = '#c9c1ad'; c.fillRect(place.x, place.y, place.w, place.h + T);
-    c.fillStyle = '#b6ad97';
-    for (let y = place.y; y < place.y + place.h; y += 8) for (let x = place.x + ((y / 8) % 2) * 4; x < place.x + place.w; x += 8) c.fillRect(x, y, 1, 1);
+    c.fillStyle = motifTuile(c, 'city', 706); c.fillRect(place.x, place.y, place.w, place.h + T);   // pavés Kenney
   });
   let k = 0;
   for (let rang = 0, yb = i.y + i.h - 72; yb > i.y + 40; rang++, yb -= 128) {
@@ -291,26 +282,16 @@ function village(v, i, cotes, g) {
       v.dessin(yb - 4, (c) => fleurs(c, x + 4, yb - 16, k));
     }
   }
-  // La place : église au fond, fontaine, étals, bancs.
-  const e = v.ajouter({ type: 'rect', x: place.x + 16, y: place.y + 8, w: 96, h: 112 });
-  v.dessin(e.y + e.h, (c) => eglise(c, e.x, e.y));
+  // La place : la mairie au fond, le puits, les étals du marché, des bancs.
+  const e = v.ajouter({ type: 'rect', x: place.x + 24, y: place.y + 12, w: 64, h: 64 });
+  v.dessin(e.y + e.h, (c) => mairie(c, e.x, e.y));
   const fx = place.x + place.w / 2 + 30, fy = place.y + place.h / 2 + 20;
-  v.ajouter({ type: 'cercle', x: fx, y: fy - 6, r: 14 });
-  v.dessin(fy + 8, (c) => {
-    c.fillStyle = CONTOUR; c.fillRect(fx - 15, fy - 14, 30, 22);
-    c.fillStyle = '#c0cbdc'; c.fillRect(fx - 14, fy - 13, 28, 20);
-    c.fillStyle = '#75e3ff'; c.fillRect(fx - 11, fy - 10, 22, 14);
-    c.fillStyle = '#d9f7ff'; c.fillRect(fx - 1, fy - 22, 3, 14);
-  });
-  for (const [dx, coul] of [[150, '#e4432d'], [196, '#3fa34d']]) {
+  v.ajouter({ type: 'cercle', x: fx, y: fy - 6, r: 9 });
+  v.dessin(fy, (c) => puits(c, fx, fy));
+  for (const [dx, etal] of [[150, [552, 589]], [196, [553, 590]]]) {
     const sx = place.x + dx, sy = place.y + 60;
-    v.ajouter({ type: 'rect', x: sx - 14, y: sy - 12, w: 28, h: 12 });
-    v.dessin(sy, (c) => {
-      c.fillStyle = CONTOUR; c.fillRect(sx - 15, sy - 24, 30, 24);
-      for (let n = 0; n < 28; n += 7) { c.fillStyle = n % 14 ? '#f4f6fb' : coul; c.fillRect(sx - 14 + n, sy - 23, 7, 8); }
-      c.fillStyle = '#c98a55'; c.fillRect(sx - 14, sy - 14, 28, 13);
-      tuileTiny(c, v.tiny, 'farm', 11, sx - 12, sy - 18); tuileTiny(c, v.tiny, 'farm', 23, sx - 2, sy - 18);
-    });
+    v.ajouter({ type: 'rect', x: sx - 8, y: sy - 14, w: 16, h: 14 });
+    v.dessin(sy, (c) => pileVille(c, etal, sx, sy));
   }
   for (const dx of [-60, 60]) {
     v.ajouter({ type: 'cercle', x: fx + dx, y: fy + 35, r: 6 });
@@ -321,17 +302,20 @@ function village(v, i, cotes, g) {
   v.lampes.push({ x: fx + 30, y: fy - 40 }, { x: fx - 70, y: fy + 80 });
 }
 
-// --- Éoliennes -----------------------------------------------------------------------------------
+// --- Rucher ------------------------------------------------------------------------------------
 
-function eoliennes(v, i, cotes, g) {
-  const nx = Math.max(1, Math.floor(i.w / 240)), ny = Math.max(1, Math.floor(i.h / 300));
-  for (let a = 0; a < nx; a++) for (let b = 0; b < ny; b++) {
-    const x = i.x + (a + 0.5) * (i.w / nx) + (b % 2 ? 24 : -24), y = i.y + (b + 0.5) * (i.h / ny) + 50;
-    v.ajouter({ type: 'cercle', x, y: y - 3, r: 5 });
-    v.dessin(y, (c) => eolienne(c, x, y));
-    v.eoliennes.push({ x, y: y - 98, phase: hash2(a, b, g) * 6 });
+/** Le rucher : rangées de ruches (Tiny Town) dans un pré fleuri, des moutons qui broutent. */
+function rucher(v, i, cotes, g) {
+  for (let y = i.y + 40; y < i.y + i.h - 20; y += 64) {
+    for (let x = i.x + 30; x < i.x + i.w - 30; x += 40) {
+      if (hash2(x, y, g) < 0.3) continue;
+      v.ajouter({ type: 'rect', x: x - 6, y: y - 10, w: 12, h: 10 });
+      v.dessin(y, (c) => tuileTiny(c, v.tiny, 'town', 94, x - 8, y - 16));
+    }
+    v.dessin(y + 20, (c) => { for (let x = i.x + 20; x < i.x + i.w - 20; x += 48) fleurs(c, x, y + 8); });
   }
-  for (let k = 0; k < 12; k++) {
+  v.dessin(i.y + 30, (c) => pancarte(c, i.x + 14, i.y + 30));
+  for (let k = 0; k < 10; k++) {
     const x = i.x + 20 + hash2(g, k, 5) * (i.w - 40), y = i.y + 30 + hash2(k, g, 7) * (i.h - 40);
     v.animaux.push({ x, y, n: 120, phase: k * 1.3 });
   }
@@ -349,24 +333,16 @@ function etang(v, i, cotes, g) {
     if (demi > 0) bandes.push({ y: cy + y, demi });
   }
   v.dessin(-1, (c) => {
+    // L'eau : la tuile d'eau Kenney Modern City, sur une rive d'herbe plus sombre.
     for (const b of bandes) { c.fillStyle = '#6aa85a'; c.fillRect(cx - b.demi - 10, b.y - 2, (b.demi + 10) * 2, 12); }
-    for (const b of bandes) { c.fillStyle = '#5fd0f0'; c.fillRect(cx - b.demi, b.y, b.demi * 2, 8); }
-    for (const b of bandes) { c.fillStyle = '#75e3ff'; c.fillRect(cx - b.demi + 6, b.y, b.demi * 2 - 12, 8); }
-    c.fillStyle = '#d9f7ff';
-    for (let k = 0; k < 8; k++) c.fillRect(cx - rx * 0.5 + hash2(k, g, 3) * rx, cy - ry * 0.5 + hash2(g, k, 5) * ry, 6, 1);
+    c.fillStyle = motifEau(c);
+    for (const b of bandes) c.fillRect(cx - b.demi, b.y, b.demi * 2, 8);
     // Roseaux sur la rive.
     for (let k = 0; k < 10; k++) tuileTiny(c, v.tiny, 'farm', 80, cx - rx + hash2(k, 1, g) * rx * 2 - 8, cy + ry * (k % 2 ? 0.8 : -0.9) - 8);
   });
   for (const b of bandes) v.ajouter({ type: 'rect', x: cx - b.demi, y: b.y, w: b.demi * 2, h: 8, eau: true });
-  v.canards.push({ x: cx, y: cy, phase: g });
-  // Ponton de pêche et un pêcheur.
-  const px = cx + rx - 30, py = cy + 10;
-  v.dessin(py + 12, (c) => {
-    c.fillStyle = CONTOUR; c.fillRect(px, py - 7, 44, 14);
-    c.fillStyle = '#c98a55'; c.fillRect(px + 1, py - 6, 42, 12);
-    dessinerPerso(c, { tuile: ['farm', 109] }, px + 10, py, 'face');
-    c.fillStyle = CONTOUR; c.fillRect(px - 16, py - 18, 22, 1); c.fillRect(px - 16, py - 18, 1, 14);
-  });
+  // Un pêcheur sur la rive.
+  v.gens.push({ x: cx + rx + 18, y: cy + 10, tenue: { tuile: ['farm', 109] }, dir: 'face' });
   // Arbres autour, tables de pique-nique.
   const a = creerAlea(g + 77);
   for (let k = 0; k < 40; k++) {
@@ -379,31 +355,24 @@ function etang(v, i, cotes, g) {
 
 // --- Station-service -------------------------------------------------------------------------------
 
-/** Au bord de la nationale : boutique, auvent et pompes, parking ; le reste en champs. */
+/** Au bord de la nationale : boutique à auvent, parking ; le reste en champs. */
 function station(v, i, cotes, g) {
   const w = 220;
   const droite = cotes.droite || !cotes.gauche;
   const z = { x: droite ? i.x + i.w - w : i.x, y: i.y + i.h - 200, w, h: 200 };
   v.dessin(-1, (c) => {
     // L'aire bitumée va jusqu'à la route (par-dessus le bas-côté).
-    c.fillStyle = '#9aa1b5'; c.fillRect(droite ? z.x : z.x - T, z.y + 70, z.w + T, z.h - 70);
-    c.fillStyle = '#e8e4d6'; for (let k = 0; k < 5; k++) c.fillRect(z.x + 12 + k * 40, z.y + z.h - 14, 20, 2);
+    c.fillStyle = motifTuile(c, 'city', 714); c.fillRect(droite ? z.x : z.x - T, z.y + 70, z.w + T, z.h - 70);
   });
   const h = hauteurBatiment(1);
   const b = v.ajouter({ type: 'rect', x: z.x + 8, y: z.y + 6, w: 96, h });
-  v.dessin(b.y + b.h, (c) => batimentModerne(c, b.x, b.y, b.w, 1, { facade: '#f4f6fb', toit: '#e4432d', vitrine: '#cfe8ff', enseigne: '#e4432d', nom: 'STATION' }));
-  const ax = z.x + 120, ay = z.y + 70, aw = 80;
-  for (const px of [ax + 12, ax + aw - 12]) v.ajouter({ type: 'cercle', x: px, y: ay + 52, r: 4 });
-  for (const px of [ax + aw / 2 - 16, ax + aw / 2 + 16]) v.ajouter({ type: 'rect', x: px - 6, y: ay + 44, w: 12, h: 10 });
-  v.dessin(ay + 56, (c) => auventStation(c, ax, ay, aw));
-  const tx = droite ? z.x + z.w - 24 : z.x + 8;
-  v.ajouter({ type: 'rect', x: tx, y: z.y + 34, w: 16, h: 20 });
-  v.dessin(z.y + 60, (c) => {
-    c.fillStyle = CONTOUR; c.fillRect(tx, z.y + 4, 16, 30); c.fillRect(tx + 7, z.y + 34, 3, 20);
-    c.fillStyle = '#e4432d'; c.fillRect(tx + 1, z.y + 5, 14, 8);
-    c.fillStyle = '#f4f6fb'; c.fillRect(tx + 1, z.y + 14, 14, 19);
-    c.fillStyle = CONTOUR; c.fillRect(tx + 3, z.y + 17, 10, 2); c.fillRect(tx + 3, z.y + 23, 10, 2); c.fillRect(tx + 3, z.y + 29, 7, 2);
-  });
+  v.dessin(b.y + b.h, (c) => batimentModerne(c, b.x, b.y, b.w, 1, { mur: 'gris', toiture: 'clair', vitrine: true, auvent: '#e4432d', nom: 'STATION' }));
+  // Voitures garées sur le parking, panneau au bord de la route.
+  v.voitureGaree(z.x + 140, z.y + 130, false);
+  v.voitureGaree(z.x + 180, z.y + 130, false);
+  const tx = droite ? z.x + z.w - 16 : z.x + 12;
+  v.ajouter({ type: 'cercle', x: tx, y: z.y + 64, r: 4 });
+  v.dessin(z.y + 66, (c) => imageAtlas(c, 'panneauBleu', tx, z.y + 56));
   const reste = droite ? { x: i.x, y: i.y, w: i.w - w - 16, h: i.h } : { x: i.x + w + 16, y: i.y, w: i.w - w - 16, h: i.h };
   champs(v, reste, cotes, g + 3);
   champs(v, { x: z.x, y: i.y, w, h: i.h - 216 }, cotes, g + 9);

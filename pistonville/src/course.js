@@ -10,7 +10,7 @@ import { situer, pointA, courbureDevant, DEMI, BARRIERE } from './circuit.js';
 import { Voiture, RAYON_VOITURE, DEMI_LONGUEUR, DEMI_LARGEUR } from './voiture.js';
 import { SURFACES, kmh, BOOSTS } from './regles.js';
 import { bulle, police } from './sprites.js';
-import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, spritePerso, tenue, PERSONNES } from './tiny.js';
+import { spriteVoitureTiny, dessinerVoitureTiny, dessinerPerso, spritePerso, tenue, PERSONNES, imageAtlas } from './tiny.js';
 
 const NOMS_DIRECTION = ['gauche', 'face', 'dos', 'droite'];
 import { clamp, lerp, angleNorm, formatTemps, ordinal, creerAlea } from './outils.js';
@@ -690,33 +690,29 @@ export class Course {
     this.dessinerInterface(ctx, W, H, t);
   }
 
-  /** Portique de départ en vue 3/4 : deux poteaux posés au sol, la poutre et ses feux en hauteur. */
+  /**
+   * Départ (Kenney Racing Pack) : la rampe de feux au-dessus de la ligne et une
+   * barrière « RACE » de chaque côté. Les quatre feux s'allument pendant le
+   * compte à rebours, puis passent au vert.
+   */
   dessinerPortique(ctx) {
-    const H = 30;   // hauteur de la poutre au-dessus du sol, en pixels d'écran
-    const a = pointA(this.circuit, 0, -(DEMI + 12));
-    const b = pointA(this.circuit, 0, DEMI + 12);
-    for (const p of [a, b]) {
-      const x = Math.round(p.x), y = Math.round(p.y);
-      ctx.fillStyle = 'rgba(38,24,46,0.3)'; ctx.fillRect(x - 3, y - 1, 9, 4);
-      ctx.fillStyle = '#26182e'; ctx.fillRect(x - 3, y - H, 6, H + 1);
-      ctx.fillStyle = '#c0cbdc'; ctx.fillRect(x - 2, y - H + 1, 4, H - 1);
-      ctx.fillStyle = '#ffffff'; ctx.fillRect(x - 2, y - H + 1, 1, H - 1);
-    }
-    const dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy);
-    ctx.save();
-    ctx.translate(a.x, a.y - H);
-    ctx.rotate(Math.atan2(dy, dx));
-    ctx.fillStyle = '#26182e'; ctx.fillRect(-2, -6, l + 4, 12);
-    ctx.fillStyle = '#f2c14e'; ctx.fillRect(-1, -5, l + 2, 10);
-    for (let x = 0; x < l; x += 8) { ctx.fillStyle = (x / 8) % 2 ? '#26182e' : '#ffffff'; ctx.fillRect(x, 3, 8, 2); }
-    const feux = 5;
+    const c0 = pointA(this.circuit, 0, 0);
+    const a = pointA(this.circuit, 0, -(DEMI + 18)), b = pointA(this.circuit, 0, DEMI + 18);
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    for (const p of [a, b]) imageAtlas(ctx, 'barriereBlanche', p.x, p.y, angle + Math.PI / 2, 0.8);
+    imageAtlas(ctx, 'feux', c0.x, c0.y, angle, 1);
+    const feux = 4;
     const allumes = this.etat === 'compte' ? clamp(Math.floor((this.temps + COMPTE_A_REBOURS) / (COMPTE_A_REBOURS / feux)) + 1, 0, feux) : 0;
+    ctx.save();
+    ctx.translate(Math.round(c0.x), Math.round(c0.y));
+    ctx.rotate(angle);
     for (let i = 0; i < feux; i++) {
-      let c = '#3a3550';
-      if (this.etat === 'compte' && i < allumes) c = '#e4432d';
-      if (this.etat !== 'compte' && this.temps < 2) c = '#5ad16a';
-      ctx.fillStyle = '#26182e'; ctx.fillRect(l / 2 - feux * 5 + i * 10, -4, 8, 7);
-      ctx.fillStyle = c; ctx.fillRect(l / 2 - feux * 5 + i * 10 + 1, -3, 6, 5);
+      let couleur = null;
+      if (this.etat === 'compte' && i < allumes) couleur = '#e4432d';
+      if (this.etat !== 'compte' && this.temps < 2) couleur = '#5ad16a';
+      if (!couleur) continue;
+      ctx.fillStyle = couleur;
+      ctx.fillRect(-25 + i * 14, -3, 8, 6);
     }
     ctx.restore();
   }

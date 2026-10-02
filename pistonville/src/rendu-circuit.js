@@ -12,7 +12,8 @@
 import { DEMI, VIBREUR, BARRIERE, PUBLIC_DEBUT, PUBLIC_FIN, pointA } from './circuit.js';
 import { hash2, creerAlea, rgb, melangerCouleur } from './outils.js';
 import { objet, tuile, PERSONNAGES, directionVers, T } from './sprites.js';
-import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny } from './tiny.js';
+import { tuileTiny, dessinerPerso, tenue, spriteVoitureTiny, dessinerVoitureTiny, imageAtlas, tuileVille, pileVille } from './tiny.js';
+import { batimentModerne, maisonModerne, caisses } from './ville-dessins.js';
 
 // Palette des packs Kenney Tiny (relevée sur leurs tuiles) : tout le jeu a les mêmes couleurs.
 const SOLS = {
@@ -47,11 +48,7 @@ const SPONSORS = ['#c2504d', '#2f6fdb', '#f2c14e', '#f4f1e8', '#3fa34d', '#e86ca
 const ROUGE_VIBREUR = rgb('#e4432d');
 const BLANC = rgb('#f4f6fb');
 const NOIR_PNEU = rgb('#2a2838');
-const GRIS_PNEU = rgb('#5c6278');
 const CONTOUR = rgb('#26182e');
-const GRADIN = rgb('#c0cbdc');
-const GRADIN_BORD = rgb('#8b9bb4');
-const TOIT_TRIBUNE = rgb('#e4432d');
 
 const tons = (liste) => liste.map(rgb);
 
@@ -138,7 +135,6 @@ export function rendreCircuit(circuit, planche, niveau = 1, tiny = {}) {
   const L = circuit.longueur;
   const exterieur = -circuit.interieur;
   const rangs = Math.min(3, niveau + 1);
-  const profondeurTribune = rangs * 14 + 8;
 
   // --- 1. Grille d'environnement (cellules de 16 px) -----------------------
   const GW = Math.ceil(W / T), GH = Math.ceil(H / T);
@@ -226,20 +222,13 @@ export function rendreCircuit(circuit, planche, niveau = 1, tiny = {}) {
         const bac = exterieurVirage && ak > 1 / 280 && d > DEMI + VIBREUR + 2;
         ecrire(o, ton(bac ? gravier : degagement, x, y));
       } else if (d < BARRIERE - 1) {
-        if (exterieurVirage && ak > 1 / 250) {
-          const u = ((s % 7) + 7) % 7 - 3.5, v = d - (BARRIERE - 4.5);
-          const r2 = u * u + v * v;
-          ecrire(o, r2 < 2.2 ? GRIS_PNEU : r2 < 12 ? NOIR_PNEU : ton(degagement, x, y));
-        } else ecrire(o, ton(degagement, x, y));
+        ecrire(o, ton(degagement, x, y));
       } else if (d < BARRIERE) {
         ecrire(o, BLANC);
       } else if (d < BARRIERE + 2) {
         ecrire(o, sponsors[Math.floor(s / 36) % sponsors.length]);
       } else if (d < BARRIERE + 3) {
         ecrire(o, CONTOUR);
-      } else if (cote === exterieur && ok[m.i] && d >= PUBLIC_DEBUT && d < PUBLIC_DEBUT + profondeurTribune) {
-        const e = d - PUBLIC_DEBUT;
-        ecrire(o, e > profondeurTribune - 4 ? TOIT_TRIBUNE : e % 14 < 1.5 ? GRADIN_BORD : GRADIN);
       } else {
         const base = type === C.ABORDS ? solsEnv[C.ABORDS] : solsEnv[type] || solsEnv[C.LIBRE];
         const c = ton(base, x, y);
@@ -257,7 +246,7 @@ export function rendreCircuit(circuit, planche, niveau = 1, tiny = {}) {
   for (let j = 0; j < 3; j++) {
     const p = pointA(circuit, L - 120 - j * 46, -exterieur * (BARRIERE + 30));
     paddock.push(p);
-    statiques.push({ y: p.y + 12, dessin: (c) => tente(c, p.x, p.y, SPONSORS[(j + 1) % SPONSORS.length]) });
+    statiques.push({ y: p.y + 12, dessin: (c) => imageAtlas(c, j % 2 ? 'tenteBleue' : 'tenteRouge', p.x, p.y, 0, 0.8) });
     statiques.push({ y: p.y + 20, dessin: (c) => dessinerPerso(c, tenue(j * 5 + 1, 'mecano'), p.x + 18, p.y + 20, 'face') });
   }
 
@@ -273,17 +262,45 @@ export function rendreCircuit(circuit, planche, niveau = 1, tiny = {}) {
     statiques.push({ y: q.y + 8, dessin: (c) => commissaire(c, planche, q.x, q.y) });
   }
 
+  // Murs de pneus (Kenney Racing Pack) à l'extérieur des virages serrés.
+  let dernierPneu = -1e9;
+  for (const p of points) {
+    if (Math.abs(p.k) < 1 / 250 || p.s - dernierPneu < 15) continue;
+    dernierPneu = p.s;
+    const q = pointA(circuit, p.s, -Math.sign(p.k) * (BARRIERE - 5));
+    const rouge = Math.floor(p.s / 15) % 2;
+    statiques.push({ y: q.y - 100, dessin: (c) => imageAtlas(c, rouge ? 'pneusRouges' : 'pneusBlancs', q.x, q.y, 0, 0.62) });
+  }
+
+  // Tribunes (Kenney Racing Pack) le long des lignes droites, côté extérieur, tournées vers la piste.
+  const tribunesPosees = [];
+  let derniereTribune = -1e9;
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    if (!ok[i] || p.s - derniereTribune < 150) continue;
+    if (!ok[Math.min(points.length - 1, i + Math.ceil(130 / circuit.pas))]) continue;
+    const s0 = p.s + 66;
+    derniereTribune = s0 + 66;
+    const pied = pointA(circuit, s0, 0), q = pointA(circuit, s0, exterieur * (PUBLIC_DEBUT + 36));
+    const nx = (q.x - pied.x) / (PUBLIC_DEBUT + 36), ny = (q.y - pied.y) / (PUBLIC_DEBUT + 36);
+    const angle = Math.atan2(nx, -ny);
+    tribunesPosees.push(s0);
+    statiques.push({ y: q.y - 200, dessin: (c) => imageAtlas(c, 'tribuneVide', q.x, q.y, angle, 0.75) });
+  }
+
   statiques.sort((a, b) => a.y - b.y);
   for (const s of statiques) s.dessin(ctx);
 
   // --- 4. Public (animé pendant la course) ---------------------------------
   const spectateurs = [];
   for (let i = 0; i < points.length; i++) {
-    if (!ok[i] || i % 2) continue;
+    if (i % 2) continue;
     const p = points[i];
+    // Assis sur les gradins des tribunes posées : trois rangées de bancs.
+    if (!tribunesPosees.some((s0) => Math.abs(p.s - s0) < 58)) continue;
     for (let r = 0; r < rangs; r++) {
       if (hash2(i, r, graine) < 0.25) continue;
-      const q = pointA(circuit, p.s, exterieur * (PUBLIC_DEBUT + 12 + r * 14));
+      const q = pointA(circuit, p.s, exterieur * (PUBLIC_DEBUT + 22 + r * 18));
       spectateurs.push({
         x: q.x + (hash2(i, r + 9, graine) - 0.5) * 3,
         y: q.y,
@@ -364,7 +381,7 @@ function dessinerEnvironnement(ctx, planche, g) {
     const r = h(gx, gy, 11);
     if (type === C.QUAI) {
       if (r < 0.12) statiques.push({ y: by, dessin: (c) => { c.fillStyle = '#3a3550'; c.fillRect(cx - 2, y + 6, 4, 4); c.fillStyle = '#5c6278'; c.fillRect(cx - 1, y + 7, 2, 2); } });
-      else if (r < 0.32) statiques.push({ y: by, dessin: (c) => conteneur(c, x, y, h(gx, gy, 5)) });
+      else if (r < 0.32) statiques.push({ y: by, dessin: (c) => tuileVille(c, 605, x, y) });
     } else if (type === C.RUE) {
       const v = env.ville;
       const horizontale = (gy + v.oy) % v.P < 2 && !((gx + v.ox) % v.P < 2);
@@ -417,13 +434,13 @@ function vegetation(g, planche, gx, gy, x, y, cx, by, r) {
       const n = ARBRES[Math.floor(hash2(gx, gy, graine + 4) * ARBRES.length)];
       statiques.push({ y: by, dessin: (c) => arbreTiny(c, g.tiny, n, cx + Math.round((r - 0.5) * 6), by) });
     } else if (r > 0.985) {
-      statiques.push({ y: by, dessin: (c) => fleurs(c, x, y, graine + gx * 7 + gy) });
+      statiques.push({ y: by, dessin: (c) => tuileTiny(c, g.tiny, 'town', 2, x, y) });
     }
   } else if (theme.sol === 'sable') {
-    if (r < 0.05) statiques.push({ y: by, dessin: (c) => parasol(c, cx, y + 8, hash2(gx, gy, 3)) });
+    if (r < 0.05) statiques.push({ y: by, dessin: (c) => pileVille(c, [hash2(gx, gy, 3) < 0.5 ? 552 : 553], cx, by) });
     else if (r < 0.08 && amas > 0.5) statiques.push({ y: by, dessin: (c) => arbreTiny(c, g.tiny, 28, cx, by) });
   } else if (theme.sol === 'terre') {
-    if (r < 0.06) statiques.push({ y: by, dessin: (c) => tas(c, cx, y + 9) });
+    if (r < 0.06) statiques.push({ y: by, dessin: (c) => imageAtlas(c, 'rocher', cx, y + 8, 0, 0.5) });
     else if (r < 0.1) statiques.push({ y: by, dessin: (c) => objet(c, planche, 'cone', cx, by) });
     else if (r < 0.12) statiques.push({ y: by, dessin: (c) => objet(c, planche, 'barriereChantier', cx, by) });
   } else if (theme.sol === 'beton') {
@@ -431,7 +448,8 @@ function vegetation(g, planche, gx, gy, x, y, cx, by, r) {
     const allee = gy % 4 === 3 || gx % 8 === 7;
     if (!allee && amas > 0.42) {
       const couleur = hash2(gx >> 1, gy, graine + 5);
-      statiques.push({ y: by, dessin: (c) => conteneur(c, x, y, couleur) });
+      void couleur;
+      statiques.push({ y: by, dessin: (c) => tuileVille(c, [605, 606, 642][Math.floor(r * 3)], x, y) });
     } else if (allee && gx % 8 === 7 && gy % 4 === 3 && r < 0.6) {
       statiques.push({ y: by, dessin: (c) => objet(c, planche, 'lampadaire', cx, by) });
     }
@@ -468,9 +486,10 @@ function batir(ctx, planche, g) {
       if (banlieue) {
         ctx.fillStyle = '#d6d4af';
         ctx.fillRect(bati.x + bati.w / 2 - 4, bati.y + bati.h, 8, (y0 + taille) * T - bati.y - bati.h);   // allée
-        statiques.push({ y: bati.y + bati.h, dessin: (c) => maison(c, bati.x, bati.y, bati.w, bati.h, couleur) });
+        statiques.push({ y: bati.y + bati.h, dessin: (c) => maisonModerne(c, bati.x + bati.w / 2 - 32, bati.y + bati.h - 64, 64, couleur, '#f4e6c8') });
       } else {
-        statiques.push({ y: bati.y + bati.h, dessin: (c) => immeuble(c, bati.x, bati.y, bati.w, bati.h, couleur, r) });
+        const etages = Math.max(1, Math.min(3, Math.floor((bati.h - 32) / 32)));
+        statiques.push({ y: bati.y + bati.h, dessin: (c) => batimentModerne(c, bati.x, bati.y + bati.h - 32 - etages * 32, bati.w, etages, { facade: r < 0.5 ? '#c2504d' : '#9ea3ac', toit: couleur, vitrine: r > 0.6 }) });
       }
     }
     // Arbres sur la pelouse restante, jamais sur le bâtiment.
@@ -489,63 +508,13 @@ function batir(ctx, planche, g) {
 
 // --- Petits dessins pixel ------------------------------------------------------
 
-export function immeuble(c, x, y, w, h, toit, r) {
-  const facade = 18;
-  c.fillStyle = '#3a3550'; c.fillRect(x - 1, y - 1, w + 2, h + 2);
-  c.fillStyle = toit; c.fillRect(x, y, w, h - facade);
-  c.fillStyle = melangerCouleur(toit, '#ffffff', 0.25); c.fillRect(x, y, w, 2);
-  c.fillStyle = melangerCouleur(toit, '#000000', 0.15);
-  for (let i = 6; i < h - facade; i += 6) c.fillRect(x + 2, y + i, w - 4, 1);
-  // équipements sur le toit
-  c.fillStyle = '#c9ccd4'; c.fillRect(x + 6 + Math.floor(r * 20), y + 8, 10, 8);
-  c.fillStyle = '#7e7c93'; c.fillRect(x + 8 + Math.floor(r * 20), y + 10, 6, 4);
-  // façade côté sud, avec fenêtres et porte (vue Kenney légèrement de face)
-  const fy = y + h - facade;
-  c.fillStyle = r < 0.5 ? '#dc8f7a' : '#d6d4af'; c.fillRect(x, fy, w, facade);
-  c.fillStyle = '#3a3550'; c.fillRect(x, fy, w, 1);
-  for (let i = x + 4; i < x + w - 8; i += 10) {
-    c.fillStyle = '#3a3550'; c.fillRect(i - 1, fy + 3, 7, 7);
-    c.fillStyle = '#9fd3ff'; c.fillRect(i, fy + 4, 5, 5);
-  }
-  c.fillStyle = '#3a3550'; c.fillRect(x + w / 2 - 5, fy + 6, 10, facade - 6);
-  c.fillStyle = '#836a62'; c.fillRect(x + w / 2 - 4, fy + 7, 8, facade - 7);
-  c.fillStyle = 'rgba(42,40,56,0.35)'; c.fillRect(x + w + 1, y + 3, 3, h);
-}
 
-export function maison(c, x, y, w, h, toit) {
-  const facade = 12;
-  c.fillStyle = '#3a3550'; c.fillRect(x - 1, y - 1, w + 2, h + 2);
-  c.fillStyle = toit; c.fillRect(x, y, w, (h - facade) / 2);
-  c.fillStyle = melangerCouleur(toit, '#000000', 0.18); c.fillRect(x, y + (h - facade) / 2, w, (h - facade) / 2);
-  c.fillStyle = '#d6d4af'; c.fillRect(x, y + h - facade, w, facade);
-  c.fillStyle = '#3a3550'; c.fillRect(x, y + h - facade, w, 1);
-  c.fillStyle = '#9fd3ff'; c.fillRect(x + 5, y + h - 9, 5, 5); c.fillRect(x + w - 10, y + h - 9, 5, 5);
-  c.fillStyle = '#836a62'; c.fillRect(x + w / 2 - 3, y + h - 9, 6, 9);
-}
 
-function conteneur(c, x, y, r) {
-  const couleurs = ['#c2504d', '#2f6fdb', '#3fa34d', '#f2c14e', '#c77b47'];
-  const col = couleurs[Math.floor(r * couleurs.length)];
-  c.fillStyle = '#2a2838'; c.fillRect(x, y + 2, 16, 12);
-  c.fillStyle = col; c.fillRect(x + 1, y + 3, 14, 10);
-  c.fillStyle = melangerCouleur(col, '#000000', 0.25);
-  for (let i = x + 3; i < x + 15; i += 3) c.fillRect(i, y + 4, 1, 8);
-}
 
 export function voitureGaree(c, x, y, couleur, horizontale) {
   dessinerVoitureTiny(c, spriteVoitureTiny(couleur, null, [], `voiture${1 + (Math.round(x + y) % 5)}`), x, y, horizontale ? 0 : Math.PI / 2);
 }
 
-function tente(c, x, y, couleur) {
-  x = Math.round(x); y = Math.round(y);
-  c.fillStyle = 'rgba(42,40,56,0.3)'; c.fillRect(x - 13, y - 7, 30, 22);
-  c.fillStyle = '#2a2838'; c.fillRect(x - 15, y - 11, 30, 22);
-  for (let i = 0; i < 28; i++) {
-    c.fillStyle = Math.floor(i / 4) % 2 ? '#f4f1e8' : couleur;
-    c.fillRect(x - 14 + i, y - 10, 1, 20);
-  }
-  c.fillStyle = 'rgba(255,255,255,0.25)'; c.fillRect(x - 14, y - 10, 28, 2);
-}
 
 function commissaire(c, planche, x, y) {
   dessinerPerso(c, { ...tenue(2), haut: '#f39c33' }, x, y + 7, 'face');
@@ -553,31 +522,8 @@ function commissaire(c, planche, x, y) {
   c.fillStyle = '#f2c14e'; c.fillRect(Math.round(x) + 7, Math.round(y) - 12, 6, 4);
 }
 
-function parasol(c, x, y, r) {
-  const col = ['#c2504d', '#2f6fdb', '#f2c14e', '#3fa34d'][Math.floor(r * 4)];
-  c.fillStyle = 'rgba(42,40,56,0.25)'; c.fillRect(x - 5, y - 2, 12, 9);
-  for (let a = -6; a <= 6; a++) for (let b = -6; b <= 6; b++) {
-    if (a * a + b * b > 36) continue;
-    const quart = (a >= 0) !== (b >= 0);
-    c.fillStyle = quart ? col : '#f4f1e8';
-    c.fillRect(x + a, y + b - 4, 1, 1);
-  }
-  c.fillStyle = '#e8d7a8'; c.fillRect(x + 4, y + 4, 8, 4);
-}
 
-function tas(c, x, y) {
-  c.fillStyle = '#8e6c4e';
-  c.fillRect(x - 6, y - 2, 12, 5); c.fillRect(x - 4, y - 4, 8, 2);
-  c.fillStyle = '#a68060'; c.fillRect(x - 3, y - 3, 4, 2);
-}
 
-function fleurs(c, x, y, s) {
-  const cols = ['#e86ca6', '#f2c14e', '#f4f1e8', '#c2504d'];
-  for (let i = 0; i < 6; i++) {
-    c.fillStyle = cols[(s + i) % cols.length];
-    c.fillRect(x + 2 + ((s * (i + 3)) % 11), y + 3 + ((s * (i + 5)) % 9), 2, 2);
-  }
-}
 
 /** Mini-carte : le tracé en blanc, la ligne d'arrivée en jaune. */
 export function miniCarte(circuit, largeurMax = 88, hauteurMax = 100) {

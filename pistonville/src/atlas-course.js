@@ -169,5 +169,23 @@ export const ATLAS_COURSE = {
     236,
     35,
     28
+  ],
+  "stop": [
+    271,
+    236,
+    7,
+    21
+  ],
+  "panneauBleu": [
+    279,
+    236,
+    7,
+    21
+  ],
+  "plaqueRue": [
+    287,
+    236,
+    9,
+    21
   ]
 };

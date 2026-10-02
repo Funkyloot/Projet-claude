@@ -146,15 +146,28 @@ const enRgb = (h, s, v) => {
  * Repeint la carrosserie (rouge-orangé chez Kenney) dans la couleur voulue en
  * gardant les ombres et les reflets du dessin d'origine.
  */
-function repeindre(ctx, w, h, couleur) {
+function repeindre(ctx, w, h, couleur, teinte = [340, 40]) {
   const [th, ts, tv] = enHsv(...[1, 3, 5].map((i) => parseInt(couleur.slice(i, i + 2), 16)));
   const img = ctx.getImageData(0, 0, w, h);
   const d = img.data;
-  const REF_S = 0.85, REF_V = 0.9;
+  const dans = (hh) => (teinte[0] > teinte[1] ? hh >= teinte[0] || hh <= teinte[1] : hh >= teinte[0] && hh <= teinte[1]);
+  // Référence : la couleur la plus fréquente de la carrosserie d'origine.
+  const compte = new Map();
+  for (let i = 0; i < d.length; i += 4) {
+    if (!d[i + 3]) continue;
+    const [hh, ss] = enHsv(d[i], d[i + 1], d[i + 2]);
+    if (ss < 0.25 || !dans(hh)) continue;
+    const k = (d[i] << 16) | (d[i + 1] << 8) | d[i + 2];
+    compte.set(k, (compte.get(k) || 0) + 1);
+  }
+  let ref = null, max = 0;
+  for (const [k, n] of compte) if (n > max) { max = n; ref = k; }
+  if (ref === null) return;
+  const [, REF_S, REF_V] = enHsv(ref >> 16, (ref >> 8) & 255, ref & 255);
   for (let i = 0; i < d.length; i += 4) {
     if (!d[i + 3]) continue;
     const [hh, ss, vv] = enHsv(d[i], d[i + 1], d[i + 2]);
-    if (ss < 0.35 || (hh > 40 && hh < 340)) continue;   // vitres, phares, pneus : on n'y touche pas
+    if (ss < 0.25 || !dans(hh)) continue;   // vitres, phares, pneus : on n'y touche pas
     const s2 = Math.min(1, ts * (ss / REF_S)), v2 = Math.min(1, Math.max(0.08, tv * (vv / REF_V)));
     [d[i], d[i + 1], d[i + 2]] = enRgb(th, s2, v2);
   }
@@ -220,3 +233,84 @@ export function vignetteVoitureTiny(couleur, bande, looks = [], modele = 'voitur
   cacheVignettes.set(cle, url);
   return url;
 }
+
+// --- Voitures de la ville (Kenney Roguelike Modern City) -----------------------------------
+//
+// En ville (vue de 3/4), une voiture se voit de côté quand elle va vers l'est
+// ou l'ouest, et de face ou de dos vers le sud ou le nord : quatre dessins
+// Kenney, à l'échelle des tuiles. La carrosserie verte d'origine est repeinte.
+
+const VUES_VILLE = { gauche: [496, 256, 48, 32], droite: [544, 256, 48, 32], dos: [496, 288, 32, 32], face: [528, 288, 32, 32] };
+const cacheVille = new Map();
+
+export function spriteVoitureVille(couleur, vue) {
+  const cle = `${couleur}|${vue}`;
+  if (cacheVille.has(cle)) return cacheVille.get(cle);
+  const [sx, sy, w, h] = VUES_VILLE[vue] || VUES_VILLE.droite;
+  const d = toile(w, h);
+  if (planches.tiny.city) {
+    d.ctx.drawImage(planches.tiny.city, sx, sy, w, h, 0, 0, w, h);
+    if (couleur) repeindre(d.ctx, w, h, couleur, [100, 180]);
+    cacheVille.set(cle, d.c);
+  }
+  return d.c;
+}
+
+/** Vue d'après l'angle (0 = est) : la plus proche des quatre. */
+export function vueDepuisAngle(angle) {
+  const a = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+  const q = Math.round(a / (Math.PI / 2)) % 4;
+  return ['droite', 'face', 'gauche', 'dos'][q];
+}
+
+/** Dessine une voiture de ville centrée en (x, y), avec son ombre au sol. */
+export function dessinerVoitureVille(ctx, couleur, x, y, angle) {
+  const vue = vueDepuisAngle(angle);
+  const img = spriteVoitureVille(couleur, vue);
+  const cote = vue === 'gauche' || vue === 'droite';
+  ctx.fillStyle = 'rgba(20,16,34,0.25)';
+  if (cote) ctx.fillRect(Math.round(x) - 17, Math.round(y) + 6, 34, 5);
+  else ctx.fillRect(Math.round(x) - 10, Math.round(y) + 10, 20, 5);
+  ctx.drawImage(img, Math.round(x - img.width / 2), Math.round(y - img.height / 2 - (cote ? 2 : 0)));
+}
+
+// --- Tuiles et images Kenney, sans avoir à passer les planches ------------------------------
+
+/** Une tuile de la planche Roguelike Modern City (37 colonnes). */
+export function tuileVille(ctx, n, x, y) { tuileTiny(ctx, planches.tiny, 'city', n, x, y); }
+
+/** Une pile de tuiles Modern City, de haut en bas, posée au pied (x = centre, y = sol). */
+export function pileVille(ctx, tuiles, x, y) {
+  tuiles.forEach((n, i) => tuileVille(ctx, n, x - 8, y - 16 * (tuiles.length - i)));
+}
+
+/** Une image de l'atlas de course (Racing Pack, panneaux), centrée en (x, y), tournée de `angle`. */
+export function imageAtlas(ctx, nom, x, y, angle = 0, echelle = 1) {
+  const r = ATLAS_COURSE[nom];
+  if (!r || !planches.tiny.course) return;
+  const [sx, sy, w, h] = r;
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  if (angle) ctx.rotate(angle);
+  if (echelle !== 1) ctx.scale(echelle, echelle);
+  ctx.drawImage(planches.tiny.course, sx, sy, w, h, -Math.round(w / 2), -Math.round(h / 2), w, h);
+  ctx.restore();
+}
+export const tailleAtlas = (nom) => ATLAS_COURSE[nom]?.slice(2) || [0, 0];
+
+/** Une tuile de n'importe quelle planche Kenney chargée (town, farm, factory…). */
+export function tuileKenney(ctx, pack, n, x, y) { tuileTiny(ctx, planches.tiny, pack, n, x, y); }
+
+/** Motif (pour remplir une forme) fait d'une tuile Kenney ; l'eau : tuile 214 de Modern City. */
+const cacheTuiles = new Map();
+export function motifTuile(ctx, pack, n) {
+  const cle = `${pack}${n}`;
+  let t = cacheTuiles.get(cle);
+  if (!t) {
+    t = toile(16, 16);
+    tuileTiny(t.ctx, planches.tiny, pack, n, 0, 0);
+    if (planches.tiny[pack]) cacheTuiles.set(cle, t);
+  }
+  return ctx.createPattern(t.c, 'repeat');
+}
+export const motifEau = (ctx) => motifTuile(ctx, 'city', 214);
