@@ -109,4 +109,5 @@ self.addEventListener('fetch', (e) => {
   }).catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html'))));
 });
 `);
+writeFileSync(join(WEB, 'version.txt'), `${version}\n`);
 console.log(`dist/web/ : version ${version}`);

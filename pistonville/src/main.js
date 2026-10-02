@@ -274,6 +274,41 @@ class App {
     suivant();
   }
 
+  /**
+   * Bouton « Mettre à jour le jeu » : le serveur cherche la dernière version et
+   * l'installe ; on attend qu'il ait fini, puis on recharge la page (la partie,
+   * déjà copiée sur le serveur, est retrouvée telle quelle).
+   */
+  async mettreAJour() {
+    const avant = await Nuage.versionServeur();
+    if (!avant) { this.toast('Mise à jour impossible ici : le jeu n\'est pas servi par ton serveur Pistonville.'); return; }
+    if (this.partie) await Nuage.ecrireMaintenant(this.partie);
+    if (!(await Nuage.demanderMiseAJour())) { this.toast('Le serveur n\'a pas répondu. Réessaie dans un instant.'); return; }
+    this.montrer(ecranChargement('Le serveur cherche une nouvelle version…'));
+    const debut = Date.now();
+    let vuEnCours = false;
+    while (Date.now() - debut < 4 * 60 * 1000) {
+      await new Promise((ok) => setTimeout(ok, 2500));
+      const v = await Nuage.versionServeur();   // null pendant que le jeu redémarre
+      if (!v) { vuEnCours = true; continue; }
+      if (v.version && v.version !== avant.version) {
+        this.montrer(ecranChargement('Nouvelle version installée ! Redémarrage…'));
+        try { const reg = await navigator.serviceWorker?.getRegistration(); await reg?.update(); } catch { /* pas de service worker */ }
+        location.reload();
+        return;
+      }
+      if (v.enCours) { vuEnCours = true; continue; }
+      // La demande a été traitée et la version n'a pas changé : rien de neuf.
+      if (vuEnCours || Date.now() - debut > 20000) {
+        this.titre();
+        this.toast(`Le jeu est déjà à jour (version ${v.version.slice(0, 7)}).`);
+        return;
+      }
+    }
+    this.titre();
+    this.toast('Le serveur ne répond pas : la mise à jour automatique (toutes les 10 min) prendra le relais.');
+  }
+
   titre() { this.ecran = 'titre'; this.scene.placement = null; this.scene.selection = null; this.montrer(ecranTitre(this)); }
 
   nouvellePartie() {

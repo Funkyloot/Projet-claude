@@ -1,5 +1,5 @@
-/* sw.js — Pistonville hors ligne. Version 8d16f94891. */
-const VERSION = 'pistonville-8d16f94891';
+/* sw.js — Pistonville hors ligne. Version 1340987fb3. */
+const VERSION = 'pistonville-1340987fb3';
 const FICHIERS = ['./', './index.html', './manifest.webmanifest', './icones/icone-192.png', './icones/icone-512.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => Promise.all(FICHIERS.map((f) => c.add(f).catch(() => null)))).then(() => self.skipWaiting()));

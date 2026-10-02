@@ -51,3 +51,28 @@ export function ecrireMaintenant(partie) {
     navigator.sendBeacon(URL_API, new Blob([json], { type: 'application/json' }));
   } else envoyer(json, true);
 }
+
+// --- Mise à jour du jeu sur le serveur ------------------------------------------------------
+
+/** { version, enCours } du jeu servi, ou null (pas de serveur Pistonville). */
+export async function versionServeur() {
+  if (!actif) return null;
+  try {
+    const r = await fetch('api/version', { cache: 'no-store' });
+    if (!r.ok) return null;
+    const v = await r.json();
+    return typeof v.version === 'string' ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Demande au serveur de chercher et d'installer la dernière version. */
+export async function demanderMiseAJour() {
+  try {
+    const r = await fetch('api/mise-a-jour', { method: 'POST', body: '{}', headers: { 'Content-Type': 'application/json' } });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}

@@ -16,6 +16,20 @@ Le script installe le jeu comme service (il redémarre tout seul), affiche
 l'adresse à ouvrir sur le téléphone, et explique Tailscale pour jouer hors de
 la maison. Pour mettre à jour plus tard : `bash /opt/pistonville/pistonville/installer-serveur.sh`.
 
+### Mettre le jeu à jour depuis le téléphone
+
+Après l'installation, plus besoin de taper de commande :
+
+- **tout seul** : toutes les 10 minutes, le serveur regarde s'il y a une
+  nouvelle version ; s'il y en a une, il l'installe et relance le jeu ;
+- **tout de suite** : sur l'écran titre du jeu, touche « Mettre à jour le
+  jeu ». Le serveur cherche la dernière version, l'installe, et la page se
+  recharge toute seule ; ta partie est gardée (elle est copiée sur le serveur
+  avant). S'il n'y a rien de neuf, le jeu le dit.
+
+Pour voir ce qu'a fait la mise à jour automatique, sur le serveur :
+`journalctl -u pistonville-maj -n 20`.
+
 ## 1. Une seule fois, sur le PC
 
 1. Installe **Node.js** (version LTS) : https://nodejs.org

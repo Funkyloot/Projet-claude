@@ -5,6 +5,11 @@
 #
 #   bash /opt/pistonville/pistonville/installer-serveur.sh
 #
+# Une fois installé, le jeu se met à jour tout seul : toutes les 10 minutes,
+# le serveur regarde s'il y a une nouvelle version et l'installe. Depuis le
+# téléphone, le bouton « Mettre à jour le jeu » (écran titre) le fait tout de
+# suite. On peut aussi relancer cette commande à la main.
+#
 # Le jeu est servi sur le port 8090 (PORT=9000 bash … pour en changer) ; si ce
 # port est déjà pris par une autre application, le script en choisit un libre.
 # Aucune installation nécessaire : seulement git et python3, déjà présents.
@@ -14,14 +19,22 @@
 set -e
 DOSSIER="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCHE="claude/kairosoft-hybrid-racing-game-5x34eg"
-PORT="${PORT:-8090}"
+# Le port choisi à la première installation est gardé pour les mises à jour.
+PORT="${PORT:-$(cat /etc/pistonville.port 2>/dev/null || echo 8090)}"
+AUTO=""
+case " $* " in *" --auto "*) AUTO=1 ;; esac
 
 # 1. Récupérer la dernière version (puis relancer ce script, à jour lui aussi).
+#    En mode --auto (mise à jour automatique), on s'arrête là si rien n'a changé.
 if [ "$1" != "--deja-a-jour" ] && git -C "$DOSSIER" rev-parse >/dev/null 2>&1; then
-  echo "→ Récupération de la dernière version…"
+  [ -z "$AUTO" ] && echo "→ Récupération de la dernière version…"
   git -C "$DOSSIER" fetch -q origin "$BRANCHE"
+  if [ -n "$AUTO" ] && [ "$(git -C "$DOSSIER" rev-parse HEAD)" = "$(git -C "$DOSSIER" rev-parse FETCH_HEAD)" ] \
+     && systemctl is-active --quiet pistonville; then
+    exit 0
+  fi
   git -C "$DOSSIER" checkout -q --detach FETCH_HEAD
-  exec bash "$DOSSIER/pistonville/installer-serveur.sh" --deja-a-jour
+  exec bash "$DOSSIER/pistonville/installer-serveur.sh" --deja-a-jour ${AUTO:+--auto}
 fi
 
 WEB="$DOSSIER/pistonville/dist/web"
@@ -65,9 +78,46 @@ NoNewPrivileges=yes
 [Install]
 WantedBy=multi-user.target
 EOF
+# 3. La mise à jour automatique : toutes les 10 minutes, et tout de suite quand
+#    le téléphone la demande (le jeu dépose un fichier « maj-demandee »).
+cat > /etc/systemd/system/pistonville-maj.service <<EOF
+[Unit]
+Description=Pistonville : mise à jour
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sh -c 'rm -f /var/lib/private/pistonville/maj-demandee; echo en-cours > /var/lib/private/pistonville/maj-etat'
+ExecStart=/bin/bash $DOSSIER/pistonville/installer-serveur.sh --auto
+ExecStopPost=/bin/sh -c 'echo fini > /var/lib/private/pistonville/maj-etat'
+EOF
+cat > /etc/systemd/system/pistonville-maj.timer <<EOF
+[Unit]
+Description=Pistonville : chercher une nouvelle version toutes les 10 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target
+EOF
+cat > /etc/systemd/system/pistonville-maj.path <<EOF
+[Unit]
+Description=Pistonville : mise à jour demandée depuis le jeu
+
+[Path]
+PathExists=/var/lib/private/pistonville/maj-demandee
+Unit=pistonville-maj.service
+
+[Install]
+WantedBy=multi-user.target
+EOF
+echo "$PORT" > /etc/pistonville.port
 systemctl daemon-reload
 systemctl enable -q pistonville
 systemctl restart pistonville
+systemctl enable -q --now pistonville-maj.timer pistonville-maj.path 2>/dev/null || true
 sleep 2
 # On vérifie que c'est bien le jeu qui répond sur ce port.
 if systemctl is-active --quiet pistonville && python3 -c "import urllib.request,sys; sys.exit(0 if b'Pistonville' in urllib.request.urlopen('http://127.0.0.1:$PORT/', timeout=5).read() else 1)" 2>/dev/null; then
@@ -78,7 +128,9 @@ else
   exit 1
 fi
 
-# 3. Les adresses.
+[ -n "$AUTO" ] && { echo "Pistonville mis à jour : $(cat "$WEB/version.txt" 2>/dev/null)"; exit 0; }
+
+# 4. Les adresses.
 echo
 echo "À la maison (même réseau) :"
 for ip in $(hostname -I); do case "$ip" in *:*) ;; *) echo "   http://$ip:$PORT" ;; esac; done
@@ -97,4 +149,5 @@ else
   echo "puis relance ce script. Installe aussi l'appli Tailscale sur ton téléphone (même compte)."
 fi
 echo
-echo "Mise à jour plus tard : bash $DOSSIER/pistonville/installer-serveur.sh"
+echo "Mises à jour : automatiques (toutes les 10 min, ou bouton « Mettre à jour le jeu » sur l'écran titre)."
+echo "À la main : bash $DOSSIER/pistonville/installer-serveur.sh"

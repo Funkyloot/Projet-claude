@@ -8,6 +8,14 @@ Sans dépendance (Python 3 seul). Deux rôles :
     joueur sur toutes les adresses (maison, Tailscale) et survit si le
     téléphone ferme le jeu brutalement.
 
+Et deux petites routes pour la mise à jour depuis le téléphone :
+  - GET /api/version : la version du jeu servi (fichier version.txt) et si une
+    mise à jour est en cours ;
+  - POST /api/mise-a-jour : dépose une demande (fichier « maj-demandee » dans
+    le dossier de sauvegarde). Le serveur ne fait rien d'autre : c'est le
+    service pistonville-maj (installé par installer-serveur.sh, en root) qui
+    voit la demande, récupère la nouvelle version et relance le jeu.
+
 Pensé pour un réseau privé (maison, Tailscale) : un seul joueur, pas de compte.
 
 Usage : python3 serveur-pistonville.py DOSSIER_WEB PORT [DOSSIER_SAUVEGARDE]
@@ -44,7 +52,24 @@ class Gestionnaire(SimpleHTTPRequestHandler):
         if self.command != 'HEAD':
             self.wfile.write(corps)
 
+    def demande(self):
+        return os.path.join(self.dossier_sauvegarde, 'maj-demandee')
+
     def do_GET(self):
+        if self.path.split('?')[0] == '/api/version':
+            try:
+                with open(os.path.join(self.directory, 'version.txt'), encoding='utf-8') as f:
+                    version = f.read().strip()
+            except FileNotFoundError:
+                version = ''
+            try:
+                with open(os.path.join(self.dossier_sauvegarde, 'maj-etat'), encoding='utf-8') as f:
+                    etat = f.read().strip()
+            except FileNotFoundError:
+                etat = ''
+            en_cours = os.path.exists(self.demande()) or etat == 'en-cours'
+            self.repondre(200, json.dumps({'version': version, 'enCours': en_cours}).encode())
+            return
         if self.path.split('?')[0] == '/api/sauvegarde':
             try:
                 with open(self.fichier(), 'rb') as f:
@@ -55,6 +80,12 @@ class Gestionnaire(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def enregistrer(self):
+        if self.path.split('?')[0] == '/api/mise-a-jour':
+            os.makedirs(self.dossier_sauvegarde, exist_ok=True)
+            with open(self.demande(), 'w') as f:
+                f.write('1')
+            self.repondre(202, b'{"ok":true}')
+            return
         if self.path.split('?')[0] != '/api/sauvegarde':
             self.repondre(404, b'{}')
             return

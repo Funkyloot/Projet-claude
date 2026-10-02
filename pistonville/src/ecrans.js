@@ -152,6 +152,7 @@ export function ecranTitre(app) {
         <button class="btn ${reprise ? '' : 'btn-principal'}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="lien" data-action="sauvegarde">Transférer ma sauvegarde (PC ↔ téléphone)</button>
+        ${/^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre à jour le jeu</button>' : ''}
       </div>
       <p class="credits">Version d'essai 0.6 · Graphismes Kenney (CC0) · Police Jersey 10 (OFL)</p>
     </div>`,
@@ -160,6 +161,7 @@ export function ecranTitre(app) {
       nouvelle: () => app.nouvellePartie(),
       aide: () => app.montrer(ecranAide(app, 'titre')),
       sauvegarde: () => app.montrer(ecranSauvegarde(app)),
+      maj: () => app.mettreAJour(),
     },
   };
 }

@@ -10204,6 +10204,7 @@ body {
         <button class="btn ${reprise ? "" : "btn-principal"}" data-action="nouvelle">Nouvelle partie</button>
         <button class="btn" data-action="aide">Comment jouer</button>
         <button class="lien" data-action="sauvegarde">Transf\xE9rer ma sauvegarde (PC \u2194 t\xE9l\xE9phone)</button>
+        ${/^https?:$/.test(location.protocol) ? '<button class="lien" data-action="maj">Mettre \xE0 jour le jeu</button>' : ""}
       </div>
       <p class="credits">Version d'essai 0.6 \xB7 Graphismes Kenney (CC0) \xB7 Police Jersey 10 (OFL)</p>
     </div>`,
@@ -10211,7 +10212,8 @@ body {
         continuer: () => app2.continuer(),
         nouvelle: () => app2.nouvellePartie(),
         aide: () => app2.montrer(ecranAide(app2, "titre")),
-        sauvegarde: () => app2.montrer(ecranSauvegarde(app2))
+        sauvegarde: () => app2.montrer(ecranSauvegarde(app2)),
+        maj: () => app2.mettreAJour()
       }
     };
   }
@@ -11255,6 +11257,25 @@ body {
       navigator.sendBeacon(URL_API, new Blob([json], { type: "application/json" }));
     } else envoyer(json, true);
   }
+  async function versionServeur() {
+    if (!actif) return null;
+    try {
+      const r = await fetch("api/version", { cache: "no-store" });
+      if (!r.ok) return null;
+      const v2 = await r.json();
+      return typeof v2.version === "string" ? v2 : null;
+    } catch {
+      return null;
+    }
+  }
+  async function demanderMiseAJour() {
+    try {
+      const r = await fetch("api/mise-a-jour", { method: "POST", body: "{}", headers: { "Content-Type": "application/json" } });
+      return r.ok;
+    } catch {
+      return false;
+    }
+  }
 
   // pistonville/src/main.js
   var W2 = 320;
@@ -11522,6 +11543,55 @@ body {
         }, 2600);
       };
       suivant();
+    }
+    /**
+     * Bouton « Mettre à jour le jeu » : le serveur cherche la dernière version et
+     * l'installe ; on attend qu'il ait fini, puis on recharge la page (la partie,
+     * déjà copiée sur le serveur, est retrouvée telle quelle).
+     */
+    async mettreAJour() {
+      const avant = await versionServeur();
+      if (!avant) {
+        this.toast("Mise \xE0 jour impossible ici : le jeu n'est pas servi par ton serveur Pistonville.");
+        return;
+      }
+      if (this.partie) await ecrireMaintenant(this.partie);
+      if (!await demanderMiseAJour()) {
+        this.toast("Le serveur n'a pas r\xE9pondu. R\xE9essaie dans un instant.");
+        return;
+      }
+      this.montrer(ecranChargement("Le serveur cherche une nouvelle version\u2026"));
+      const debut = Date.now();
+      let vuEnCours = false;
+      while (Date.now() - debut < 4 * 60 * 1e3) {
+        await new Promise((ok) => setTimeout(ok, 2500));
+        const v2 = await versionServeur();
+        if (!v2) {
+          vuEnCours = true;
+          continue;
+        }
+        if (v2.version && v2.version !== avant.version) {
+          this.montrer(ecranChargement("Nouvelle version install\xE9e ! Red\xE9marrage\u2026"));
+          try {
+            const reg = await navigator.serviceWorker?.getRegistration();
+            await reg?.update();
+          } catch {
+          }
+          location.reload();
+          return;
+        }
+        if (v2.enCours) {
+          vuEnCours = true;
+          continue;
+        }
+        if (vuEnCours || Date.now() - debut > 2e4) {
+          this.titre();
+          this.toast(`Le jeu est d\xE9j\xE0 \xE0 jour (version ${v2.version.slice(0, 7)}).`);
+          return;
+        }
+      }
+      this.titre();
+      this.toast("Le serveur ne r\xE9pond pas : la mise \xE0 jour automatique (toutes les 10 min) prendra le relais.");
     }
     titre() {
       this.ecran = "titre";
