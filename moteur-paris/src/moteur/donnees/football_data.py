@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 URL_SAISON = "https://football-data.co.uk/mmz4281/{saison}/{code}.csv"
 URL_FIXTURES = "https://football-data.co.uk/fixtures.csv"
 AGENT = "moteur-paris/0.2 (usage personnel)"
-VERSION_CACHE = 2  # à augmenter quand la lecture des CSV change
+VERSION_CACHE = 3  # à augmenter quand la lecture des CSV change
 
 # code : (nom affiché, division supérieure pour les a priori promus / relégués)
 LIGUES: dict[str, tuple[str, str | None]] = {
@@ -154,6 +154,8 @@ def normaliser(brut: pd.DataFrame, ligue: str | None = None, saison: int | None 
     for cible, source in (("bd", "FTHG"), ("be", "FTAG"), ("bd_mt", "HTHG"), ("be_mt", "HTAG")):
         df[cible] = pd.to_numeric(brut[source], errors="coerce") if source in brut.columns else float("nan")
     df["arbitre"] = brut["Referee"].astype(str).str.strip() if "Referee" in brut.columns else None
+    for cible, source in (("tirs_d", "HS"), ("tirs_e", "AS"), ("tc_d", "HST"), ("tc_e", "AST")):
+        df[cible] = pd.to_numeric(brut[source], errors="coerce") if source in brut.columns else float("nan")
     for cible, (a, b) in {"cartons": ("HY", "AY"), "corners": ("HC", "AC")}.items():
         if a in brut.columns and b in brut.columns:
             df[cible] = pd.to_numeric(brut[a], errors="coerce") + pd.to_numeric(brut[b], errors="coerce")

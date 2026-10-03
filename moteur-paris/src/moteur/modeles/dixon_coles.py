@@ -54,8 +54,13 @@ def ajuster(
     priors: dict[str, tuple[float, float]] | None = None,
     depart: ModeleDC | None = None,
     equipes_sans_match=(),
+    cibles: tuple | None = None,
 ) -> ModeleDC:
-    """Ajuste le modèle sur des matchs joués. `priors` : équipe → (attaque, défense) a priori."""
+    """Ajuste le modèle sur des matchs joués. `priors` : équipe → (attaque, défense) a priori.
+
+    `cibles` : nombres de buts « lissés » (ex. mélange buts / tirs cadrés) à expliquer à la place
+    des buts réels ; le ρ, qui corrige les petits scores, reste estimé sur les vrais scores.
+    """
     dom = list(dom)
     ext = list(ext)
     priors = priors or {}
@@ -67,13 +72,14 @@ def ajuster(
     bd = np.asarray(bd, dtype=float)
     be = np.asarray(be, dtype=float)
     w = np.asarray(poids, dtype=float)
+    yd, ye = (bd, be) if cibles is None else (np.asarray(cibles[0], dtype=float), np.asarray(cibles[1], dtype=float))
 
     pa = np.zeros(n)
     pd_ = np.zeros(n)
     for e, (a, d) in priors.items():
         pa[index[e]], pd_[index[e]] = a, d
 
-    moyenne = max(float((w @ bd + w @ be) / (2 * w.sum())), 0.1)
+    moyenne = max(float((w @ yd + w @ ye) / (2 * w.sum())), 0.1)
     x0 = np.concatenate([[math.log(moyenne), 0.25], pa, pd_])
     if depart is not None:
         x0[0], x0[1] = depart.mu, depart.dom
@@ -88,9 +94,9 @@ def ajuster(
         eh = mu + h + att[ih] + dfn[ia]
         ea = mu + att[ia] + dfn[ih]
         lh, la = np.exp(eh), np.exp(ea)
-        rh, ra = w * (lh - bd), w * (la - be)
+        rh, ra = w * (lh - yd), w * (la - ye)
         da, dd = att - pa, dfn - pd_
-        nll = float(w @ (lh - bd * eh) + w @ (la - be * ea) + reg / 2 * (da @ da + dd @ dd))
+        nll = float(w @ (lh - yd * eh) + w @ (la - ye * ea) + reg / 2 * (da @ da + dd @ dd))
         g = np.empty_like(x)
         g[0] = rh.sum() + ra.sum()
         g[1] = rh.sum()

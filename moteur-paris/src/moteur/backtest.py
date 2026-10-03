@@ -35,6 +35,7 @@ SUFFIXES = ("1", "x", "2", "plus", "moins", "ah1", "ah2")
 FAMILLE_SUFFIXE = {"1": "1x2", "x": "1x2", "2": "1x2", "plus": "total", "moins": "total", "ah1": "ah", "ah2": "ah"}
 GRILLE_XI = (0.001, 0.0019, 0.004)
 GRILLE_POIDS = (0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0)
+GRILLE_BUTS = (1.0,)  # part des buts face aux tirs cadrés (1 = buts seuls)
 SAISONS_COFFRE = 2
 SAISONS_CHAUFFE = 2
 PARIS_MIN_COFFRE = 30  # par championnat
@@ -237,6 +238,7 @@ class OptionsBacktest:
     seuil_desaccord: float = 0.10
     prix: str = "moy"
     grille_xi: tuple[float, ...] = GRILLE_XI
+    grille_buts: tuple[float, ...] = GRILLE_BUTS
     reg: float = 2.0
     fenetre_jours: int = 730
     capital: float = 100.0
@@ -255,21 +257,22 @@ def tournoi_ligue(ligue: str, df: pd.DataFrame, df_sup: pd.DataFrame | None, o: 
     coffre = set(saisons[-SAISONS_COFFRE:])
     meilleur = None
     for xi in o.grille_xi:
-        params = ParamsLigue(xi=xi, reg=o.reg, fenetre_jours=o.fenetre_jours)
-        pred = predictions_modele(df, df_sup, params)
-        if pred.empty:
-            continue
-        j = prep.join(pred, how="inner")
-        dev = j[~j["saison"].isin(coffre)]
-        for w in GRILLE_POIDS:
-            ll = log_loss(dev, w)
-            if meilleur is None or ll < meilleur[0]:
-                meilleur = (ll, xi, w, j)
+        for alpha in o.grille_buts:
+            params = ParamsLigue(xi=xi, reg=o.reg, fenetre_jours=o.fenetre_jours, poids_buts=alpha)
+            pred = predictions_modele(df, df_sup, params)
+            if pred.empty:
+                continue
+            j = prep.join(pred, how="inner")
+            dev = j[~j["saison"].isin(coffre)]
+            for w in GRILLE_POIDS:
+                ll = log_loss(dev, w)
+                if meilleur is None or ll < meilleur[0]:
+                    meilleur = (ll, xi, alpha, w, j)
     if meilleur is None:
         res.erreur = "aucune prédiction possible"
         return res
-    ll, xi, w, j = meilleur
-    res.params = ParamsLigue(xi=xi, reg=o.reg, fenetre_jours=o.fenetre_jours, poids_modele=w)
+    ll, xi, alpha, w, j = meilleur
+    res.params = ParamsLigue(xi=xi, reg=o.reg, fenetre_jours=o.fenetre_jours, poids_modele=w, poids_buts=alpha)
     dev, cof = j[~j["saison"].isin(coffre)], j[j["saison"].isin(coffre)]
     res.log_loss = {
         "melange": round(ll, 5),
@@ -381,13 +384,13 @@ def rapport_markdown(resultats: list[ResultatLigue], o: OptionsBacktest, quand: 
         f"Prix utilisés : `{o.prix}` · value minimale {o.valeur_min:.0%} · coffre-fort : "
         f"{SAISONS_COFFRE} dernières saisons · capital simulé {o.capital:.0f} $.",
         "",
-        "| Ligue | xi | Poids modèle | Log-loss mélange / réf. / modèle | Coffre 1X2 | Coffre +/- | Coffre AH | Capital coffre | Validé |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Ligue | xi | Part buts / tirs | Poids modèle | Log-loss mélange / réf. / modèle | Coffre 1X2 | Coffre +/- | Coffre AH | Capital coffre | Validé |",
+        "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in resultats:
         nom = LIGUES.get(r.ligue, (r.ligue,))[0]
         if r.erreur or r.params is None:
-            lignes.append(f"| {nom} | | | {r.erreur or ''} | | | | | |")
+            lignes.append(f"| {nom} | | | | {r.erreur or ''} | | | | | |")
             continue
 
         def cel(f):
@@ -396,7 +399,7 @@ def rapport_markdown(resultats: list[ResultatLigue], o: OptionsBacktest, quand: 
 
         ll = r.log_loss
         lignes.append(
-            f"| {nom} | {r.params.xi} | {r.params.poids_modele} | "
+            f"| {nom} | {r.params.xi} | {r.params.poids_buts:.0%} / {1 - r.params.poids_buts:.0%} | {r.params.poids_modele} | "
             f"{ll['melange']:.4f} / {ll['reference_seule']:.4f} / {ll['modele_seul']:.4f} | "
             f"{cel('1x2')} | {cel('total')} | {cel('ah')} | "
             f"{r.capital_coffre.get('capital_final', '—')} $ | {', '.join(r.marches_valides) or 'rien'} |"

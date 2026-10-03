@@ -89,3 +89,25 @@ def test_a_priori_promus_et_relegues(ligue_simulee):
 def test_params_depuis_dict():
     p = ParamsLigue.depuis_dict({"xi": 0.004, "poids_modele": 0.1, "autre": 1})
     assert p.xi == 0.004 and p.poids_modele == 0.1 and p.reg == ParamsLigue().reg
+
+
+def test_melange_buts_et_tirs_cadres(ligue_simulee):
+    from moteur.modeles.ligue import cibles_buts_tirs
+
+    date = pd.Timestamp("2024-01-01", tz="UTC")
+    fen = ligue_simulee[ligue_simulee["date"] < date].copy()
+    poids = np.ones(len(fen))
+    assert cibles_buts_tirs(fen, poids, 0.5) is None  # pas de tirs dans les données : buts seuls
+    fen["tc_d"], fen["tc_e"] = fen["bd"] * 3 + 2, fen["be"] * 3 + 1
+    assert cibles_buts_tirs(fen, poids, 1.0) is None
+    fen.loc[fen.index[0], "tc_d"] = np.nan  # match sans tirs connus : ses vrais buts sont gardés
+    yd, ye = cibles_buts_tirs(fen, poids, 0.5)
+    assert yd[0] == fen["bd"].iloc[0]
+    connu = fen["tc_d"].notna().to_numpy()
+    # les buts « lissés » gardent la même moyenne que les vrais buts
+    assert (yd[connu] + ye[connu]).sum() == pytest.approx((fen["bd"] + fen["be"]).to_numpy()[connu].sum())
+    # et le modèle s'ajuste dessus, avec ou sans tirs
+    tirs = ligue_simulee.assign(tc_d=ligue_simulee["bd"] * 3 + 2, tc_e=ligue_simulee["be"] * 3 + 1)
+    m = ajuster_ligue(tirs, date, ParamsLigue(poids_buts=0.5))
+    assert m is not None and m.grille(*fen.iloc[0][["dom", "ext"]]).sum() == pytest.approx(1)
+    assert ParamsLigue.depuis_dict({"poids_buts": 0.5}).poids_buts == 0.5

@@ -21,13 +21,14 @@ class ParamsLigue:
     reg: float = 2.0  # force de rappel vers l'a priori
     fenetre_jours: int = 730
     poids_modele: float = 0.3  # part du modèle face à la référence dans le mélange
+    poids_buts: float = 1.0  # 1 = buts seuls ; moins = mélange avec les tirs cadrés (qualité des occasions)
 
     def en_dict(self) -> dict:
         return asdict(self)
 
     @classmethod
     def depuis_dict(cls, d: dict) -> "ParamsLigue":
-        return cls(**{k: d[k] for k in ("xi", "reg", "fenetre_jours", "poids_modele") if k in d})
+        return cls(**{k: d[k] for k in ("xi", "reg", "fenetre_jours", "poids_modele", "poids_buts") if k in d})
 
 
 def priors_nouvelles_equipes(
@@ -67,4 +68,27 @@ def ajuster_ligue(
     return ajuster(
         fen["dom"], fen["ext"], fen["bd"], fen["be"], poids,
         reg=params.reg, priors=priors, depart=depart, equipes_sans_match=equipes_a_predire,
+        cibles=cibles_buts_tirs(fen, poids, params.poids_buts),
     )
+
+
+def cibles_buts_tirs(fen: pd.DataFrame, poids: np.ndarray, poids_buts: float):
+    """Buts « lissés » : α × buts + (1 − α) × tirs cadrés convertis en buts.
+
+    Un tir cadré vaut en moyenne ~0,3 but ; ce taux est mesuré sur la même fenêtre. Les tirs
+    reflètent mieux la qualité de jeu que le score, qui dépend beaucoup de la chance.
+    Sans tirs connus pour un match, ses vrais buts sont gardés.
+    """
+    if poids_buts >= 1 or "tc_d" not in fen or "tc_e" not in fen:
+        return None
+    tcd, tce = fen["tc_d"].to_numpy(dtype=float), fen["tc_e"].to_numpy(dtype=float)
+    bd, be = fen["bd"].to_numpy(dtype=float), fen["be"].to_numpy(dtype=float)
+    connu = ~(np.isnan(tcd) | np.isnan(tce))
+    if connu.sum() < MATCHS_MIN:
+        return None
+    w = poids[connu]
+    taux = float(w @ (bd[connu] + be[connu])) / max(float(w @ (tcd[connu] + tce[connu])), 1e-9)
+    a = poids_buts
+    yd = np.where(connu, a * bd + (1 - a) * taux * np.nan_to_num(tcd), bd)
+    ye = np.where(connu, a * be + (1 - a) * taux * np.nan_to_num(tce), be)
+    return yd, ye
