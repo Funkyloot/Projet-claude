@@ -71,7 +71,7 @@ Prix juste {{ reco.cote_juste|cote }} · <strong>jouer si 22bet ≥ {{ reco.cote
 <div class="carte defile"><h2>Matchs analysés : l'option la plus proche d'une value</h2>
 <p class="doux petit">Pour chaque match, le pari qui s'approche le plus d'une bonne affaire, avec les mêmes filtres que les recommandations.
 Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé) pour une recommandation. Sur 22bet, la cote peut être meilleure que la moyenne : compare avec la « cote min ».</p>
-{% set statuts = {'recommande': ('', 'recommandé'), 'observation': ('alerte', 'en observation'), 'contredit': ('erreur', 'bloqué : contredit Pinnacle'), 'trop_belle': ('erreur', 'trop belle, risque d’annulation'), 'sous_seuil': ('neutre', 'sous le seuil')} %}
+{% set statuts = {'recommande': ('', 'recommandé'), 'observation': ('alerte', 'en observation'), 'contredit': ('erreur', 'bloqué : contredit la référence'), 'trop_belle': ('erreur', 'trop belle, risque d’annulation'), 'sous_seuil': ('neutre', 'sous le seuil')} %}
 <table><thead><tr><th>Match</th><th>Option</th><th>Cote vue</th><th>Prix juste</th><th>Cote min</th><th>Écart</th><th>Statut</th></tr></thead><tbody>
 {% for a in apercus %}<tr><td>{{ a.match }}<div class="doux petit">{{ a.ligue|ligue }} · {{ a.debut|local }}</div></td>
 <td>{{ a.option }}</td><td>{{ a.cote|cote }}<div class="doux petit">{{ a.source }}</div></td><td>{{ a.cote_juste|cote }}</td>

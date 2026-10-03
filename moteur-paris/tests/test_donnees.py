@@ -137,7 +137,7 @@ def test_cache_de_lecture(tmp_path):
     dossier.mkdir(parents=True)
     (dossier / "2425.csv").write_text(CSV_RECENT)
     premier = fd.charger(tmp_path, ["E1"])
-    assert (dossier / "2425.pkl").exists()
+    assert (dossier / f"2425.v{fd.VERSION_CACHE}.pkl").exists()
     assert fd.charger(tmp_path, ["E1"]).equals(premier)
     assert fd.etat_historique(tmp_path)["E1"]["saisons"] == 1  # le cache n'est pas compté comme une saison
 
@@ -159,3 +159,26 @@ def test_programme_publie(tmp_path):
         "nb": 2, "suivis": 1, "prochain": "2026-10-03T14:00:00+00:00", "autres": ["National League anglaise"]}
     assert fd.resume_programme(fixtures, ["D2"], quand)["prochain"] is None
     assert fd.resume_programme(fd.charger_fixtures(tmp_path / "vide"), ["E1"], quand)["nb"] == 0
+
+
+def test_reference_pinnacle_puis_betfair():
+    """Pinnacle si elle est là, sinon Betfair Exchange, jamais un marché Betfair trop peu liquide."""
+    entete = "Div,Date,Time,HomeTeam,AwayTeam,PSH,PSD,PSA,BFEH,BFED,BFEA,BFECH,BFECD,BFECA,BFE>2.5,BFE<2.5\n"
+    lignes = [
+        "E1,01/08/2025,15:00,A,B,2.0,3.5,4.0,2.1,3.6,4.2,2.2,3.5,3.9,1.9,2.0",  # Pinnacle présente
+        "E1,02/08/2025,15:00,C,D,,,,2.1,3.6,4.2,2.2,3.5,3.9,1.6,1.6",           # Betfair ; totaux incohérents
+        "E1,03/08/2025,15:00,E,F,,,,1.8,3.0,3.5,2.0,3.4,4.0,,",                 # Betfair trop large (marge 1,2)
+        "E1,04/08/2025,15:00,G,H,2.0,,4.0,2.1,3.6,4.2,,,,,",                     # Pinnacle incomplète
+    ]
+    df = fd.lire_csv((entete + "\n".join(lignes)).encode(), "E1", 2025)
+    assert df["ref_1"].isna().tolist() == [False, False, True, False]
+    assert df.loc[3, ["ref_1", "ref_x", "ref_2"]].tolist() == [2.1, 3.6, 4.2]  # jamais un mélange des deux
+    assert df["refc_1"].tolist()[:3] == [2.2, 2.2, 2.0]  # clôture Betfair pour la CLV
+    assert df.loc[0, "ref_plus"] == 1.9 and df["ref_plus"].isna().tolist()[1:] == [True, True, True]
+
+
+def test_alias_des_equipes_renommees():
+    c = Correspondance()
+    assert c.trouver("Peterborough United", {"Peterboro", "Plymouth"}) == "Peterboro"
+    assert c.trouver("Celta Fortuna", {"Celta B", "Cadiz", "Sociedad B"}) == "Celta B"
+    assert c.trouver("Real Sociedad B", {"Celta B", "Cadiz", "Sociedad B"}) == "Sociedad B"

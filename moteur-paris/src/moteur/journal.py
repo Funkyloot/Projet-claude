@@ -271,7 +271,7 @@ def confirmer_pari(
 # --- Règlement ----------------------------------------------------------------
 
 def cote_cloture_juste(ligne: pd.Series | None, sel: Selection) -> float | None:
-    """Prix juste à la clôture (Pinnacle sans marge), pour mesurer la CLV."""
+    """Prix juste à la clôture (référence Pinnacle ou Betfair, sans marge), pour mesurer la CLV."""
     if ligne is None:
         return None
 

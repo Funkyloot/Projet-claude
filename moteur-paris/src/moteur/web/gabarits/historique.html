@@ -21,7 +21,7 @@ puis son résultat une fois le score connu (mis à jour chaque jour). C'est ce q
 
 <div class="carte defile">
 <table><thead><tr><th>Match</th><th>Option</th><th>Cote vue</th><th>Prix juste</th><th>Proba</th><th>Statut</th><th>Résultat</th><th>CLV</th></tr></thead><tbody>
-{% set statuts = {'recommande': 'recommandé', 'observation': 'en observation', 'contredit': 'contredit Pinnacle', 'trop_belle': 'trop belle', 'sous_seuil': 'sous le seuil'} %}
+{% set statuts = {'recommande': 'recommandé', 'observation': 'en observation', 'contredit': 'contredit la référence', 'trop_belle': 'trop belle', 'sous_seuil': 'sous le seuil'} %}
 {% for p, libelle in lignes %}
 <tr><td>{{ p.match.libelle }}<div class="doux petit">{{ p.match.competition|ligue }} · {{ p.match.debut|local }}</div></td>
 <td>{{ libelle }}</td><td>{{ p.cote|cote }}<div class="doux petit">{{ p.source }}</div></td><td>{{ p.cote_juste|cote }}</td>

@@ -103,7 +103,7 @@ def fusionner_api(
         ext = correspondance.trouver(ev.ext, candidats)
         if dom is None or ext is None:
             inconnu = ev.dom if dom is None else ev.ext
-            alertes.append(f"Équipe non reconnue ({ev.ligue}) : « {inconnu} ». Ajouter un alias dans data/alias_equipes.json.")
+            alertes.append(f"Équipe non reconnue ({ev.ligue}) : « {inconnu} ». Ajoute un alias dans Réglages → Noms d'équipes.")
             continue
         existant = next(
             (m for m in matchs if m.ligue == ev.ligue and m.dom == dom and m.ext == ext

@@ -423,7 +423,7 @@ def rapport_markdown(resultats: list[ResultatLigue], o: OptionsBacktest, quand: 
         "",
         "Lecture : une log-loss plus basse = des probabilités plus justes. Si « réf. » est la plus basse,",
         "le marché sharp est meilleur que notre modèle et le poids du modèle est mis à 0 : on ne parie alors",
-        "que quand un bookmaker paie plus que le prix juste de Pinnacle.",
+        "que quand un bookmaker paie plus que le prix juste de la référence (Pinnacle, puis Betfair Exchange).",
     ]
     return "\n".join(lignes)
 

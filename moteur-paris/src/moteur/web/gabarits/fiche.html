@@ -13,7 +13,7 @@
 {% if f %}
 <div class="carte defile">
 <h2>{{ f.dom }} – {{ f.ext }} · {{ f.ligue|ligue }}{% if f.debut %} · {{ f.debut|local }}{% endif %}</h2>
-<p class="doux petit">{{ 'Modèle + référence Pinnacle' if f.avec_reference else 'Modèle seul (pas de cote de référence pour ce match)' }}.
+<p class="doux petit">{{ 'Modèle + cote de référence (Pinnacle, ou Betfair Exchange depuis 2025-26)' if f.avec_reference else 'Modèle seul (pas de cote de référence pour ce match)' }}.
 Si 22bet affiche au moins la cote minimale, le pari a au moins {{ '%.0f'|format(r.valeur_min*100) }} % de value.</p>
 <table><thead><tr><th>Marché</th><th>Probabilité</th><th>Prix juste</th><th>Cote minimale</th></tr></thead><tbody>
 {% for l in f.lignes %}<tr><td>{{ l.libelle }}</td><td>{{ '%.0f'|format(l.proba*100) }} %</td><td>{{ l.cote_juste|cote }}</td><td><strong>{{ l.cote_min|cote }}</strong></td></tr>{% endfor %}

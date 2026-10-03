@@ -1,7 +1,7 @@
 """Historique et matchs à venir depuis football-data.co.uk (cahier des charges, section 6).
 
 Fichiers CSV publics : un par championnat et par saison (résultats + cotes de nombreux
-bookmakers, dont Pinnacle), et `fixtures.csv` pour les matchs à venir avec leurs cotes.
+bookmakers, dont Pinnacle jusqu'à mi-2025-26 puis Betfair Exchange), et `fixtures.csv` pour les matchs à venir avec leurs cotes.
 Les noms de colonnes ont changé au fil des saisons : on prend la première disponible.
 """
 
@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 URL_SAISON = "https://football-data.co.uk/mmz4281/{saison}/{code}.csv"
 URL_FIXTURES = "https://football-data.co.uk/fixtures.csv"
 AGENT = "moteur-paris/0.2 (usage personnel)"
+VERSION_CACHE = 2  # à augmenter quand la lecture des CSV change
 
 # code : (nom affiché, division supérieure pour les a priori promus / relégués)
 LIGUES: dict[str, tuple[str, str | None]] = {
@@ -53,7 +54,7 @@ def nom_division(code: str) -> str:
     return LIGUES[code][0] if code in LIGUES else AUTRES_DIVISIONS.get(code, code)
 
 # Colonne normalisée → colonnes football-data possibles, par ordre de préférence.
-# ref = Pinnacle avant match, refc = Pinnacle à la clôture, moy = moyenne du marché,
+# ref = référence avant match, refc = référence à la clôture (voir REFERENCES), moy = moyenne du marché,
 # max = meilleure cote du marché, b365 = un bookmaker « grand public » isolé.
 COLONNES: dict[str, list[str]] = {
     "ref_1": ["PSH"], "ref_x": ["PSD"], "ref_2": ["PSA"],
@@ -74,6 +75,38 @@ COLONNES: dict[str, list[str]] = {
     "ahc_ligne": ["AHCh"], "refc_ah1": ["PCAHH"], "refc_ah2": ["PCAHA"],
 }
 COTES = [c for c in COLONNES if c not in ("ah_ligne", "ahc_ligne")]
+
+# Cotes de référence (« ref » avant match, « refc » à la clôture), choisies match par match :
+# Pinnacle tant que football-data la publie (jusqu'à mi-2025-26), sinon Betfair Exchange,
+# l'autre marché de référence. Les prix Betfair d'un marché peu liquide (marge trop forte) sont
+# écartés : mieux vaut pas de référence qu'une mauvaise.
+REFERENCES: dict[tuple[str, ...], list[tuple[str, ...]]] = {
+    ("ref_1", "ref_x", "ref_2"): [("PSH", "PSD", "PSA"), ("BFEH", "BFED", "BFEA")],
+    ("ref_plus", "ref_moins"): [("P>2.5", "P<2.5"), ("BFE>2.5", "BFE<2.5")],
+    ("ref_ah1", "ref_ah2"): [("PAHH", "PAHA"), ("BFEAHH", "BFEAHA")],
+    ("refc_1", "refc_x", "refc_2"): [("PSCH", "PSCD", "PSCA"), ("BFECH", "BFECD", "BFECA")],
+    ("refc_plus", "refc_moins"): [("PC>2.5", "PC<2.5"), ("BFEC>2.5", "BFEC<2.5")],
+    ("refc_ah1", "refc_ah2"): [("PCAHH", "PCAHA"), ("BFECAHH", "BFECAHA")],
+}
+MARGE_MAX_BETFAIR = {3: 1.07, 2: 1.05}  # somme des 1/cote acceptée (Pinnacle : toujours sous ces valeurs)
+MARGE_MIN = 0.98  # en dessous, prix incohérents (relevés à des instants différents)
+
+
+def _references(brut: pd.DataFrame, df: pd.DataFrame) -> None:
+    for cibles, sources in REFERENCES.items():
+        retenu = pd.DataFrame(float("nan"), index=brut.index, columns=list(cibles))
+        for rang, colonnes in enumerate(sources):
+            if not all(c in brut.columns for c in colonnes):
+                continue
+            prix = pd.DataFrame({cible: pd.to_numeric(brut[c], errors="coerce")
+                                 for cible, c in zip(cibles, colonnes)}).where(lambda x: x > 1.0)
+            somme = (1 / prix).sum(axis=1, min_count=len(cibles))
+            plafond = float("inf") if rang == 0 else MARGE_MAX_BETFAIR[len(cibles)]
+            valable = prix.notna().all(axis=1) & (somme >= MARGE_MIN) & (somme <= plafond)
+            libre = retenu.isna().all(axis=1) & valable
+            retenu.loc[libre] = prix.loc[libre]
+        for cible in cibles:
+            df[cible] = retenu[cible].to_numpy()
 PRIX = ("moy", "max", "b365")
 
 
@@ -132,6 +165,7 @@ def normaliser(brut: pd.DataFrame, ligue: str | None = None, saison: int | None 
         if cible in COTES:
             valeurs = valeurs.where(valeurs > 1.0)
         df[cible] = valeurs
+    _references(brut, df)
     return df.dropna(subset=["date"]).reset_index(drop=True)
 
 
@@ -238,7 +272,10 @@ def telecharger_fixtures(dossier: str | Path, client: httpx.Client | None = None
 
 def _lire_fichier_en_cache(chemin: Path, code: str, annee: int | None) -> pd.DataFrame:
     """Lecture d'un CSV, mise en cache tant que le fichier ne change pas (lecture ~20 fois plus rapide)."""
-    cache = chemin.with_suffix(".pkl")
+    cache = chemin.with_suffix(f".v{VERSION_CACHE}.pkl")
+    ancien = chemin.with_suffix(".pkl")
+    if ancien.exists():
+        ancien.unlink(missing_ok=True)
     if cache.exists() and cache.stat().st_mtime >= chemin.stat().st_mtime:
         try:
             return pd.read_pickle(cache)

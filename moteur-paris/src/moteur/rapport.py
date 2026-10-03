@@ -142,7 +142,7 @@ def rapport_quotidien(s: Session, r: Reglages, quand: datetime, derniere_analyse
 
 
 def texte_fiche(lignes, dom: str, ext: str, ligue: str, avec_reference: bool, valeur_min: float) -> str:
-    source = "modèle + référence Pinnacle" if avec_reference else "modèle seul (pas de cote de référence)"
+    source = "modèle + cote de référence (Pinnacle ou Betfair)" if avec_reference else "modèle seul (pas de cote de référence)"
     texte = [f"Fiche {dom} – {ext} ({nom_ligue(ligue)}) · {source}",
              f"Prix juste · cote minimale pour +{valeur_min:.0%} de value", ""]
     for l in lignes:
@@ -176,7 +176,7 @@ def bilan_hebdo(s: Session, r: Reglages, quand: datetime, parametres: dict) -> s
     lignes = [
         f"# Bilan hebdomadaire du moteur de paris ({debut:%d/%m} → {quand:%d/%m/%Y})",
         "",
-        "Contexte : moteur Dixon-Coles + Pinnacle, football (2es divisions), 22bet, mises Kelly × "
+        "Contexte : moteur Dixon-Coles + cote de référence (Pinnacle puis Betfair Exchange), football (2es divisions), 22bet, mises Kelly × "
         f"{r.fraction_kelly} plafonnées à {r.mise_max_pct:.0%}, value min {r.valeur_min:.0%}.",
         "Cahier des charges : moteur-paris/CAHIER_DES_CHARGES.md.",
         "",
