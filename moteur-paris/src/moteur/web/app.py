@@ -251,7 +251,8 @@ def creer_app(service: Service) -> FastAPI:
                     "mise": dimensionner(s, r, mode, reco.p_gain, reco.p_perte, prix, reco.match_id, quand),
                 })
             contexte = dict(
-                mode=mode, sim=solde(s, "simulation"), reel=solde(s, "reel"),
+                mode=mode, sim=solde(s, "simulation"), reel=solde(s, "reel"), obs=solde(s, "observation"),
+                stats_obs=stats_paris(s, "observation"),
                 stats={"7 jours": stats_paris(s, mode, jour - timedelta(days=7)),
                        "30 jours": stats_paris(s, mode, jour - timedelta(days=30)),
                        "depuis le début": stats_paris(s, mode)},

@@ -118,7 +118,9 @@ def enregistrer_candidats(s: Session, r: Reglages, candidats: list[Candidat], qu
     """Enregistre les signaux ; renvoie les nouveaux signaux validés à envoyer en alerte.
 
     En plus, chaque nouveau signal validé devient un pari simulé : c'est ce qui alimente
-    les deux semaines de simulation exigées avant l'argent réel.
+    les deux semaines de simulation exigées avant l'argent réel. Les signaux value d'un marché
+    pas encore validé deviennent des paris « observation » : un capital fictif à part, pour voir
+    en direct ce qu'ils vaudraient, qui ne compte jamais pour débloquer l'argent réel.
     """
     nouvelles = []
     for c in candidats:
@@ -143,17 +145,20 @@ def enregistrer_candidats(s: Session, r: Reglages, candidats: list[Candidat], qu
         reco = Recommandation(match_id=m.id, chasseur=c.chasseur, selection=c.selection.cle, cree_le=quand, **champs)
         s.add(reco)
         s.flush()
-        if c.valide and not c.suspect:
+        if c.suspect or not (c.valide or c.chasseur == "B"):
+            continue
+        if c.valide:
             nouvelles.append(reco)
-            prix = c.cote_retenue
-            if prix is not None and prix >= c.cote_min:
-                mise = dimensionner(s, r, "simulation", c.p_gain, c.p_perte, prix, m.id, quand)
-                if mise >= 0.1:
-                    s.add(Pari(
-                        mode="simulation", recommandation_id=reco.id, match_id=m.id, selection=reco.selection,
-                        cote_prise=prix, source_cote=c.bookmaker or "moyenne (indicative)",
-                        p_gain=c.p_gain, p_perte=c.p_perte, chasseur=c.chasseur, mise=mise, cree_le=quand,
-                    ))
+        mode = "simulation" if c.valide else "observation"
+        prix = c.cote_retenue
+        if prix is not None and prix >= c.cote_min:
+            mise = dimensionner(s, r, mode, c.p_gain, c.p_perte, prix, m.id, quand)
+            if mise >= 0.1:
+                s.add(Pari(
+                    mode=mode, recommandation_id=reco.id, match_id=m.id, selection=reco.selection,
+                    cote_prise=prix, source_cote=c.bookmaker or "moyenne (indicative)",
+                    p_gain=c.p_gain, p_perte=c.p_perte, chasseur=c.chasseur, mise=mise, cree_le=quand,
+                ))
     s.commit()
     return nouvelles
 

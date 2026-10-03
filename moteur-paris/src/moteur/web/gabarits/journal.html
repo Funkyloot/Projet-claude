@@ -18,7 +18,7 @@
 <thead><tr><th>#</th><th>Mode</th><th>Match</th><th>Pari</th><th>Cote</th><th>Mise</th><th>Résultat</th><th>CLV</th></tr></thead>
 <tbody>
 {% for p, libelle in paris %}
-<tr><td>{{ p.id }}</td><td>{{ 'réel' if p.mode == 'reel' else 'simul.' }}</td>
+<tr><td>{{ p.id }}</td><td>{{ {'reel': 'réel', 'simulation': 'simul.', 'observation': 'observ.'}.get(p.mode, p.mode) }}</td>
 <td>{{ p.match.libelle }}<div class="doux petit">{{ p.match.debut|local }}{% if p.match.score %} · {{ p.match.score }}{% endif %}</div></td>
 <td>{{ libelle }}<div class="doux petit">{{ p.source_cote }}</div></td>
 <td>{{ p.cote_prise|cote }}</td><td>{{ p.mise|argent }}</td>

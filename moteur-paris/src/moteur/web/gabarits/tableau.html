@@ -18,6 +18,10 @@ Tant que le backtest n'a validé aucun marché, les signaux restent « en observ
 <div class="carte"><div class="doux petit">Capital simulation</div><div class="chiffre">{{ sim|argent if sim is not none else '—' }}</div></div>
 <div class="carte"><div class="doux petit">Capital réel</div><div class="chiffre">{{ reel|argent if reel is not none else 'non démarré' }}</div>
 <div class="doux petit">Arrêt automatique sous {{ r.seuil_arret|argent }}</div></div>
+<div class="carte"><div class="doux petit">Observation (capital fictif)</div>
+<div class="chiffre">{{ obs|argent if obs is not none else '—' }}</div>
+<div class="doux petit">{% if stats_obs.n %}{{ stats_obs.n }} pari(s) réglé(s) · ROI {{ stats_obs.roi|pct }}{% if stats_obs.clv_moy is not none %} · CLV {{ stats_obs.clv_moy|pct }}{% endif %}{% else %}aucun pari réglé{% endif %}
+· signaux des marchés pas encore validés, ne débloque jamais le réel</div></div>
 {% for titre, st in stats.items() %}
 <div class="carte"><div class="doux petit">{{ titre|capitalize }}</div>
 <div class="chiffre">{{ st.profit|argent if st.n else '—' }}</div>

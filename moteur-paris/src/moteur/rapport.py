@@ -105,6 +105,7 @@ def rapport_quotidien(s: Session, r: Reglages, quand: datetime, derniere_analyse
     lignes.append(_ligne_stats("Hier", stats_paris(s, mode, aujourdhui - timedelta(days=1), aujourdhui)))
     lignes.append(_ligne_stats("7 jours", stats_paris(s, mode, aujourdhui - timedelta(days=7))))
     lignes.append(_ligne_stats("30 jours", stats_paris(s, mode, aujourdhui - timedelta(days=30))))
+    lignes.append(_ligne_stats("Observation, 30 jours", stats_paris(s, "observation", aujourdhui - timedelta(days=30))))
     lignes.append("")
 
     recos = recommandations_ouvertes(s, quand, valides=True)
@@ -187,6 +188,7 @@ def bilan_hebdo(s: Session, r: Reglages, quand: datetime, parametres: dict) -> s
         _ligne_stats("Simulation", stats_paris(s, "simulation", debut)),
         _ligne_stats("Réel", stats_paris(s, "reel", debut)),
         _ligne_stats("Simulation depuis le début", stats_paris(s, "simulation")),
+        _ligne_stats("Observation depuis le début (marchés non validés, capital fictif)", stats_paris(s, "observation")),
         "",
         "## Signaux réglés (1 unité), par chasseur / championnat / marché",
         "| Chasseur | Ligue | Marché | Validé | N | ROI | CLV |",

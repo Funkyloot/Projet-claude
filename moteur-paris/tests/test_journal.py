@@ -52,8 +52,12 @@ def test_signaux_non_valides_ou_suspects(session, reglages_test):
     nouvelles = enregistrer_candidats(session, reglages_test, [
         candidat(valide=False), candidat(sel=Selection("btts", "oui"), suspect=True),
         candidat(sel=Selection("1x2", "1"), cote=1.5)], T0)  # sous la cote minimale : pas de pari simulé
-    assert len(nouvelles) == 1 and session.query(Pari).count() == 0
-    assert session.query(Recommandation).count() == 3
+    assert len(nouvelles) == 1 and session.query(Recommandation).count() == 3
+    # le signal d'un marché non validé devient un pari « observation », jamais un pari simulé
+    (p,) = session.query(Pari).all()
+    assert p.mode == "observation" and p.mise == pytest.approx(2.5)
+    assert conditions_reel(session, reglages_test, T0) == ["aucun pari simulé pour l'instant"]
+    assert stats_paris(session, "simulation").n == 0
 
 
 def test_match_passe_ignore(session, reglages_test):
