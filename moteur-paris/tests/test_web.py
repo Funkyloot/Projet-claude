@@ -184,8 +184,9 @@ def test_historique_des_predictions(connecte, service, sessions, scenario):
     with sessions() as s:
         n = s.query(Prediction).count()
     assert n == len(service.derniere_analyse["apercus"]) > 0
-    page = connecte.get("/historique").text
+    page = connecte.get("/historique?voir=avenir").text
     assert "Historique des prédictions" in page and "à venir" in page
+    assert "Aucun résultat connu" in connecte.get("/historique").text  # par défaut : résultats connus seulement
     plus_tard = scenario["maintenant"] + timedelta(days=3)
     with sessions() as s:
         regler_depuis_resultats(s, scenario["complet"], plus_tard)
@@ -193,7 +194,9 @@ def test_historique_des_predictions(connecte, service, sessions, scenario):
     assert reglees == n  # toutes notées une fois les scores connus
     service.horloge = lambda: plus_tard
     page = connecte.get("/historique?jours=7").text
-    assert "Réussite réelle" in page and ("gagné" in page or "perdu" in page)
+    assert "Réussite réelle" in page and ("gagné" in page or "perdu" in page) and "à venir</span>" not in page
+    assert "Aucun match à venir" in connecte.get("/historique?jours=7&voir=avenir").text
+    assert "Résultats connus" in connecte.get("/historique?voir=nimportequoi").text
 
 
 def test_installation_sur_iphone(client):
@@ -224,3 +227,10 @@ def test_fuseau_de_l_appareil_a_la_premiere_connexion(client, sessions):
     client.post("/connexion", data={"mdp": "motdepasse1", "fuseau": "America/Toronto"})
     with sessions() as s:
         assert surcharges(s)["fuseau"] == "Europe/Paris"  # un choix déjà fait n'est jamais écrasé
+
+
+def test_rapport_lisible_dans_l_application(connecte):
+    page = connecte.get("/rapport").text
+    assert "Rapport du jour" in page and "Capital simulation" in page
+    assert "Relie Telegram" in page and "L'envoyer maintenant" not in page  # pas de bouton sans Telegram relié
+    assert 'href="/rapport"' in connecte.get("/").text

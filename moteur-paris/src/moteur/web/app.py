@@ -49,7 +49,7 @@ from ..journal import (
 )
 from ..marches import Selection
 from ..promo import cashback, cote_boostee, pari_gratuit
-from ..rapport import bilan_hebdo, nom_ligue, quand_local
+from ..rapport import bilan_hebdo, nom_ligue, quand_local, rapport_quotidien
 from ..taches import ACTIONS, demander, effectifs, enregistrer_reglages, etat_taches, surcharges
 from ..telegram import Telegram
 from . import securite
@@ -82,7 +82,10 @@ SECTIONS: dict[str, tuple[str, list[Champ]]] = {
         Champ("bookmaker_cible", "Bookmaker cible", "texte",
               "Clé du bookmaker où vous misez (22bet s'il est couvert). « Vérifier l'API » liste les clés possibles."),
         Champ("bookmaker_reference", "Bookmaker de référence", "texte", "Bookmaker « sharp » servant de prix juste."),
-        Champ("odds_api_credits_jour", "Crédits par jour", "entier", "Budget quotidien de requêtes."),
+        Champ("odds_api_credits_jour", "Crédits par jour", "entier",
+              "Budget quotidien de requêtes (offre gratuite : 500 par mois, soit environ 16 par jour)."),
+        Champ("odds_api_credits_scores", "Dont crédits réservés aux scores", "entier",
+              "Pour connaître les résultats quelques heures après les matchs (2 crédits par championnat)."),
         Champ("odds_api_regions", "Régions", "texte", "eu, uk, us… séparées par des virgules."),
         Champ("odds_api_marches", "Marchés", "texte", "h2h,totals,spreads"),
     ]),
@@ -531,16 +534,34 @@ def creer_app(service: Service) -> FastAPI:
     # --- historique des prédictions -----------------------------------------------------
 
     @app.get("/historique", response_class=HTMLResponse)
-    def historique(request: Request, jours: int = 4):
+    def historique(request: Request, jours: int = 4, voir: str = "resultats"):
         jours = max(1, min(jours, 90))
+        voir = voir if voir in ("resultats", "attente", "avenir", "tout") else "resultats"
         quand = service.horloge()
         with service.sessions() as s:
             liste = predictions(s, quand - timedelta(days=jours))
-            lignes = [(p, Selection.depuis_cle(p.selection).libelle(p.match.domicile, p.match.exterieur)) for p in liste]
             bilan = bilan_predictions(liste)
-        return page(request, "historique", lignes=lignes, bilan=bilan, jours=jours)
+            groupes = {
+                "resultats": [p for p in liste if p.fraction is not None],
+                "attente": [p for p in liste if p.fraction is None and p.match.debut <= quand],
+                "avenir": sorted((p for p in liste if p.match.debut > quand), key=lambda p: p.match.debut),
+                "tout": liste,
+            }
+            nombres = {k: len(v) for k, v in groupes.items()}
+            lignes = [(p, Selection.depuis_cle(p.selection).libelle(p.match.domicile, p.match.exterieur))
+                      for p in groupes[voir]]
+        return page(request, "historique", lignes=lignes, bilan=bilan, jours=jours, voir=voir, nombres=nombres)
 
     # --- bilan ----------------------------------------------------------------------------------
+
+    @app.get("/rapport", response_class=HTMLResponse)
+    def rapport(request: Request):
+        r = reglages_actuels()
+        with service.sessions() as s:
+            analyse = service.derniere_analyse or lire_etat(s, "derniere_analyse", {})
+            texte = rapport_quotidien(s, r, service.horloge(), analyse, service.parametres_presents())
+        return page(request, "rapport", texte=texte,
+                    telegram_relie=bool(r.telegram_token and r.telegram_chat_id))
 
     @app.get("/bilan", response_class=HTMLResponse)
     def bilan(request: Request):

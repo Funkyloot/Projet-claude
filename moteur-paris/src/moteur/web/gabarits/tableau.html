@@ -105,9 +105,10 @@ Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé
 <form method="post" action="/mode"><input type="hidden" name="nouveau" value="simulation"><button class="danger" type="submit">Repasser en simulation</button></form>
 {% endif %}
 </div>
-<div class="carte"><h2>Rapport</h2>
-<p class="doux petit">Envoyé chaque jour à {{ r.heure_rapport }} h ({{ r.fuseau }}).</p>
-<form method="post" action="/action/rapport"><button class="secondaire" type="submit">Envoyer le rapport maintenant</button></form>
+<div class="carte"><h2>Rapport du jour</h2>
+<p class="doux petit">Résumé de la journée : capital, résultats, paris recommandés, alertes.
+{% if r.telegram_token and r.telegram_chat_id %}Envoyé sur Telegram chaque jour à {{ r.heure_rapport }} h ({{ r.fuseau }}).{% else %}Telegram n'est pas relié : il n'est envoyé nulle part, mais tu peux le lire ici.{% endif %}</p>
+<a class="bouton secondaire" href="/rapport">Lire le rapport</a>
 </div>
 <div class="carte"><h2>Alertes (24 h)</h2>
 {% for a in alertes[-8:] %}<div class="petit">{{ a }}</div>{% else %}<p class="doux petit">Aucune.</p>{% endfor %}

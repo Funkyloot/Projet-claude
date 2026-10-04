@@ -197,3 +197,43 @@ def test_prediction_figee_apres_le_coup_d_envoi(service, sessions, scenario):
     service.analyser(apres_debut)
     with sessions() as s:
         assert {p.match_id: p.maj_le for p in s.query(Prediction)} == avant
+
+
+class FauxOdds:
+    def __init__(self, scores):
+        self.a_rendre, self.appels, self.restant = scores, [], 450
+
+    def scores(self, ligue, jours=3):
+        self.appels.append(ligue)
+        return [x for x in self.a_rendre if x.ligue == ligue]
+
+    def cotes(self, *a, **k):
+        return []
+
+
+def test_resultats_depuis_odds_api_puis_clv(service, sessions, scenario):
+    from moteur.db import Prediction
+    from moteur.donnees.odds_api import Score
+    from moteur.journal import completer_clv
+
+    service.analyser(scenario["maintenant"])
+    joues = scenario["complet"].loc[scenario["fixtures"].index]
+    noms = {"Club A": "Club A FC"}  # l'API écrit parfois les noms autrement
+    service.odds = FauxOdds([Score("E1", noms.get(l.dom, l.dom), noms.get(l.ext, l.ext), l.date.to_pydatetime(),
+                                   int(l.bd), int(l.be)) for l in joues.itertuples()])
+    service.reseau = True
+    apres = scenario["maintenant"] + timedelta(days=2, hours=12)
+    service.r.odds_api_credits_jour = 20
+    service.resultats_api(apres)
+    with sessions() as s:
+        assert s.query(Prediction).filter(Prediction.fraction.is_(None)).count() == 0  # tout est réglé
+        assert lire_etat(s, "odds_api:budget")["credits"] == 2
+    assert service.odds.appels == ["E1"]
+    service.resultats_api(apres + timedelta(hours=1))  # plus rien à régler : aucun appel payant
+    assert service.odds.appels == ["E1"]
+    # la CLV arrive plus tard, avec les cotes de clôture de football-data
+    with sessions() as s:
+        assert s.query(Prediction).filter(Prediction.clv.is_not(None)).count() == 0
+        assert completer_clv(s, scenario["complet"], apres) > 0
+        assert s.query(Prediction).filter(Prediction.clv.is_(None)).count() == 0
+        assert completer_clv(s, scenario["complet"], apres) == 0  # déjà fait

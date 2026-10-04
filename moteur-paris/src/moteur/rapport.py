@@ -134,7 +134,7 @@ def rapport_quotidien(s: Session, r: Reglages, quand: datetime, derniere_analyse
         lignes += [f"  {x}" for x in surebets[:5]]
     if not parametres_presents:
         lignes.append("Backtest pas encore fait : aucun marché n'est validé. Il se lance automatiquement "
-                      "(ou `moteur backtest --activer`).")
+                      "(ou bouton « Lancer le backtest » de la page Données).")
 
     alertes = alertes_depuis(s, quand - timedelta(hours=24))
     lignes += ["", "Alertes : " + ("aucune." if not alertes else "")]

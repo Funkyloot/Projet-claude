@@ -370,6 +370,44 @@ def regler_manuellement(s: Session, match_id: int, bd: int, be: int, quand: date
     return regles, f"{m.libelle} {bd}-{be} : {len(regles)} pari(s) réglé(s)."
 
 
+def completer_clv(s: Session, hist: pd.DataFrame, quand: datetime, jours: int = 30) -> int:
+    """CLV des matchs réglés avant que football-data publie les cotes de clôture (score venu
+    de The Odds API) : on la calcule dès que la ligne arrive. Renvoie le nombre de CLV ajoutées."""
+    if hist.empty:
+        return 0
+    n = 0
+    matchs = s.scalars(select(Match).where(Match.buts_domicile.is_not(None),
+                                           Match.debut >= quand - timedelta(days=jours)))
+    for m in matchs:
+        manquants = (
+            [x for x in s.scalars(select(Pari).where(Pari.match_id == m.id, Pari.statut != "en_cours",
+                                                     Pari.clv.is_(None)))]
+            + [x for x in s.scalars(select(Recommandation).where(
+                Recommandation.match_id == m.id, Recommandation.fraction.is_not(None), Recommandation.clv.is_(None)))]
+            + [x for x in s.scalars(select(Prediction).where(
+                Prediction.match_id == m.id, Prediction.fraction.is_not(None), Prediction.clv.is_(None)))]
+        )
+        if not manquants:
+            continue
+        cand = hist[(hist["ligue"] == m.competition) & (hist["dom"] == m.domicile) & (hist["ext"] == m.exterieur)]
+        if cand.empty:
+            continue
+        ecart = (cand["date"] - pd.Timestamp(m.debut)).abs()
+        if ecart.min() > pd.Timedelta(hours=36):
+            continue
+        ligne = cand.loc[ecart.idxmin()]
+        for x in manquants:
+            cc = cote_cloture_juste(ligne, Selection.depuis_cle(x.selection))
+            prix = x.cote_prise if isinstance(x, Pari) else x.cote_retenue if isinstance(x, Recommandation) else x.cote
+            if cc and prix:
+                x.clv = prix / cc - 1
+                if isinstance(x, Pari):
+                    x.cote_cloture_juste = cc
+                n += 1
+    s.commit()
+    return n
+
+
 # --- Statistiques -------------------------------------------------------------
 
 @dataclass

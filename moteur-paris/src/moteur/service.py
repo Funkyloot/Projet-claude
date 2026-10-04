@@ -40,16 +40,18 @@ from .config import Reglages
 from .db import Recommandation
 from .donnees import football_data
 from .donnees.equipes import Correspondance
-from .donnees.odds_api import SPORTS, ClientOdds
+from .donnees.odds_api import SANS_SCORES, SPORTS, ClientOdds
 from .format import cote, pct
 from .journal import (
     ajouter_alerte,
     capital,
+    completer_clv,
     controle_arret,
     ecrire_etat,
     enregistrer_candidats,
     enregistrer_predictions,
     lire_etat,
+    matchs_a_regler,
     regler_depuis_resultats,
 )
 from .modeles.ligue import ajuster_ligue
@@ -188,14 +190,17 @@ class Service:
         with self.sessions() as s:
             suivre(s, "historique", "en_cours", "Lecture des fichiers téléchargés…")
         self.charger_donnees()
+        regles_api = self.resultats_api(quand)
         with self.sessions() as s:
             regles = regler_depuis_resultats(s, self.hist, quand)
+            completer_clv(s, self.hist, quand)
             message = controle_arret(s, self.r)
-            suivre(s, "historique", "termine", f"{len(self.hist)} matchs en base, {len(regles)} pari(s) réglé(s).")
+            suivre(s, "historique", "termine",
+                   f"{len(self.hist)} matchs en base, {len(regles) + regles_api} pari(s) réglé(s).")
         if message:
             self._alerte(message, quand)
             self._envoyer(message)
-        return len(regles)
+        return len(regles) + regles_api
 
     def _cotes_api(self, matchs: list[MatchAVenir], quand: datetime) -> list:
         if self.odds is None or not self.reseau:
@@ -206,26 +211,92 @@ class Service:
         ligues = sorted((c for c in self.r.liste_ligues if c in SPORTS),
                         key=lambda c: prochains.get(c, quand + timedelta(days=30)))
         cout = ClientOdds.credits_par_appel(self.r.odds_api_marches, self.r.odds_api_regions)
-        jour = quand.astimezone(ZoneInfo(self.r.fuseau)).date().isoformat()
-        with self.sessions() as s:
-            budget = lire_etat(s, "odds_api:budget", {"jour": jour, "credits": 0})
-        if budget["jour"] != jour:
-            budget = {"jour": jour, "credits": 0}
+        budget = self._budget_api(quand)
         evenements = []
         for ligue in ligues:
-            if budget["credits"] + cout > self.r.odds_api_credits_jour:
-                break
+            if budget["credits"] + cout > self.r.odds_api_credits_jour - self.r.odds_api_credits_scores:
+                break  # le reste est gardé pour les scores
             try:
                 evenements += self.odds.cotes(ligue, self.r.odds_api_marches, self.r.odds_api_regions)
             except Exception as e:
                 self._alerte(f"API de cotes ({ligue}) : {e}", quand)
                 break
             budget["credits"] += cout
+        self._noter_budget_api(budget)
+        return evenements
+
+    def _budget_api(self, quand: datetime) -> dict:
+        """Crédits The Odds API déjà dépensés aujourd'hui (cotes et scores partagent le budget)."""
+        jour = quand.astimezone(ZoneInfo(self.r.fuseau)).date().isoformat()
+        with self.sessions() as s:
+            budget = lire_etat(s, "odds_api:budget", {"jour": jour, "credits": 0})
+        return budget if budget["jour"] == jour else {"jour": jour, "credits": 0}
+
+    def _noter_budget_api(self, budget: dict) -> None:
         with self.sessions() as s:
             ecrire_etat(s, "odds_api:budget", budget)
-            if self.odds.restant is not None:
+            if self.odds is not None and self.odds.restant is not None:
                 ecrire_etat(s, "odds_api:restant", self.odds.restant)
-        return evenements
+
+    def _equipes_connues(self, quand: datetime) -> dict[str, set[str]]:
+        """Noms football-data des équipes de chaque championnat (pour reconnaître les noms de l'API)."""
+        recents = self.hist[self.hist["date"] >= pd.Timestamp(quand) - pd.Timedelta(days=500)]
+        equipes: dict[str, set[str]] = {}
+        for df in (recents, self.fixtures):
+            if not df.empty:
+                for ligue, g in df.groupby("ligue"):
+                    equipes.setdefault(ligue, set()).update(g["dom"], g["ext"])
+        return equipes
+
+    def resultats_api(self, quand: datetime) -> int:
+        """Scores officiels des matchs terminés via The Odds API, sans attendre football-data, qui
+        publie les résultats avec plusieurs jours (parfois deux semaines) de retard.
+
+        Seulement pour les championnats qui ont un match à régler de moins de 3 jours (limite de
+        l'API), au plus une fois toutes les 3 h par championnat, dans le budget quotidien de crédits.
+        Renvoie le nombre de paris réglés.
+        """
+        if self.odds is None or not self.reseau:
+            return 0
+        with self.sessions() as s:
+            attente = matchs_a_regler(s, quand)
+            derniers = lire_etat(s, "scores:dernier", {})
+        ligues = sorted({m.competition for m in attente if m.competition in SPORTS
+                         and m.competition not in SANS_SCORES and quand - m.debut < timedelta(days=3)})
+        ligues = [c for c in ligues
+                  if c not in derniers or quand - datetime.fromisoformat(derniers[c]) >= timedelta(hours=3)]
+        if not ligues:
+            return 0
+        budget = self._budget_api(quand)
+        scores = []
+        for ligue in ligues:
+            if budget["credits"] + 2 > self.r.odds_api_credits_jour:
+                break
+            try:
+                scores += self.odds.scores(ligue)
+            except Exception as e:
+                self._alerte(f"Scores The Odds API ({ligue}) : {e}", quand)
+                break
+            budget["credits"] += 2
+            derniers[ligue] = quand.isoformat()
+        self._noter_budget_api(budget)
+        with self.sessions() as s:
+            ecrire_etat(s, "scores:dernier", derniers)
+        equipes = self._equipes_connues(quand)
+        lignes = []
+        for sc in scores:
+            candidats = equipes.get(sc.ligue, set())
+            dom, ext = self.correspondance.trouver(sc.dom, candidats), self.correspondance.trouver(sc.ext, candidats)
+            if dom and ext:
+                lignes.append({"ligue": sc.ligue, "date": pd.Timestamp(sc.debut), "dom": dom, "ext": ext,
+                               "bd": sc.bd, "be": sc.be})
+        if not lignes:
+            return 0
+        with self.sessions() as s:
+            regles = regler_depuis_resultats(s, pd.DataFrame(lignes), quand)
+        if regles:
+            log.info("Scores The Odds API : %s pari(s) réglé(s).", len(regles))
+        return len(regles)
 
     def analyser(self, quand: datetime) -> list[Recommandation]:
         debut = time.monotonic()
@@ -249,13 +320,7 @@ class Service:
         matchs = matchs_depuis_fixtures(self.fixtures, self.r.liste_ligues, quand, self.r.horizon_h, maj)
         evenements = self._cotes_api(matchs, quand)
         if evenements:
-            recents = self.hist[self.hist["date"] >= pd.Timestamp(quand) - pd.Timedelta(days=500)]
-            equipes: dict[str, set[str]] = {}
-            for df in (recents, self.fixtures):
-                if not df.empty:
-                    for ligue, g in df.groupby("ligue"):
-                        equipes.setdefault(ligue, set()).update(g["dom"], g["ext"])
-            matchs, alertes = fusionner_api(matchs, evenements, equipes, self.correspondance)
+            matchs, alertes = fusionner_api(matchs, evenements, self._equipes_connues(quand), self.correspondance)
             for a in sorted(set(alertes)):
                 self._alerte(a, quand)
         res = analyser(matchs, self.hist, self.r, quand)
@@ -443,6 +508,8 @@ class Service:
             self.maj_donnees(quand)
             self._fait("donnees", quand)
             faites.append("donnees")
+        elif self.resultats_api(quand):
+            faites.append("scores")
         with self.sessions() as s:
             derniere = lire_etat(s, "job:analyse")
         if derniere is None or quand - datetime.fromisoformat(derniere) >= timedelta(hours=self.r.intervalle_analyse_h):

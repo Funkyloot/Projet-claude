@@ -33,6 +33,9 @@ SPORTS: dict[str, str] = {
     "G1": "soccer_greece_super_league",
 }
 
+# Championnats dont The Odds API ne publie pas les scores (page « sports-apis » du fournisseur).
+SANS_SCORES = {"F2"}
+
 
 @dataclass
 class EvenementCotes:
@@ -41,6 +44,31 @@ class EvenementCotes:
     ext: str
     debut: datetime
     cotes: list[CoteBrute] = field(default_factory=list)
+
+
+@dataclass
+class Score:
+    ligue: str
+    dom: str
+    ext: str
+    debut: datetime
+    bd: int
+    be: int
+
+
+def parser_scores(donnees: list[dict], ligue: str) -> list[Score]:
+    """Matchs terminés avec leur score ; les matchs en cours ou à venir sont ignorés."""
+    scores = []
+    for ev in donnees:
+        if not ev.get("completed"):
+            continue
+        buts = {x.get("name"): x.get("score") for x in ev.get("scores") or []}
+        try:
+            bd, be = int(buts[ev["home_team"]]), int(buts[ev["away_team"]])
+        except (KeyError, TypeError, ValueError):
+            continue
+        scores.append(Score(ligue, ev["home_team"], ev["away_team"], _date(ev["commence_time"]), bd, be))
+    return scores
 
 
 def _date(texte: str) -> datetime:
@@ -115,6 +143,14 @@ class ClientOdds:
         params = {"markets": marches, "oddsFormat": "decimal", "dateFormat": "iso"}
         params.update({"bookmakers": bookmakers} if bookmakers else {"regions": regions})
         return parser(self._get(f"/sports/{sport}/odds", **params), ligue)
+
+    def scores(self, ligue: str, jours: int = 3) -> list[Score]:
+        """Scores des matchs terminés depuis `jours` jours (1 à 3). Coûte 2 crédits."""
+        sport = SPORTS.get(ligue)
+        if sport is None or ligue in SANS_SCORES:
+            return []
+        return parser_scores(self._get(f"/sports/{sport}/scores", daysFrom=max(1, min(jours, 3)),
+                                       dateFormat="iso"), ligue)
 
     @staticmethod
     def credits_par_appel(marches: str, regions: str = "eu", bookmakers: str = "") -> int:

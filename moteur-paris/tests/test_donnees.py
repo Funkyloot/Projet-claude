@@ -182,3 +182,27 @@ def test_alias_des_equipes_renommees():
     assert c.trouver("Peterborough United", {"Peterboro", "Plymouth"}) == "Peterboro"
     assert c.trouver("Celta Fortuna", {"Celta B", "Cadiz", "Sociedad B"}) == "Celta B"
     assert c.trouver("Real Sociedad B", {"Celta B", "Cadiz", "Sociedad B"}) == "Sociedad B"
+
+
+def test_scores_odds_api():
+    from moteur.donnees.odds_api import parser_scores
+
+    donnees = [
+        {"home_team": "Leeds United", "away_team": "Hull City", "commence_time": "2026-10-03T14:00:00Z",
+         "completed": True, "scores": [{"name": "Hull City", "score": "1"}, {"name": "Leeds United", "score": "3"}]},
+        {"home_team": "A", "away_team": "B", "commence_time": "2026-10-03T14:00:00Z", "completed": False,
+         "scores": [{"name": "A", "score": "1"}, {"name": "B", "score": "0"}]},  # en cours : ignoré
+        {"home_team": "C", "away_team": "D", "commence_time": "2026-10-03T14:00:00Z", "completed": True, "scores": None},
+    ]
+    (sc,) = parser_scores(donnees, "E1")
+    assert (sc.dom, sc.ext, sc.bd, sc.be, sc.debut.hour) == ("Leeds United", "Hull City", 3, 1, 14)
+    vus = []
+
+    def repondre(r: httpx.Request):
+        vus.append(r.url)
+        return httpx.Response(200, json=donnees, headers={"x-requests-remaining": "480"})
+
+    client = ClientOdds("CLE", httpx.Client(transport=httpx.MockTransport(repondre)))
+    assert len(client.scores("E1")) == 1 and client.restant == 480
+    assert vus[0].path.endswith("/soccer_efl_champ/scores") and vus[0].params["daysFrom"] == "3"
+    assert client.scores("F2") == [] and len(vus) == 1  # Ligue 2 : pas de scores chez ce fournisseur

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Rapport du jour</h1>
+<div class="carte">
+<p class="doux petit">Le résumé de la journée : capital, résultats d'hier, 7 et 30 jours, paris recommandés, alertes.
+{% if telegram_relie %}Il est aussi envoyé sur Telegram chaque jour à {{ r.heure_rapport }} h.{% else %}Relie Telegram dans <a href="/reglages">Réglages</a> pour le recevoir chaque jour à {{ r.heure_rapport }} h sur ton téléphone.{% endif %}</p>
+{% if telegram_relie %}<form method="post" action="/action/rapport"><input type="hidden" name="retour_vers" value="/rapport">
+<button class="secondaire" type="submit">L'envoyer maintenant sur Telegram</button></form>{% endif %}
+<pre>{{ texte }}</pre>
+</div>
+{% endblock %}

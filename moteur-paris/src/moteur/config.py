@@ -58,6 +58,7 @@ class Reglages(BaseSettings):
     # Cotes en direct (optionnel)
     odds_api_key: str = ""
     odds_api_credits_jour: int = Field(15, ge=0)
+    odds_api_credits_scores: int = Field(6, ge=0)  # part du budget réservée aux scores (règlement rapide)
     odds_api_marches: str = "h2h,totals,spreads"
     odds_api_regions: str = "eu"
     bookmaker_cible: str = ""  # clé du bookmaker où l'on mise (22bet s'il est couvert)
@@ -100,7 +101,7 @@ CHAMPS_MODIFIABLES = [
     "exposition_match_pct", "valeur_min", "seuil_suspect", "seuil_desaccord", "jours_simulation_min",
     "ligues", "saison_depuis", "horizon_h", "poids_modele", "prix_backtest",
     "fuseau", "heure_donnees", "heure_rapport", "intervalle_analyse_h",
-    "odds_api_key", "odds_api_credits_jour", "odds_api_marches", "odds_api_regions",
+    "odds_api_key", "odds_api_credits_jour", "odds_api_credits_scores", "odds_api_marches", "odds_api_regions",
     "bookmaker_cible", "bookmaker_reference", "telegram_token", "telegram_chat_id",
 ]
 SECRETS = {"odds_api_key", "telegram_token", "anthropic_api_key"}
