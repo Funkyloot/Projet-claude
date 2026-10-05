@@ -237,3 +237,24 @@ def test_resultats_depuis_odds_api_puis_clv(service, sessions, scenario):
         assert completer_clv(s, scenario["complet"], apres) > 0
         assert s.query(Prediction).filter(Prediction.clv.is_(None)).count() == 0
         assert completer_clv(s, scenario["complet"], apres) == 0  # déjà fait
+
+
+def test_coupure_internet_sans_avalanche_d_alertes(service, sessions, scenario):
+    from moteur.journal import alertes_depuis
+
+    class OddsHorsLigne(FauxOdds):
+        def scores(self, ligue, jours=3):
+            self.appels.append(ligue)
+            raise httpx.ConnectError("[Errno -3] Temporary failure in name resolution")
+
+    service.analyser(scenario["maintenant"])
+    service.odds, service.reseau = OddsHorsLigne([]), True
+    apres = scenario["maintenant"] + timedelta(days=2, hours=12)
+    for minutes in range(0, 50, 5):  # le service repasse souvent : une seule tentative par heure
+        service.resultats_api(apres + timedelta(minutes=minutes))
+    assert service.odds.appels == ["E1"]
+    service.resultats_api(apres + timedelta(hours=1, minutes=1))
+    assert service.odds.appels == ["E1", "E1"]
+    with sessions() as s:
+        alertes = alertes_depuis(s, apres - timedelta(hours=1))
+    assert len(alertes) == 1 and "pas accès à Internet" in alertes[0]  # même alerte : notée une fois

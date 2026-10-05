@@ -42,8 +42,11 @@ def ecrire_etat(s: Session, cle: str, valeur) -> None:
     s.commit()
 
 
-def ajouter_alerte(s: Session, texte: str, quand: datetime) -> None:
+def ajouter_alerte(s: Session, texte: str, quand: datetime, silence: timedelta = timedelta(hours=6)) -> None:
+    """Ajoute une alerte, sauf si la même a déjà été notée récemment (évite les répétitions)."""
     alertes = lire_etat(s, "alertes", [])
+    if any(t == texte and quand - datetime.fromisoformat(q) < silence for q, t in alertes):
+        return
     alertes.append([quand.isoformat(), texte])
     ecrire_etat(s, "alertes", alertes[-50:])
 

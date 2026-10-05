@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Callable
 from zoneinfo import ZoneInfo
 
+import httpx
 import pandas as pd
 
 from . import commandes
@@ -151,6 +152,22 @@ class Service:
     def parametres_presents(self) -> bool:
         return bool(charger_parametres(self.r.dossier).get("ligues"))
 
+    @staticmethod
+    def _erreur_lisible(e: Exception) -> str:
+        """Message compréhensible pour les pannes réseau les plus courantes."""
+        texte = str(e)
+        if "name resolution" in texte or "Name or service not known" in texte or "getaddrinfo" in texte:
+            return "le serveur n'a pas accès à Internet (adresse introuvable). Vérifie la box ou la connexion."
+        if isinstance(e, httpx.ConnectError):
+            return "connexion impossible (Internet coupé ou site injoignable)."
+        if isinstance(e, httpx.TimeoutException):
+            return "le site ne répond pas (délai dépassé)."
+        if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 401:
+            return "clé refusée : vérifie la clé The Odds API dans Réglages."
+        if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
+            return "crédits épuisés ou trop de requêtes."
+        return texte
+
     def _alerte(self, texte: str, quand: datetime) -> None:
         log.warning(texte)
         with self.sessions() as s:
@@ -219,7 +236,7 @@ class Service:
             try:
                 evenements += self.odds.cotes(ligue, self.r.odds_api_marches, self.r.odds_api_regions)
             except Exception as e:
-                self._alerte(f"API de cotes ({ligue}) : {e}", quand)
+                self._alerte(f"API de cotes ({ligue}) : {self._erreur_lisible(e)}", quand)
                 break
             budget["credits"] += cout
         self._noter_budget_api(budget)
@@ -275,7 +292,9 @@ class Service:
             try:
                 scores += self.odds.scores(ligue)
             except Exception as e:
-                self._alerte(f"Scores The Odds API ({ligue}) : {e}", quand)
+                self._alerte(f"Scores The Odds API ({ligue}) : {self._erreur_lisible(e)}", quand)
+                # nouvel essai dans 1 h, pas à chaque passage du service
+                derniers[ligue] = (quand - timedelta(hours=2)).isoformat()
                 break
             budget["credits"] += 2
             derniers[ligue] = quand.isoformat()
