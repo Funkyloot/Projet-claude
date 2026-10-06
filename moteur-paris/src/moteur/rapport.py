@@ -136,10 +136,6 @@ def rapport_quotidien(s: Session, r: Reglages, quand: datetime, derniere_analyse
         lignes.append(f"Cotes trop belles, risque d'annulation par le bookmaker ({len(suspects)}) :")
         lignes += [f"  #{x.id} {x.match.libelle} · {_libelle(x)} @ {cote(x.cote_retenue)} "
                    f"(juste {cote(x.cote_juste)})" for x in suspects[:5]]
-    surebets = (derniere_analyse or {}).get("surebets", [])
-    if surebets:
-        lignes.append(f"Surebets entre bookmakers ({len(surebets)}, il faut un compte chez chacun) :")
-        lignes += [f"  {x}" for x in surebets[:5]]
     if not parametres_presents:
         lignes.append("Backtest pas encore fait : aucun marché n'est validé. Il se lance automatiquement "
                       "(ou bouton « Lancer le backtest » de la page Données).")

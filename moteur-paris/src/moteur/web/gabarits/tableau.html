@@ -90,10 +90,7 @@ Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé
 </div>
 {% endif %}
 
-{% if analyse and analyse.get('surebets') %}
-<div class="carte"><h2>Surebets entre bookmakers</h2><p class="doux petit">Il faut un compte chez chaque bookmaker cité.</p>
-{% for x in analyse.surebets %}<div class="petit">{{ x }}</div>{% endfor %}</div>
-{% endif %}
+{# Surebets masqués : ils demandent des comptes chez plusieurs bookmakers, l'utilisateur n'a que 22bet. #}
 
 <div class="grille">
 <div class="carte"><h2>Mode</h2>
