@@ -158,7 +158,7 @@ def test_chasseur_sharp_contre_pinnacle():
     quand = DEBUT - timedelta(hours=1)
     (c,) = _sharp(quand, DEBUT)  # 1xBet paie 2,20 la victoire de Leeds, juste ≈ 2,06 chez Pinnacle
     assert c.chasseur == "S" and c.selection == Selection("1x2", "1") and c.valide and c.bookmaker == "onexbet"
-    assert c.cote_vue == 2.2 and 0.03 <= c.ev <= 0.10 and c.cote_min <= 2.2 and "pinnacle" in c.note
+    assert c.cote_vue == 2.2 and 0.03 <= c.ev <= 0.10 and c.cote_min <= 2.2 and c.note.startswith("Pinnacle, le bookmaker le plus précis") and "2,20" in c.note
     assert _sharp(quand, DEBUT, age_ref=200) == []  # prix Pinnacle trop ancien
     assert _sharp(quand, DEBUT, age_cible=200) == []  # cote 1xBet trop ancienne
     assert _sharp(DEBUT - timedelta(hours=10), DEBUT) == []  # trop tôt avant le match

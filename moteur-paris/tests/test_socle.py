@@ -22,7 +22,7 @@ def test_reglages_par_defaut_respectent_le_cahier_des_charges(monkeypatch):
     assert r.mode == "simulation"
     assert r.capital_initial == 100
     assert r.seuil_arret == 60
-    assert r.mise_max_pct == 0.03
+    assert r.mise_max_pct == 0.05 and r.fraction_kelly == 0.5  # choix de l'utilisateur (octobre 2026)
 
 
 def test_mise_max_plafonnee_a_5_pourcent():
@@ -74,6 +74,6 @@ def test_cli_calculateur(capsys):
     sortie = capsys.readouterr().out
     assert "10.32 $" in sortie and "39.68 $" in sortie and "51.59 $" in sortie
     assert main(["value", "--proba", "0.52", "--cote", "2.05", "--capital", "100"]) == 0
-    assert "1.50 $" in capsys.readouterr().out
+    assert "3.10 $" in capsys.readouterr().out  # Kelly × 0,5 sur 100 $
     assert main(["value", "--proba", "0.45", "--cote", "2.0"]) == 0
     assert "Ne pas jouer" in capsys.readouterr().out

@@ -345,8 +345,8 @@ def test_mouvement_de_pinnacle_et_clv_par_les_releves(service, sessions, scenari
     assert service.odds.n == 2  # un second relevé dans la dernière heure
     with sessions() as s:
         (reco,) = s.query(Recommandation).filter(Recommandation.chasseur == "S").all()
-        assert reco.selection == Selection("1x2", "1").cle and "Pinnacle a monté" in reco.note
-        assert "1xBet en retard" in reco.note
+        assert reco.selection == Selection("1x2", "1").cle and "Ses chances ont monté" in reco.note
+        assert "22bet est souvent en retard" in reco.note
         assert s.query(Cote).count() == 12  # 2 relevés × (3 Pinnacle + 3 1xBet)
         match = s.get(Match, reco.match_id)
         # CLV : seulement sur un relevé pris APRÈS le pari
@@ -389,3 +389,18 @@ def test_budget_de_credits_automatique(service, sessions):
     assert service._limite_cotes(quand) == 4 - 2  # la moitié au plus réservée aux scores
     service.r.odds_api_credits_jour = 20  # nombre fixe choisi dans les réglages
     assert service.limite_jour(quand) == 20
+
+
+def test_migration_des_reglages_une_seule_fois(service, sessions):
+    from moteur.taches import enregistrer_reglages, surcharges
+
+    with sessions() as s:
+        enregistrer_reglages(s, {"fraction_kelly": 0.25, "mise_max_pct": 0.03, "odds_api_credits_jour": 15},
+                             service.base)  # réglages enregistrés avant la mise à jour
+    assert set(service.appliquer_migrations()) == {"0.5.3-mises", "0.5.2-credits-auto"}
+    assert service.r.fraction_kelly == 0.5 and service.r.mise_max_pct == 0.05 and service.r.odds_api_credits_jour == 0
+    with sessions() as s:
+        enregistrer_reglages(s, {"fraction_kelly": 0.3}, service.base)  # choix fait ensuite dans l'interface
+    assert service.appliquer_migrations() == []  # jamais réappliquée
+    with sessions() as s:
+        assert surcharges(s)["fraction_kelly"] == 0.3

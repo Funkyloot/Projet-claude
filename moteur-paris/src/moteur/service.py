@@ -110,6 +110,27 @@ class Service:
         self._tentative_donnees: datetime | None = None
         self.recharger()
 
+    # Changements de réglages décidés par l'utilisateur et appliqués une seule fois par la mise à jour
+    # (une valeur qu'il modifie ensuite dans l'interface n'est plus jamais touchée).
+    MIGRATIONS = {
+        "0.5.3-mises": {"fraction_kelly": 0.5, "mise_max_pct": 0.05},  # croissance plus rapide (RECHERCHE.md §5)
+        "0.5.2-credits-auto": {"odds_api_credits_jour": 0},  # crédits répartis automatiquement
+    }
+
+    def appliquer_migrations(self) -> list[str]:
+        faites = []
+        for nom, valeurs in self.MIGRATIONS.items():
+            with self.sessions() as s:
+                if lire_etat(s, f"migration:{nom}"):
+                    continue
+                enregistrer_reglages(s, valeurs, self.base)
+                ecrire_etat(s, f"migration:{nom}", True)
+            faites.append(nom)
+            log.info("Réglages mis à jour (%s) : %s", nom, valeurs)
+        if faites:
+            self.recharger()
+        return faites
+
     def nettoyer_taches(self) -> None:
         """Au démarrage du service principal seulement : une tâche restée « en cours » a été
         interrompue (PC éteint, arrêt…). Pas dans les autres commandes : le backtest, lancé à

@@ -107,12 +107,20 @@ def grille_reference(ctx: ContexteMatch, f: Filtre) -> tuple[np.ndarray | None, 
 
 # Chasseur S : règles tirées de la recherche sur données réelles (RECHERCHE.md).
 REFERENCES_SHARP = ("pinnacle", "betfair_ex_eu")
+NOMS_SHARP = {"pinnacle": "Pinnacle", "betfair_ex_eu": "Betfair"}
 MARGE_MAX_SHARP = {"pinnacle": {3: 1.10, 2: 1.08}, "betfair_ex_eu": {3: 1.07, 2: 1.05}}
 AGE_MAX_COTE = timedelta(hours=3)  # prix relevés il y a moins de 3 h
 AVANT_MATCH_MAX = timedelta(hours=6)  # près du coup d'envoi : prix sharp le plus juste
 COTE_S = (1.25, 4.5)  # au-delà de 4,5 les écarts historiques ne sont plus fiables
 # Les 5 grands championnats : marchés si efficaces que la stratégie y perd (−5,5 % sur 1 042 paris).
 LIGUES_EFFICACES = frozenset({"E0", "D1", "I1", "SP1", "F1"})
+# Contre un prix Pinnacle frais, un écart de 10 à 15 % reste réel (+8,7 % historique) : seuil « trop
+# belle » relevé à 15 % pour ce chasseur (22bet est de toute façon vérifié avant de miser).
+SUSPECT_S = 0.15
+
+
+def _virgule(x: float) -> str:
+    return f"{x:.2f}".replace(".", ",")
 
 
 def _issues_opposees(sel: Selection) -> list[Selection] | None:
@@ -168,8 +176,10 @@ def chasseur_sharp(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:
             chasseur="S", ligue=ctx.ligue, dom=ctx.dom, ext=ctx.ext, debut=ctx.debut, selection=sel,
             p_gain=W, p_perte=L, cote_juste=cote_juste(W, L), cote_min=cmin,
             cote_vue=c.cote, bookmaker=bk, ev=ev, kelly=kelly_wl(W, L, c.cote),
-            valide=True, suspect=ev > f.seuil_suspect,
-            note=f"prix juste {source} · cotes relevées il y a {age} min · vérifier que 22bet affiche au moins la cote min",
+            valide=True, suspect=ev > max(f.seuil_suspect, SUSPECT_S),
+            note=(f"{NOMS_SHARP[source]}, le bookmaker le plus précis, lui donne {p:.0%} de chances : elle vaut "
+                  f"{_virgule(1 / p)}. 1xBet (même logiciel que 22bet) la paie {_virgule(c.cote)}, plus qu'elle ne vaut. "
+                  f"Relevé il y a {age} min."),
         ))
     return candidats
 

@@ -12,7 +12,7 @@ from moteur.db import fabrique_sessions, initialiser, moteur_bdd
 @pytest.fixture
 def reglages_test(tmp_path) -> Reglages:
     return Reglages(_env_file=None, database_url=f"sqlite:///{tmp_path}/t.db", dossier_donnees=str(tmp_path),
-                    ligues="E1", fuseau="UTC")
+                    ligues="E1", fuseau="UTC", fraction_kelly=0.25, mise_max_pct=0.03)  # mises des tests
 
 
 @pytest.fixture

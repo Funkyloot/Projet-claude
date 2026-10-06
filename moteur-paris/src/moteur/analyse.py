@@ -197,10 +197,11 @@ def noter_mouvement(candidats: list[Candidat], cotes: list[CoteBrute]) -> None:
             continue
         p0, apres = avant[0], c.p_gain / (c.p_gain + c.p_perte)
         ecart = apres - p0
-        if abs(ecart) >= 0.005:
-            sens = "monté" if ecart > 0 else "baissé"
-            c.note += (f" · Pinnacle a {sens} de {abs(ecart) * 100:.1f} pts depuis le premier relevé "
-                       f"({p0:.0%} → {apres:.0%})" + (" : 1xBet en retard" if ecart > 0 else ""))
+        if ecart >= 0.005:
+            c.note += (f" Ses chances ont monté depuis le premier relevé ({p0:.0%} → {apres:.0%}) mais 1xBet n'a pas "
+                       "suivi : 22bet est souvent en retard aussi.")
+        elif ecart <= -0.005:
+            c.note += f" Ses chances ont un peu baissé depuis le premier relevé ({p0:.0%} → {apres:.0%})."
 
 
 @dataclass

@@ -58,8 +58,10 @@ def bloc_reco(s: Session, r: Reglages, reco: Recommandation, quand: datetime) ->
     ]
     if reco.cote_vue is not None:
         lignes.append(f"  ➜ Sur 22bet : jouer si la cote est ≥ {cote(reco.cote_min)} · mise {argent(mise)}")
-        lignes.append(f"  Cote {nom_bookmaker(reco.bookmaker)} {cote(reco.cote_vue)} · prix juste {cote(reco.cote_juste)} · "
-                      f"espérance {pct(reco.ev)}")
+        repere = ("1xBet (même logiciel que 22bet, pas besoin d'y avoir un compte)" if reco.bookmaker == "onexbet"
+                  else nom_bookmaker(reco.bookmaker))
+        lignes.append(f"  Repère : {repere} affiche {cote(reco.cote_vue)} · prix juste {cote(reco.cote_juste)} · "
+                      f"gain moyen attendu {pct(reco.ev)}")
     else:
         lignes.append(f"  Prix juste {cote(reco.cote_juste)} · jouer si 22bet ≥ {cote(reco.cote_min)} · "
                       f"mise {argent(mise)}")

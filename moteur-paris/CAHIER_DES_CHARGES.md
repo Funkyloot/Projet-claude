@@ -34,7 +34,7 @@ avec un rapport quotidien obligatoire.
 | # | Règle | Pourquoi |
 |---|---|---|
 | 1 | **Rapport quotidien obligatoire, pari jamais forcé.** Un jour sans valeur = « rien de bon aujourd'hui ». | Forcer un pari sans avantage = perte moyenne garantie. |
-| 2 | **Mise max 2 à 3 % du capital** par pari (Kelly fractionné). | 3-4 pertes d'affilée ne doivent jamais vider le capital. |
+| 2 | **Mise max 5 % du capital** par pari (Kelly fractionné ; 3 % jusqu'en octobre 2026, relevé à la demande de l'utilisateur après simulation, voir RECHERCHE.md §5). | 3-4 pertes d'affilée ne doivent jamais vider le capital. |
 | 3 | **Aucune martingale** (jamais doubler après une perte). | Mène toujours à la faillite à terme. |
 | 4 | **Arrêt automatique** si le capital passe sous un seuil (par défaut 60 $). | Protection contre un bug ou une mauvaise série. |
 | 5 | **2 semaines de simulation** avant tout argent réel. | Vérifier le programme sans risque. |
@@ -72,8 +72,8 @@ avec un rapport quotidien obligatoire.
 (conservé comme module secondaire ; rare entre bookmakers de la même plateforme que 22bet).
 
 **Mise Kelly fractionnée :**
-`f* = (p × cote − 1) / (cote − 1)` puis `mise = capital × f* × fraction` (fraction 0,25 par défaut),
-plafonnée à 2-3 % du capital.
+`f* = (p × cote − 1) / (cote − 1)` puis `mise = capital × f* × fraction` (fraction 0,5 par défaut depuis octobre 2026),
+plafonnée à 5 % du capital.
 
 **Paires complémentaires à connaître :** `1`+`X2`, `2`+`1X`, `X`+`12`, `1`+`X`+`2`,
 Plus/Moins même ligne, handicap asiatique ±0,5.
@@ -203,7 +203,7 @@ Un signal devient une recommandation seulement si :
 4. la cote de référence ne contredit pas fortement le signal ;
 5. Claude n'a pas trouvé d'information contradictoire (blessure, forfait…).
 
-**Mises :** Kelly fractionné (0,25), plafond 2-3 % du capital, arrondies à des montants naturels.
+**Mises :** Kelly fractionné (0,5), plafond 5 % du capital, arrondies à des montants naturels.
 **Exposition :** plafond de mise totale par jour et par match.
 **Arrêt automatique :** sous 60 $ (paramétrable), le programme passe en simulation seule.
 
