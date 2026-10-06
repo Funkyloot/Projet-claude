@@ -21,7 +21,9 @@ class ParamsLigue:
     reg: float = 2.0  # force de rappel vers l'a priori
     fenetre_jours: int = 730
     poids_modele: float = 0.3  # part du modèle face à la référence dans le mélange
-    poids_buts: float = 1.0  # 1 = buts seuls ; moins = mélange avec les tirs cadrés (qualité des occasions)
+    # 30 % buts / 70 % tirs cadrés : meilleure log-loss dans les 8 championnats testés (RECHERCHE.md).
+    # Sans tirs dans les données, le modèle reprend automatiquement les buts seuls.
+    poids_buts: float = 0.3
 
     def en_dict(self) -> dict:
         return asdict(self)

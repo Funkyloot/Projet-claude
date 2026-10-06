@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from .capital import solde
 from .config import Reglages
 from .db import Pari, Recommandation
+from .donnees.cotes import nom_bookmaker
 from .donnees.football_data import LIGUES
 from .format import argent, cote, pct
 from .journal import (
@@ -31,7 +32,7 @@ from .marches import Selection
 
 JOURS = ["lun.", "mar.", "mer.", "jeu.", "ven.", "sam.", "dim."]
 JOURS_LONGS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
-CHASSEURS = {"A": "incohérences", "B": "value", "L": "surebet"}
+CHASSEURS = {"A": "incohérences", "B": "value (modèle)", "L": "surebet", "S": "value contre Pinnacle"}
 
 
 def quand_local(dt: datetime, fuseau: str) -> str:
@@ -56,7 +57,7 @@ def bloc_reco(s: Session, r: Reglages, reco: Recommandation, quand: datetime) ->
         f"  {reco.match.libelle} · {_libelle(reco)}",
     ]
     if reco.cote_vue is not None:
-        lignes.append(f"  Cote {reco.bookmaker} {cote(reco.cote_vue)} · prix juste {cote(reco.cote_juste)} · "
+        lignes.append(f"  Cote {nom_bookmaker(reco.bookmaker)} {cote(reco.cote_vue)} · prix juste {cote(reco.cote_juste)} · "
                       f"espérance {pct(reco.ev)} · mise {argent(mise)}")
     else:
         lignes.append(f"  Prix juste {cote(reco.cote_juste)} · jouer si 22bet ≥ {cote(reco.cote_min)} · "

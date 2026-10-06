@@ -3,6 +3,7 @@
 Programme qui tourne jour et nuit sur un serveur local, calcule ses propres probabilités sur le
 football et indique chaque jour sur quoi miser sur 22bet, à quelle cote minimale et combien.
 Conception complète : [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md).
+Recherche sur ce qui est rentable (données réelles) : [RECHERCHE.md](RECHERCHE.md).
 
 **Tout se règle dans l'interface web** : token Telegram, clé d'API de cotes, championnats,
 capital, seuils, téléchargement de l'historique, backtest, alias d'équipes. Aucun fichier à modifier.

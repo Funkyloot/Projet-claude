@@ -258,3 +258,46 @@ def test_coupure_internet_sans_avalanche_d_alertes(service, sessions, scenario):
     with sessions() as s:
         alertes = alertes_depuis(s, apres - timedelta(hours=1))
     assert len(alertes) == 1 and "pas accès à Internet" in alertes[0]  # même alerte : notée une fois
+
+
+def test_cotes_relevees_juste_avant_les_matchs(service, sessions, scenario):
+    from moteur.db import Pari, Recommandation
+    from moteur.donnees.cotes import CoteBrute
+    from moteur.donnees.odds_api import EvenementCotes
+    from moteur.marches import Selection
+
+    m = scenario["fixtures"].iloc[0]
+    debut = m["date"].to_pydatetime()
+
+    class OddsDirect(FauxOdds):
+        def __init__(self):
+            super().__init__([])
+            self.cotes_demandees = []
+
+        def evenements(self, ligue):
+            return [(m["dom"], m["ext"], debut)] if ligue == "E1" else []
+
+        def cotes(self, ligue, *a, **k):
+            self.cotes_demandees.append(ligue)
+            quand = service.horloge()
+            cotes = [CoteBrute("pinnacle", Selection("1x2", i), c, quand) for i, c in zip("1X2", (2.0, 3.6, 4.0))]
+            cotes += [CoteBrute("onexbet", Selection("1x2", i), c, quand) for i, c in zip("1X2", (2.2, 3.3, 3.7))]
+            return [EvenementCotes("E1", m["dom"], m["ext"], debut, cotes)]
+
+    service.odds, service.reseau = OddsDirect(), True
+    service.r.odds_api_credits_jour, service.r.odds_api_credits_scores = 15, 6
+    service.maj_donnees = lambda quand: 0  # pas de téléchargement dans le test
+    service.horloge_modifiable["t"] = debut - timedelta(hours=5)
+    assert service.ligues_avant_match(service.horloge()) == []  # trop tôt : aucun crédit dépensé
+    service.horloge_modifiable["t"] = debut - timedelta(hours=1)
+    assert service.ligues_avant_match(service.horloge()) == ["E1"]
+    service.tick()
+    assert service.odds.cotes_demandees == ["E1"]
+    with sessions() as s:
+        (reco,) = s.query(Recommandation).filter(Recommandation.chasseur == "S").all()
+        assert reco.valide and reco.selection == Selection("1x2", "1").cle
+        assert s.query(Pari).filter(Pari.mode == "simulation", Pari.recommandation_id == reco.id).count() == 1
+        assert lire_etat(s, "odds_api:budget")["credits"] == 3
+    service.horloge_modifiable["t"] = debut - timedelta(minutes=40)
+    service.tick()  # relevé trop récent : pas de nouvel appel payant
+    assert service.odds.cotes_demandees == ["E1"]

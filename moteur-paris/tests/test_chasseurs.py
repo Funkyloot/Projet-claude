@@ -133,3 +133,42 @@ def test_apercu_dit_pourquoi_une_option_est_bloquee():
     cotes = _cotes_justes(g, "pinnacle", 0.02) + _cotes_justes(g, "moyenne", 0.05, {Selection("total", "plus", 2.5): prix})
     assert meilleure_option(_ctx(g, cotes), Filtre(familles_validees=frozenset({"total"}))).statut == "recommande"
     assert meilleure_option(_ctx(g, cotes), Filtre()).statut == "observation"
+
+
+def _sharp(quand, debut, ref=(2.0, 3.6, 4.0), cible=(2.2, 3.3, 3.7), age_ref=10, age_cible=5, bk_ref="pinnacle",
+           totaux=None):
+    from datetime import timedelta
+
+    from moteur.chasseurs import chasseur_sharp
+
+    cotes = []
+    for bk, valeurs, age in ((bk_ref, ref, age_ref), ("onexbet", cible, age_cible)):
+        maj = quand - timedelta(minutes=age)
+        cotes += [CoteBrute(bk, Selection("1x2", i), c, maj) for i, c in zip(("1", "X", "2"), valeurs)]
+    for bk, (plus, moins) in (totaux or {}).items():
+        cotes += [CoteBrute(bk, Selection("total", "plus", 2.5), plus, quand),
+                  CoteBrute(bk, Selection("total", "moins", 2.5), moins, quand)]
+    ctx = ContexteMatch("E1", "Leeds", "Hull", debut, None, plus_recentes(cotes), quand=quand)
+    return chasseur_sharp(ctx, Filtre(valeur_min=0.03, bookmaker_cible="onexbet"))
+
+
+def test_chasseur_sharp_contre_pinnacle():
+    from datetime import timedelta
+
+    quand = DEBUT - timedelta(hours=1)
+    (c,) = _sharp(quand, DEBUT)  # 1xBet paie 2,20 la victoire de Leeds, juste ≈ 2,06 chez Pinnacle
+    assert c.chasseur == "S" and c.selection == Selection("1x2", "1") and c.valide and c.bookmaker == "onexbet"
+    assert c.cote_vue == 2.2 and 0.03 <= c.ev <= 0.10 and c.cote_min <= 2.2 and "pinnacle" in c.note
+    assert _sharp(quand, DEBUT, age_ref=200) == []  # prix Pinnacle trop ancien
+    assert _sharp(quand, DEBUT, age_cible=200) == []  # cote 1xBet trop ancienne
+    assert _sharp(DEBUT - timedelta(hours=10), DEBUT) == []  # trop tôt avant le match
+    assert _sharp(DEBUT + timedelta(minutes=5), DEBUT) == []  # match commencé
+    assert _sharp(quand, DEBUT, cible=(2.05, 3.5, 3.9)) == []  # pas assez d'écart
+    # au-delà de 4,5 : écarts historiques pas fiables, ignoré
+    assert _sharp(quand, DEBUT, ref=(1.6, 4.2, 5.5), cible=(1.55, 4.0, 6.5)) == []
+    # Betfair en secours, mais pas un marché Betfair trop large
+    assert len(_sharp(quand, DEBUT, bk_ref="betfair_ex_eu")) == 1
+    assert _sharp(quand, DEBUT, bk_ref="betfair_ex_eu", ref=(1.9, 3.3, 3.6)) == []
+    # plus / moins 2,5 : même principe sur le marché à deux issues
+    s = _sharp(quand, DEBUT, cible=(2.0, 3.4, 3.8), totaux={"pinnacle": (1.95, 1.95), "onexbet": (2.12, 1.80)})
+    assert [x.selection for x in s] == [Selection("total", "plus", 2.5)]

@@ -26,6 +26,7 @@ from ..calcul import analyser_value, marge, mise_conseillee, surebet
 from ..capital import solde
 from ..config import SECRETS
 from ..db import Pari
+from ..donnees.cotes import nom_bookmaker
 from ..donnees.football_data import LIGUES, etat_historique
 from ..donnees.odds_api import SPORTS, ClientOdds
 from ..format import argent, cote, pct
@@ -80,14 +81,16 @@ SECTIONS: dict[str, tuple[str, list[Champ]]] = {
         Champ("odds_api_key", "Clé The Odds API", "secret",
               "Compte gratuit sur the-odds-api.com. Sans clé, le moteur utilise les cotes de football-data."),
         Champ("bookmaker_cible", "Bookmaker cible", "texte",
-              "Clé du bookmaker où vous misez (22bet s'il est couvert). « Vérifier l'API » liste les clés possibles."),
+              "22bet n'est dans aucun flux officiel : « onexbet » (1xBet, même plateforme, cotes très proches) "
+              "sert d'indicateur. « Vérifier l'API » liste les clés possibles."),
         Champ("bookmaker_reference", "Bookmaker de référence", "texte", "Bookmaker « sharp » servant de prix juste."),
         Champ("odds_api_credits_jour", "Crédits par jour", "entier",
               "Budget quotidien de requêtes (offre gratuite : 500 par mois, soit environ 16 par jour)."),
         Champ("odds_api_credits_scores", "Dont crédits réservés aux scores", "entier",
               "Pour connaître les résultats quelques heures après les matchs (2 crédits par championnat)."),
         Champ("odds_api_regions", "Régions", "texte", "eu, uk, us… séparées par des virgules."),
-        Champ("odds_api_marches", "Marchés", "texte", "h2h,totals,spreads"),
+        Champ("odds_api_marches", "Marchés", "texte",
+              "h2h,totals conseillé (2 crédits par relevé). Ajouter spreads (handicaps) coûte 1 crédit de plus."),
     ]),
     "mises": ("Capital et mises", [
         Champ("capital_initial", "Capital de départ", "argent"),
@@ -150,7 +153,7 @@ def creer_app(service: Service) -> FastAPI:
     app = FastAPI(title="Moteur de paris", docs_url=None, redoc_url=None, openapi_url=None)
     gabarits = Jinja2Templates(directory=str(GABARITS))
     env = gabarits.env
-    env.filters.update(argent=argent, cote=cote, pct=pct, ligue=nom_ligue,
+    env.filters.update(argent=argent, cote=cote, pct=pct, ligue=nom_ligue, bookmaker=nom_bookmaker,
                        local=lambda dt: quand_local(dt, service.r.fuseau) if dt else "—")
 
     def reglages_actuels():

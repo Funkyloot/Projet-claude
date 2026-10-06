@@ -13,6 +13,14 @@ MOYENNE = "moyenne"
 MAXIMUM = "max"
 BET365 = "bet365"
 
+NOMS_BOOKMAKERS = {"onexbet": "1xBet", "pinnacle": "Pinnacle", "betfair_ex_eu": "Betfair", "moyenne": "moyenne du marché",
+                   "max": "meilleure cote du marché", "bet365": "Bet365", "williamhill": "William Hill",
+                   "marathonbet": "Marathonbet", "sport888": "888sport", "unibet_fr": "Unibet"}
+
+
+def nom_bookmaker(cle: str | None) -> str:
+    return NOMS_BOOKMAKERS.get(cle or "", cle or "")
+
 
 @dataclass(frozen=True)
 class CoteBrute:

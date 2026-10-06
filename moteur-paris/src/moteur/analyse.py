@@ -18,6 +18,7 @@ from .chasseurs import (
     Filtre,
     Surebet,
     chasseur_incoherences,
+    chasseur_sharp,
     chasseur_surebet,
     chasseur_value,
     grille_reference,
@@ -162,8 +163,13 @@ def analyser(
             m.ligue, m.dom, m.ext, m.debut,
             modele.grille(m.dom, m.ext) if modele is not None else None,
             plus_recentes(m.cotes),
+            quand=maintenant,
         )
-        candidats += chasseur_value(ctx, f) + chasseur_incoherences(ctx, f)
+        sharp = chasseur_sharp(ctx, f)
+        couverts = {c.selection for c in sharp}
+        # un même pari n'est signalé qu'une fois : le signal « sharp » prime sur celui du modèle
+        candidats += sharp + [c for c in chasseur_value(ctx, f) if c.selection not in couverts]
+        candidats += chasseur_incoherences(ctx, f)
         apercu = meilleure_option(ctx, f)
         if apercu is not None:
             apercus.append(apercu)

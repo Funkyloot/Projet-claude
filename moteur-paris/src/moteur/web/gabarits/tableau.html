@@ -50,7 +50,7 @@ football-data le met à jour plusieurs fois par semaine, surtout avant le week-e
 <div><strong>#{{ reco.id }} {{ reco.match.libelle }}</strong> · {{ reco.match.competition|ligue }} · {{ reco.match.debut|local }}</div>
 <div>{{ x.libelle }}</div>
 <div class="doux petit">
-{% if reco.cote_vue %}Cote {{ reco.bookmaker }} {{ reco.cote_vue|cote }} · {% endif %}
+{% if reco.cote_vue %}Cote {{ reco.bookmaker|bookmaker }} {{ reco.cote_vue|cote }} · {% endif %}
 Prix juste {{ reco.cote_juste|cote }} · <strong>jouer si 22bet ≥ {{ reco.cote_min|cote }}</strong> · mise conseillée {{ x.mise|argent }}
 {% if reco.cote_indicative %} · moyenne des bookmakers {{ reco.cote_indicative|cote }}{% endif %}
 {% if reco.note %} · {{ reco.note }}{% endif %}</div>

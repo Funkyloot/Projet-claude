@@ -144,6 +144,14 @@ class ClientOdds:
         params.update({"bookmakers": bookmakers} if bookmakers else {"regions": regions})
         return parser(self._get(f"/sports/{sport}/odds", **params), ligue)
 
+    def evenements(self, ligue: str) -> list[tuple[str, str, datetime]]:
+        """Matchs à venir (équipes, coup d'envoi). Gratuit : ne consomme aucun crédit."""
+        sport = SPORTS.get(ligue)
+        if sport is None:
+            return []
+        return [(e["home_team"], e["away_team"], _date(e["commence_time"]))
+                for e in self._get(f"/sports/{sport}/events", dateFormat="iso")]
+
     def scores(self, ligue: str, jours: int = 3) -> list[Score]:
         """Scores des matchs terminés depuis `jours` jours (1 à 3). Coûte 2 crédits."""
         sport = SPORTS.get(ligue)

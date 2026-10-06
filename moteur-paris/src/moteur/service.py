@@ -94,6 +94,9 @@ class Service:
         self.hist = pd.DataFrame()
         self.fixtures = pd.DataFrame()
         self.matchs: list[MatchAVenir] = []
+        self._calendrier: dict[str, list[datetime]] = {}  # coups d'envoi connus via l'API (gratuit)
+        self._calendrier_maj: datetime | None = None
+        self._releves_api: dict[str, tuple[datetime, list]] = {}  # dernières cotes API par championnat
         self.modeles: dict = {}
         self.derniere_analyse: dict = {}
         self.correspondance = Correspondance(self.fichier_alias)
@@ -219,28 +222,82 @@ class Service:
             self._envoyer(message)
         return len(regles) + regles_api
 
+    # Les cotes ne sont relevées que peu avant les matchs : c'est là que le prix de Pinnacle est le
+    # plus juste et que la stratégie « sharp » a fait ses preuves (RECHERCHE.md). Le calendrier, lui,
+    # est gratuit.
+    FENETRE_AVANT_MATCH = timedelta(hours=2)
+    DELAI_ENTRE_RELEVES = timedelta(minutes=90)
+    DUREE_RELEVE = timedelta(hours=3)
+
+    def _calendrier_api(self, quand: datetime) -> dict[str, list[datetime]]:
+        """Coups d'envoi à venir de chaque championnat suivi (endpoint gratuit, relu toutes les 6 h)."""
+        if self.odds is None or not self.reseau:
+            return {}
+        if self._calendrier_maj is not None and quand - self._calendrier_maj < timedelta(hours=6):
+            return self._calendrier
+        calendrier = dict(self._calendrier)
+        self._calendrier_maj = quand
+        for ligue in self.r.liste_ligues:
+            if ligue not in SPORTS:
+                continue
+            try:
+                calendrier[ligue] = [d for _, _, d in self.odds.evenements(ligue)]
+            except Exception as e:
+                self._alerte(f"Calendrier The Odds API : {self._erreur_lisible(e)}", quand)
+                self._calendrier_maj = quand - timedelta(hours=5)  # nouvel essai dans 1 h
+                break
+        self._calendrier = calendrier
+        return calendrier
+
+    def _limite_cotes(self) -> int:
+        return self.r.odds_api_credits_jour - self.r.odds_api_credits_scores  # le reste va aux scores
+
+    def ligues_avant_match(self, quand: datetime) -> list[str]:
+        """Championnats dont un match commence dans les 2 h et dont les cotes sont à relever."""
+        calendrier = self._calendrier_api(quand)
+        if not calendrier:
+            return []
+        cout = ClientOdds.credits_par_appel(self.r.odds_api_marches, self.r.odds_api_regions)
+        if self._budget_api(quand)["credits"] + cout > self._limite_cotes():
+            return []
+        with self.sessions() as s:
+            derniers = lire_etat(s, "cotes:dernier", {})
+        dues = []
+        for ligue, debuts in calendrier.items():
+            prochains = [d for d in debuts if quand < d <= quand + self.FENETRE_AVANT_MATCH]
+            if not prochains or ligue not in self.r.liste_ligues:
+                continue
+            if ligue in derniers and quand - datetime.fromisoformat(derniers[ligue]) < self.DELAI_ENTRE_RELEVES:
+                continue
+            dues.append((min(prochains), ligue))
+        return [ligue for _, ligue in sorted(dues)]
+
     def _cotes_api(self, matchs: list[MatchAVenir], quand: datetime) -> list:
         if self.odds is None or not self.reseau:
             return []
-        prochains: dict[str, datetime] = {}
-        for m in matchs:
-            prochains[m.ligue] = min(prochains.get(m.ligue, m.debut), m.debut)
-        ligues = sorted((c for c in self.r.liste_ligues if c in SPORTS),
-                        key=lambda c: prochains.get(c, quand + timedelta(days=30)))
         cout = ClientOdds.credits_par_appel(self.r.odds_api_marches, self.r.odds_api_regions)
         budget = self._budget_api(quand)
-        evenements = []
-        for ligue in ligues:
-            if budget["credits"] + cout > self.r.odds_api_credits_jour - self.r.odds_api_credits_scores:
-                break  # le reste est gardé pour les scores
+        with self.sessions() as s:
+            derniers = lire_etat(s, "cotes:dernier", {})
+        for ligue in self.ligues_avant_match(quand):
+            if budget["credits"] + cout > self._limite_cotes():
+                self._alerte("Crédits The Odds API du jour épuisés : des cotes d'avant-match n'ont pas été relevées "
+                             "(Réglages → Crédits par jour, si ton offre le permet).", quand)
+                break
             try:
-                evenements += self.odds.cotes(ligue, self.r.odds_api_marches, self.r.odds_api_regions)
+                self._releves_api[ligue] = (quand, self.odds.cotes(ligue, self.r.odds_api_marches,
+                                                                  self.r.odds_api_regions))
             except Exception as e:
                 self._alerte(f"API de cotes ({ligue}) : {self._erreur_lisible(e)}", quand)
+                derniers[ligue] = (quand - self.DELAI_ENTRE_RELEVES + timedelta(minutes=30)).isoformat()
                 break
             budget["credits"] += cout
+            derniers[ligue] = quand.isoformat()
         self._noter_budget_api(budget)
-        return evenements
+        with self.sessions() as s:
+            ecrire_etat(s, "cotes:dernier", derniers)
+        return [e for q, evenements in self._releves_api.values() if quand - q <= self.DUREE_RELEVE
+                for e in evenements]
 
     def _budget_api(self, quand: datetime) -> dict:
         """Crédits The Odds API déjà dépensés aujourd'hui (cotes et scores partagent le budget)."""
@@ -536,6 +593,9 @@ class Service:
             with self.sessions() as s:
                 ecrire_etat(s, "job:analyse", quand.isoformat())
             faites.append("analyse")
+        elif self.ligues_avant_match(quand):
+            self.analyser(quand)  # cotes fraîches juste avant des matchs : chasseur « sharp »
+            faites.append("analyse avant match")
         if self._du("rapport", self.r.heure_rapport, quand):
             self.rapport(quand)
             self._fait("rapport", quand)

@@ -1,5 +1,8 @@
 """Chasseurs d'erreurs (cahier des charges, section 8) et filtre commun (section 9).
 
+S · value « sharp » : la cote du bookmaker cible dépasse le prix juste de Pinnacle (ou Betfair),
+    relevé juste avant le match. Sans modèle : validé sur 7 saisons × 19 championnats de données
+    réelles (le profit réel suit l'écart annoncé), voir RECHERCHE.md.
 B · value : la probabilité (mélange modèle + référence sharp) vaut plus que la cote.
 A · incohérences : un marché du bookmaker cible ne colle pas avec ses propres cotes 1X2 et plus/moins.
 L · surebet : combinaison qui couvre toutes les issues chez plusieurs bookmakers.
@@ -9,11 +12,11 @@ a une espérance ≥ valeur_min. Utile quand la cote exacte de 22bet n'est pas c
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 
-from .calcul import surebet
+from .calcul import probas_justes, surebet
 from .donnees.cotes import BET365, MOYENNE, CoteBrute
 from .marches import (
     Selection,
@@ -65,6 +68,7 @@ class ContexteMatch:
     debut: datetime
     grille_modele: np.ndarray | None
     cotes: dict[tuple[str, Selection], CoteBrute] = field(default_factory=dict)
+    quand: datetime | None = None  # moment de l'analyse (fraîcheur des cotes)
 
 
 @dataclass(frozen=True)
@@ -99,6 +103,73 @@ def grille_reference(ctx: ContexteMatch, f: Filtre) -> tuple[np.ndarray | None, 
         if g is not None:
             return g, bk
     return None, None
+
+
+# Chasseur S : règles tirées de la recherche sur données réelles (RECHERCHE.md).
+REFERENCES_SHARP = ("pinnacle", "betfair_ex_eu")
+MARGE_MAX_SHARP = {"pinnacle": {3: 1.10, 2: 1.08}, "betfair_ex_eu": {3: 1.07, 2: 1.05}}
+AGE_MAX_COTE = timedelta(hours=3)  # prix relevés il y a moins de 3 h
+AVANT_MATCH_MAX = timedelta(hours=6)  # près du coup d'envoi : prix sharp le plus juste
+COTE_S = (1.25, 4.5)  # au-delà de 4,5 les écarts historiques ne sont plus fiables
+
+
+def _issues_opposees(sel: Selection) -> list[Selection] | None:
+    """Toutes les issues du même marché (pour retirer la marge), ou None si non géré sans modèle."""
+    if sel.marche == "1x2":
+        return [Selection("1x2", i) for i in ("1", "X", "2")]
+    demi = sel.ligne is not None and abs(sel.ligne * 2 - round(sel.ligne * 2)) < 1e-9 and round(sel.ligne * 2) % 2 == 1
+    if sel.marche == "total" and demi:
+        return [Selection("total", "plus", sel.ligne), Selection("total", "moins", sel.ligne)]
+    if sel.marche == "ah" and demi:
+        autre = "2" if sel.issue == "1" else "1"
+        return [sel, Selection("ah", autre, -sel.ligne)]
+    return None  # lignes entières ou quarts (remboursements) : seulement via le modèle
+
+
+def proba_sharp(ctx: ContexteMatch, sel: Selection) -> tuple[float, str] | None:
+    """Probabilité juste de `sel` selon Pinnacle (sinon Betfair), sur des prix frais."""
+    issues = _issues_opposees(sel)
+    if issues is None or ctx.quand is None:
+        return None
+    for bk in REFERENCES_SHARP:
+        cotes = [ctx.cotes.get((bk, s)) for s in issues]
+        if not all(cotes) or any(ctx.quand - c.maj > AGE_MAX_COTE for c in cotes):
+            continue
+        valeurs = [c.cote for c in cotes]
+        somme = sum(1 / v for v in valeurs)
+        if not 0.98 <= somme <= MARGE_MAX_SHARP[bk][len(valeurs)]:
+            continue
+        return probas_justes(valeurs, "puissance")[issues.index(sel)], bk
+    return None
+
+
+def chasseur_sharp(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:
+    """Chasseur S : cote du bookmaker cible au-dessus du prix juste sharp, peu avant le match."""
+    cible = f.bookmaker_cible or "onexbet"
+    if ctx.quand is None or not timedelta(0) < ctx.debut - ctx.quand <= AVANT_MATCH_MAX:
+        return []
+    candidats = []
+    for (bk, sel), c in sorted(ctx.cotes.items(), key=lambda x: x[0][1].cle):
+        if bk != cible or ctx.quand - c.maj > AGE_MAX_COTE or not COTE_S[0] <= c.cote <= COTE_S[1]:
+            continue
+        ref = proba_sharp(ctx, sel)
+        if ref is None:
+            continue
+        p, source = ref
+        W, L = p, 1 - p
+        cmin = cote_minimale(W, L, f.valeur_min)
+        if cmin is None or c.cote < cmin:
+            continue
+        ev = esperance(W, L, c.cote)
+        age = int((ctx.quand - min(c.maj, ctx.cotes[(source, sel)].maj)).total_seconds() // 60)
+        candidats.append(Candidat(
+            chasseur="S", ligue=ctx.ligue, dom=ctx.dom, ext=ctx.ext, debut=ctx.debut, selection=sel,
+            p_gain=W, p_perte=L, cote_juste=cote_juste(W, L), cote_min=cmin,
+            cote_vue=c.cote, bookmaker=bk, ev=ev, kelly=kelly_wl(W, L, c.cote),
+            valide=True, suspect=ev > f.seuil_suspect,
+            note=f"prix juste {source} · cotes relevées il y a {age} min · vérifier que 22bet affiche au moins la cote min",
+        ))
+    return candidats
 
 
 def chasseur_value(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:

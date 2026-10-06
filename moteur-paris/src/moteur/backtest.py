@@ -35,7 +35,7 @@ SUFFIXES = ("1", "x", "2", "plus", "moins", "ah1", "ah2")
 FAMILLE_SUFFIXE = {"1": "1x2", "x": "1x2", "2": "1x2", "plus": "total", "moins": "total", "ah1": "ah", "ah2": "ah"}
 GRILLE_XI = (0.001, 0.0019, 0.004)
 GRILLE_POIDS = (0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0)
-GRILLE_BUTS = (1.0,)  # part des buts face aux tirs cadrés (1 = buts seuls)
+GRILLE_BUTS = (0.3,)  # part des buts face aux tirs cadrés : 0,3 gagne partout (RECHERCHE.md)
 SAISONS_COFFRE = 2
 SAISONS_CHAUFFE = 2
 PARIS_MIN_COFFRE = 30  # par championnat
