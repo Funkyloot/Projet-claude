@@ -301,3 +301,69 @@ def test_cotes_relevees_juste_avant_les_matchs(service, sessions, scenario):
     service.horloge_modifiable["t"] = debut - timedelta(minutes=40)
     service.tick()  # relevé trop récent : pas de nouvel appel payant
     assert service.odds.cotes_demandees == ["E1"]
+
+
+def test_mouvement_de_pinnacle_et_clv_par_les_releves(service, sessions, scenario):
+    from moteur.db import Cote, Match, Recommandation
+    from moteur.donnees.cotes import CoteBrute
+    from moteur.donnees.odds_api import EvenementCotes
+    from moteur.journal import cloture_releves, enregistrer_releves
+    from moteur.marches import Selection
+
+    m = scenario["fixtures"].iloc[0]
+    debut = m["date"].to_pydatetime()
+    # 1er relevé : rien à jouer ; 2e relevé (après les compositions) : Pinnacle monte sur le domicile,
+    # 1xBet n'a pas bougé
+    prix = [((2.1, 3.5, 3.8), (2.15, 3.4, 3.7)), ((1.9, 3.7, 4.3), (2.15, 3.4, 3.7))]
+
+    class OddsQuiBouge(FauxOdds):
+        def __init__(self):
+            super().__init__([])
+            self.n = 0
+
+        def evenements(self, ligue):
+            return [(m["dom"], m["ext"], debut)] if ligue == "E1" else []
+
+        def cotes(self, ligue, *a, **k):
+            quand = service.horloge()
+            ref, cible = prix[min(self.n, 1)]
+            self.n += 1
+            cotes = [CoteBrute("pinnacle", Selection("1x2", i), c, quand) for i, c in zip("1X2", ref)]
+            cotes += [CoteBrute("onexbet", Selection("1x2", i), c, quand) for i, c in zip("1X2", cible)]
+            return [EvenementCotes("E1", m["dom"], m["ext"], debut, cotes)]
+
+    service.odds, service.reseau = OddsQuiBouge(), True
+    service.maj_donnees = lambda quand: 0
+    service.horloge_modifiable["t"] = debut - timedelta(minutes=110)
+    service.tick()
+    with sessions() as s:
+        assert s.query(Recommandation).filter(Recommandation.chasseur == "S").count() == 0
+    service.horloge_modifiable["t"] = debut - timedelta(minutes=45)
+    service.tick()
+    assert service.odds.n == 2  # un second relevé dans la dernière heure
+    with sessions() as s:
+        (reco,) = s.query(Recommandation).filter(Recommandation.chasseur == "S").all()
+        assert reco.selection == Selection("1x2", "1").cle and "Pinnacle a monté" in reco.note
+        assert "1xBet en retard" in reco.note
+        assert s.query(Cote).count() == 12  # 2 relevés × (3 Pinnacle + 3 1xBet)
+        match = s.get(Match, reco.match_id)
+        # CLV : seulement sur un relevé pris APRÈS le pari
+        assert cloture_releves(s, match, Selection("1x2", "1"), reco.cree_le) is None
+        plus_tard = debut - timedelta(minutes=5)
+        enregistrer_releves(s, match, [CoteBrute("pinnacle", Selection("1x2", i), c, plus_tard)
+                                       for i, c in zip("1X2", (1.8, 3.8, 4.8))], reco.cree_le)
+        s.commit()
+        cc = cloture_releves(s, match, Selection("1x2", "1"), reco.cree_le)
+        assert cc is not None and 1.8 < cc < 1.95  # la cote prise (2,15) bat la clôture : CLV positive
+
+
+def test_pas_de_releve_payant_pour_les_grands_championnats(service, scenario):
+    debut = scenario["maintenant"] + timedelta(hours=1)
+
+    class OddsGrands(FauxOdds):
+        def evenements(self, ligue):
+            return [("A", "B", debut)]
+
+    service.odds, service.reseau = OddsGrands([]), True
+    service.r.ligues = "E0,E1"
+    assert service.ligues_avant_match(scenario["maintenant"]) == ["E1"]  # Premier League exclue

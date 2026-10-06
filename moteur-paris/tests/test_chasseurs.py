@@ -172,3 +172,16 @@ def test_chasseur_sharp_contre_pinnacle():
     # plus / moins 2,5 : même principe sur le marché à deux issues
     s = _sharp(quand, DEBUT, cible=(2.0, 3.4, 3.8), totaux={"pinnacle": (1.95, 1.95), "onexbet": (2.12, 1.80)})
     assert [x.selection for x in s] == [Selection("total", "plus", 2.5)]
+
+
+def test_chasseur_sharp_ignore_les_grands_championnats():
+    from datetime import timedelta
+
+    from moteur.chasseurs import chasseur_sharp
+
+    quand = DEBUT - timedelta(hours=1)
+    cotes = [CoteBrute(bk, Selection("1x2", i), c, quand) for bk, valeurs in
+             (("pinnacle", (2.0, 3.6, 4.0)), ("onexbet", (2.2, 3.3, 3.7))) for i, c in zip("1X2", valeurs)]
+    for ligue, attendu in (("E1", 1), ("E0", 0), ("SP1", 0)):
+        ctx = ContexteMatch(ligue, "Leeds", "Hull", DEBUT, None, plus_recentes(cotes), quand=quand)
+        assert len(chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet"))) == attendu

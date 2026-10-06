@@ -111,6 +111,8 @@ MARGE_MAX_SHARP = {"pinnacle": {3: 1.10, 2: 1.08}, "betfair_ex_eu": {3: 1.07, 2:
 AGE_MAX_COTE = timedelta(hours=3)  # prix relevés il y a moins de 3 h
 AVANT_MATCH_MAX = timedelta(hours=6)  # près du coup d'envoi : prix sharp le plus juste
 COTE_S = (1.25, 4.5)  # au-delà de 4,5 les écarts historiques ne sont plus fiables
+# Les 5 grands championnats : marchés si efficaces que la stratégie y perd (−5,5 % sur 1 042 paris).
+LIGUES_EFFICACES = frozenset({"E0", "D1", "I1", "SP1", "F1"})
 
 
 def _issues_opposees(sel: Selection) -> list[Selection] | None:
@@ -126,14 +128,14 @@ def _issues_opposees(sel: Selection) -> list[Selection] | None:
     return None  # lignes entières ou quarts (remboursements) : seulement via le modèle
 
 
-def proba_sharp(ctx: ContexteMatch, sel: Selection) -> tuple[float, str] | None:
-    """Probabilité juste de `sel` selon Pinnacle (sinon Betfair), sur des prix frais."""
+def proba_sharp(ctx: ContexteMatch, sel: Selection, age_max: timedelta | None = AGE_MAX_COTE) -> tuple[float, str] | None:
+    """Probabilité juste de `sel` selon Pinnacle (sinon Betfair). `age_max=None` : sans contrôle de fraîcheur."""
     issues = _issues_opposees(sel)
-    if issues is None or ctx.quand is None:
+    if issues is None or (age_max is not None and ctx.quand is None):
         return None
     for bk in REFERENCES_SHARP:
         cotes = [ctx.cotes.get((bk, s)) for s in issues]
-        if not all(cotes) or any(ctx.quand - c.maj > AGE_MAX_COTE for c in cotes):
+        if not all(cotes) or (age_max is not None and any(ctx.quand - c.maj > age_max for c in cotes)):
             continue
         valeurs = [c.cote for c in cotes]
         somme = sum(1 / v for v in valeurs)
@@ -146,7 +148,7 @@ def proba_sharp(ctx: ContexteMatch, sel: Selection) -> tuple[float, str] | None:
 def chasseur_sharp(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:
     """Chasseur S : cote du bookmaker cible au-dessus du prix juste sharp, peu avant le match."""
     cible = f.bookmaker_cible or "onexbet"
-    if ctx.quand is None or not timedelta(0) < ctx.debut - ctx.quand <= AVANT_MATCH_MAX:
+    if ctx.ligue in LIGUES_EFFICACES or ctx.quand is None or not timedelta(0) < ctx.debut - ctx.quand <= AVANT_MATCH_MAX:
         return []
     candidats = []
     for (bk, sel), c in sorted(ctx.cotes.items(), key=lambda x: x[0][1].cle):

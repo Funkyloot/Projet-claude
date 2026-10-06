@@ -18,7 +18,7 @@ from .calcul import arrondi_naturel, probas_justes
 from .capital import depot_initial, enregistrer, solde
 from .chasseurs import Candidat
 from .config import Reglages
-from .db import Etat, Match, Pari, Prediction, Recommandation
+from .db import Cote, Etat, Match, Pari, Prediction, Recommandation
 from .format import argent, cote as fcote, pct
 from .marches import Selection, cote_juste, esperance, fraction_gagnee, gain_perte, kelly_wl
 from .modeles.grille import grille_depuis_cotes
@@ -84,6 +84,53 @@ def trouver_ou_creer_match(s: Session, ligue: str, dom: str, ext: str, debut: da
     elif m.debut != debut:
         m.debut = debut
     return m
+
+
+# --- Relevés de cotes ------------------------------------------------------------------
+
+BOOKMAKERS_RELEVES = ("pinnacle", "betfair_ex_eu", "onexbet")
+
+
+def enregistrer_releves(s: Session, m: Match, cotes, depuis: datetime) -> int:
+    """Garde les cotes sharp et 1xBet relevées depuis `depuis` (mouvements et CLV rapide)."""
+    deja = {(c.bookmaker, c.marche, c.releve_le) for c in s.scalars(select(Cote).where(Cote.match_id == m.id))}
+    n = 0
+    for c in cotes:
+        maj = pd.Timestamp(c.maj).to_pydatetime()
+        if c.bookmaker not in BOOKMAKERS_RELEVES or maj < depuis or (c.bookmaker, c.selection.cle, maj) in deja:
+            continue
+        s.add(Cote(match_id=m.id, bookmaker=c.bookmaker, marche=c.selection.cle, issue="", valeur=c.cote, releve_le=maj))
+        n += 1
+    return n
+
+
+def releves(s: Session, m: Match) -> list:
+    """Relevés enregistrés d'un match, sous forme de CoteBrute."""
+    from .donnees.cotes import CoteBrute
+
+    return [CoteBrute(c.bookmaker, Selection.depuis_cle(c.marche), c.valeur, c.releve_le)
+            for c in s.scalars(select(Cote).where(Cote.match_id == m.id))]
+
+
+def cloture_releves(s: Session, m: Match, sel: Selection, apres: datetime) -> float | None:
+    """Prix juste sharp du dernier relevé avant le match, pris APRÈS le pari (sinon la CLV
+    serait mesurée sur le prix même qui a déclenché le signal)."""
+    from .chasseurs import REFERENCES_SHARP, _issues_opposees
+
+    issues = _issues_opposees(sel)
+    if issues is None:
+        return None
+    cles = {x.cle for x in issues}
+    lignes = s.scalars(select(Cote).where(Cote.match_id == m.id, Cote.releve_le > apres, Cote.releve_le <= m.debut,
+                                          Cote.bookmaker.in_(REFERENCES_SHARP), Cote.marche.in_(cles)))
+    par_releve: dict = {}
+    for c in lignes:
+        par_releve.setdefault((c.releve_le, c.bookmaker), {})[c.marche] = c.valeur
+    for (_, bk), valeurs in sorted(par_releve.items(), key=lambda x: (x[0][0], x[0][1] == "pinnacle"), reverse=True):
+        if all(x.cle in valeurs for x in issues):
+            p = probas_justes([valeurs[x.cle] for x in issues], "puissance")[issues.index(sel)]
+            return 1 / p if p > 0 else None
+    return None
 
 
 # --- Mises ------------------------------------------------------------------
@@ -311,13 +358,13 @@ def _regler_match(s: Session, m: Match, ligne: pd.Series | None, quand: datetime
                                                        Recommandation.fraction.is_(None))):
         sel = Selection.depuis_cle(reco.selection)
         reco.fraction = fraction_gagnee(sel, m.buts_domicile, m.buts_exterieur)
-        cc = cote_cloture_juste(ligne, sel)
+        cc = cote_cloture_juste(ligne, sel) or cloture_releves(s, m, sel, reco.cree_le)
         if cc and reco.cote_retenue:
             reco.clv = reco.cote_retenue / cc - 1
     for pred in s.scalars(select(Prediction).where(Prediction.match_id == m.id, Prediction.fraction.is_(None))):
         sel = Selection.depuis_cle(pred.selection)
         pred.fraction = fraction_gagnee(sel, m.buts_domicile, m.buts_exterieur)
-        cc = cote_cloture_juste(ligne, sel)
+        cc = cote_cloture_juste(ligne, sel) or cloture_releves(s, m, sel, pred.maj_le)
         if cc:
             pred.clv = pred.cote / cc - 1
     for p in s.scalars(select(Pari).where(Pari.match_id == m.id, Pari.statut == "en_cours")):
@@ -326,7 +373,7 @@ def _regler_match(s: Session, m: Match, ligne: pd.Series | None, quand: datetime
         p.gain_net = round(p.mise * g * (p.cote_prise - 1) if g > 0 else p.mise * g, 2)
         p.statut = STATUTS[g]
         p.regle_le = quand
-        cc = cote_cloture_juste(ligne, sel)
+        cc = cote_cloture_juste(ligne, sel) or cloture_releves(s, m, sel, p.cree_le)
         if cc:
             p.cote_cloture_juste = cc
             p.clv = p.cote_prise / cc - 1

@@ -45,16 +45,21 @@ from .donnees.odds_api import SANS_SCORES, SPORTS, ClientOdds
 from .format import cote, pct
 from .journal import (
     ajouter_alerte,
+    BOOKMAKERS_RELEVES,
     capital,
     completer_clv,
     controle_arret,
     ecrire_etat,
     enregistrer_candidats,
     enregistrer_predictions,
+    enregistrer_releves,
     lire_etat,
     matchs_a_regler,
     regler_depuis_resultats,
+    releves,
+    trouver_ou_creer_match,
 )
+from .chasseurs import LIGUES_EFFICACES
 from .modeles.ligue import ajuster_ligue
 from .rapport import alerte, bilan_hebdo, quand_local, rapport_quotidien, texte_fiche
 from .taches import effectifs, enregistrer_reglages, prendre_demandes, suivre
@@ -226,7 +231,9 @@ class Service:
     # plus juste et que la stratégie « sharp » a fait ses preuves (RECHERCHE.md). Le calendrier, lui,
     # est gratuit.
     FENETRE_AVANT_MATCH = timedelta(hours=2)
-    DELAI_ENTRE_RELEVES = timedelta(minutes=90)
+    # 2 relevés possibles par vague de matchs : vers T-2 h puis dans la dernière heure, après
+    # l'annonce des compositions, quand Pinnacle bouge et que 1xBet/22bet suivent en retard.
+    DELAI_ENTRE_RELEVES = timedelta(minutes=60)
     DUREE_RELEVE = timedelta(hours=3)
 
     def _calendrier_api(self, quand: datetime) -> dict[str, list[datetime]]:
@@ -265,12 +272,12 @@ class Service:
         dues = []
         for ligue, debuts in calendrier.items():
             prochains = [d for d in debuts if quand < d <= quand + self.FENETRE_AVANT_MATCH]
-            if not prochains or ligue not in self.r.liste_ligues:
+            if not prochains or ligue not in self.r.liste_ligues or ligue in LIGUES_EFFICACES:
                 continue
             if ligue in derniers and quand - datetime.fromisoformat(derniers[ligue]) < self.DELAI_ENTRE_RELEVES:
                 continue
-            dues.append((min(prochains), ligue))
-        return [ligue for _, ligue in sorted(dues)]
+            dues.append((-len(prochains), min(prochains), ligue))  # le plus de matchs par crédit d'abord
+        return [ligue for _, _, ligue in sorted(dues)]
 
     def _cotes_api(self, matchs: list[MatchAVenir], quand: datetime) -> list:
         if self.odds is None or not self.reseau:
@@ -298,6 +305,21 @@ class Service:
             ecrire_etat(s, "cotes:dernier", derniers)
         return [e for q, evenements in self._releves_api.values() if quand - q <= self.DUREE_RELEVE
                 for e in evenements]
+
+    def _memoriser_releves(self, matchs: list[MatchAVenir], quand: datetime) -> None:
+        """Enregistre les relevés Pinnacle/Betfair/1xBet récents et rend aux matchs les relevés
+        précédents : mouvement de Pinnacle dans les signaux, CLV mesurée sans attendre football-data."""
+        with self.sessions() as s:
+            for m in matchs:
+                recents = [c for c in m.cotes if c.bookmaker in BOOKMAKERS_RELEVES and quand - c.maj <= self.DUREE_RELEVE]
+                if not recents:
+                    continue
+                match = trouver_ou_creer_match(s, m.ligue, m.dom, m.ext, m.debut)
+                enregistrer_releves(s, match, recents, quand - self.DUREE_RELEVE)
+                s.flush()
+                connus = {(c.bookmaker, c.selection, pd.Timestamp(c.maj)) for c in m.cotes}
+                m.cotes += [c for c in releves(s, match) if (c.bookmaker, c.selection, pd.Timestamp(c.maj)) not in connus]
+            s.commit()
 
     def _budget_api(self, quand: datetime) -> dict:
         """Crédits The Odds API déjà dépensés aujourd'hui (cotes et scores partagent le budget)."""
@@ -397,6 +419,7 @@ class Service:
         evenements = self._cotes_api(matchs, quand)
         if evenements:
             matchs, alertes = fusionner_api(matchs, evenements, self._equipes_connues(quand), self.correspondance)
+            self._memoriser_releves(matchs, quand)
             for a in sorted(set(alertes)):
                 self._alerte(a, quand)
         res = analyser(matchs, self.hist, self.r, quand)

@@ -20,6 +20,7 @@ from .chasseurs import (
     chasseur_incoherences,
     chasseur_sharp,
     chasseur_surebet,
+    proba_sharp,
     chasseur_value,
     grille_reference,
     meilleure_option,
@@ -166,6 +167,7 @@ def analyser(
             quand=maintenant,
         )
         sharp = chasseur_sharp(ctx, f)
+        noter_mouvement(sharp, m.cotes)
         couverts = {c.selection for c in sharp}
         # un même pari n'est signalé qu'une fois : le signal « sharp » prime sur celui du modèle
         candidats += sharp + [c for c in chasseur_value(ctx, f) if c.selection not in couverts]
@@ -178,6 +180,27 @@ def analyser(
     apercus.sort(key=lambda a: a.debut)
     return ResultatAnalyse(candidats, surebets, len(matchs), sorted({m.ligue for m in matchs}), alertes, modeles,
                            apercus)
+
+
+def noter_mouvement(candidats: list[Candidat], cotes: list[CoteBrute]) -> None:
+    """Ajoute au signal le mouvement de Pinnacle depuis son premier relevé : c'est quand le
+    marché sharp bouge que les bookmakers grand public prennent du retard (RECHERCHE.md)."""
+    if not candidats:
+        return
+    anciennes: dict = {}
+    for c in sorted(cotes, key=lambda c: c.maj):
+        anciennes.setdefault((c.bookmaker, c.selection), c)
+    depart = ContexteMatch("", "", "", datetime.min, None, anciennes)
+    for c in candidats:
+        avant = proba_sharp(depart, c.selection, age_max=None)
+        if avant is None:
+            continue
+        p0, apres = avant[0], c.p_gain / (c.p_gain + c.p_perte)
+        ecart = apres - p0
+        if abs(ecart) >= 0.005:
+            sens = "monté" if ecart > 0 else "baissé"
+            c.note += (f" · Pinnacle a {sens} de {abs(ecart) * 100:.1f} pts depuis le premier relevé "
+                       f"({p0:.0%} → {apres:.0%})" + (" : 1xBet en retard" if ecart > 0 else ""))
 
 
 @dataclass

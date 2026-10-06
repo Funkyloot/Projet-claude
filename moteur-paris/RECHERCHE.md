@@ -47,11 +47,35 @@ Le moment compte : à la clôture (juste avant le match) le résultat est solide
 il l'est beaucoup moins (1X2 : +2,0 % puis −0,3 %). D'où le relevé des cotes **dans les 2 h avant
 le coup d'envoi**.
 
+## 3 bis. Où et quand chercher (deuxième série de mesures)
+
+**Pas dans les 5 grands championnats.** Premier League, Liga, Serie A, Bundesliga, Ligue 1 :
+−5,5 % sur 1 042 paris (les bookmakers y sont aussi précis que Pinnacle). Ailleurs : +4,2 % sur
+3 815 paris, et 10,8 occasions pour 100 matchs contre 8,3. Le chasseur S ignore ces 5 championnats.
+
+**Juste après un mouvement de Pinnacle.** Probabilité Pinnacle du début de semaine au coup d'envoi,
+et part des issues où un bookmaker grand public paie au moins 3 % au-dessus du prix juste :
+
+| Mouvement de Pinnacle | Issues | Occasions |
+|---|---|---|
+| stable | 82 154 | 0,6 % |
+| ↑ 2 à 4 points | 47 466 | 2,0 % |
+| ↑ plus de 4 points | 25 719 | 3,2 % |
+
+Les bookmakers grand public suivent Pinnacle avec retard : les occasions sont 3 à 5 fois plus
+fréquentes après un mouvement. D'où un second relevé dans la dernière heure (compositions).
+
+**En début de semaine (données gratuites)** : CLV +1,9 à +3,9 %, ROI positif mais moins net
+qu'à la clôture. Sans la cote de 22bet dans ces données, trop de fausses alertes : non retenu.
+
 ## 4. Ce que l'app fait maintenant (chasseur S)
 
 - Calendrier des matchs via The Odds API (gratuit, 0 crédit), relu toutes les 6 h.
-- Cotes relevées seulement dans les 2 h avant un match (au plus une fois toutes les 90 min par
-  championnat) : Pinnacle, Betfair et 1xBet sont dans la région « eu ».
+- Cotes relevées seulement dans les 2 h avant un match, au plus une fois par heure et par
+  championnat (donc un second relevé après les compositions), en commençant par les championnats qui
+  ont le plus de matchs dans la fenêtre : Pinnacle, Betfair et 1xBet sont dans la région « eu ».
+- Chaque relevé est gardé : le signal indique de combien Pinnacle a bougé, et la CLV est mesurée
+  sur le dernier relevé pris après le pari, sans attendre football-data.
 - Signal si la cote 1xBet ≥ prix juste Pinnacle (ou Betfair si Pinnacle manque) + 3 %, cote entre
   1,25 et 4,5, prix relevés il y a moins de 3 h. Marchés : 1X2, plus/moins et handicaps à demi-buts.
 - Le signal donne la **cote minimale** à exiger sur 22bet. 22bet suit généralement 1xBet, mais pas
