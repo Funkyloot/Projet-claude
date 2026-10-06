@@ -74,6 +74,7 @@ class ContexteMatch:
 @dataclass(frozen=True)
 class Filtre:
     valeur_min: float = 0.03
+    ecart_min_sharp: float = 0.06
     seuil_suspect: float = 0.10
     seuil_desaccord: float = 0.10
     poids_modele: float = 0.3
@@ -167,7 +168,7 @@ def chasseur_sharp(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:
             continue
         p, source = ref
         W, L = p, 1 - p
-        cmin = cote_minimale(W, L, f.valeur_min)
+        cmin = cote_minimale(W, L, f.ecart_min_sharp)
         if cmin is None or c.cote < cmin:
             continue
         ev = esperance(W, L, c.cote)

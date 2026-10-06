@@ -102,6 +102,9 @@ SECTIONS: dict[str, tuple[str, list[Champ]]] = {
         Champ("exposition_jour_pct", "Mises maximales par jour", "pct"),
         Champ("exposition_match_pct", "Mises maximales par match", "pct"),
         Champ("valeur_min", "Value minimale", "pct", "Espérance minimale pour recommander un pari."),
+        Champ("ecart_min_sharp", "Écart minimum contre Pinnacle", "pct",
+              "Signaux « contre Pinnacle » : 6 % conseillé (moins de paris, mais chacun vaut la peine). "
+              "3 % donne 3 fois plus de paris, avec un gain moyen plus petit."),
         Champ("seuil_suspect", "Seuil « trop belle »", "pct", "Au-delà : risque d'annulation, pas recommandé."),
         Champ("seuil_desaccord", "Désaccord max modèle / référence", "pct"),
         Champ("jours_simulation_min", "Jours de simulation avant le réel", "entier"),

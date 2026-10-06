@@ -99,3 +99,15 @@ le capital et le nombre de paris (plus de championnats et de marchés suivis).
 
 Risques réels : 22bet ne suit pas toujours 1xBet ; les bookmakers limitent les comptes gagnants ;
 offre gratuite de The Odds API = 500 crédits par mois (≈ 4 relevés avant-match par jour).
+
+## 6. Seuil d'écart du chasseur S (règles de l'app, hors 5 grands championnats, clôture)
+
+| Écart minimum | Paris par saison et par bookmaker | Gain moyen réel par pari |
+|---|---|---|
+| 3 % | 94 | +4,6 % |
+| 5 % | 43 | +7,1 % |
+| **6 % (défaut)** | **31** | **+7,7 %** |
+| 8 % | 18 | +14,4 % |
+
+Choix de l'utilisateur : moins de paris, chacun avec une vraie marge. Le gain total sur une saison
+reste du même ordre (les petits écarts sont plus nombreux mais rapportent peu chacun).

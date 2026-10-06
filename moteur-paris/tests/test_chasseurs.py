@@ -185,3 +185,17 @@ def test_chasseur_sharp_ignore_les_grands_championnats():
     for ligue, attendu in (("E1", 1), ("E0", 0), ("SP1", 0)):
         ctx = ContexteMatch(ligue, "Leeds", "Hull", DEBUT, None, plus_recentes(cotes), quand=quand)
         assert len(chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet"))) == attendu
+
+
+def test_ecart_minimum_contre_pinnacle():
+    from datetime import timedelta
+
+    from moteur.chasseurs import chasseur_sharp
+
+    quand = DEBUT - timedelta(hours=1)
+    cotes = [CoteBrute(bk, Selection("1x2", i), c, quand) for bk, valeurs in
+             (("pinnacle", (2.0, 3.6, 4.0)), ("onexbet", (2.12, 3.3, 3.7))) for i, c in zip("1X2", valeurs)]
+    ctx = ContexteMatch("E1", "Leeds", "Hull", DEBUT, None, plus_recentes(cotes), quand=quand)
+    assert chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet")) == []  # ≈ +4 % : sous les 6 % par défaut
+    (c,) = chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet", ecart_min_sharp=0.03))
+    assert 0.03 <= c.ev < 0.06

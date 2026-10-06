@@ -70,7 +70,7 @@ def test_fiche_web(connecte, service):
 def test_reglages_depuis_l_interface(connecte, sessions):
     r = connecte.post("/reglages/mises", data={
         "capital_initial": "150", "seuil_arret": "90", "mise_max_pct": "2,5", "fraction_kelly": "25",
-        "exposition_jour_pct": "15", "exposition_match_pct": "5", "valeur_min": "4", "seuil_suspect": "10",
+        "exposition_jour_pct": "15", "exposition_match_pct": "5", "ecart_min_sharp": "6", "valeur_min": "4", "seuil_suspect": "10",
         "seuil_desaccord": "10", "jours_simulation_min": "14"})
     assert "Réglages enregistrés" in r.text
     with sessions() as s:
@@ -79,7 +79,7 @@ def test_reglages_depuis_l_interface(connecte, sessions):
     # une valeur incohérente est refusée et rien n'est enregistré
     r = connecte.post("/reglages/mises", data={
         "capital_initial": "50", "seuil_arret": "90", "mise_max_pct": "2", "fraction_kelly": "25",
-        "exposition_jour_pct": "15", "exposition_match_pct": "5", "valeur_min": "3", "seuil_suspect": "10",
+        "exposition_jour_pct": "15", "exposition_match_pct": "5", "ecart_min_sharp": "6", "valeur_min": "3", "seuil_suspect": "10",
         "seuil_desaccord": "10", "jours_simulation_min": "14"})
     assert "seuil_arret" in r.text
     with sessions() as s:

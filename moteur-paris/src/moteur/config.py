@@ -31,6 +31,8 @@ class Reglages(BaseSettings):
     exposition_jour_pct: float = Field(0.15, gt=0, le=0.5)
     exposition_match_pct: float = Field(0.05, gt=0, le=0.2)
     valeur_min: float = Field(0.03, ge=0)
+    # Chasseur S (contre Pinnacle) : 6 % → moins de paris mais +7,7 % en moyenne chacun (RECHERCHE.md)
+    ecart_min_sharp: float = Field(0.06, ge=0.01, le=0.5)
     age_max_cote_s: int = Field(60, gt=0)
     # Au-delà, une value ou un surebet est marqué « risque d'annulation » (section 8)
     seuil_suspect: float = Field(0.10, gt=0)
@@ -98,7 +100,7 @@ class Reglages(BaseSettings):
 # Champs modifiables depuis l'interface. Base de données et dossier restent de l'infrastructure.
 CHAMPS_MODIFIABLES = [
     "capital_initial", "seuil_arret", "fraction_kelly", "mise_max_pct", "exposition_jour_pct",
-    "exposition_match_pct", "valeur_min", "seuil_suspect", "seuil_desaccord", "jours_simulation_min",
+    "exposition_match_pct", "valeur_min", "ecart_min_sharp", "seuil_suspect", "seuil_desaccord", "jours_simulation_min",
     "ligues", "saison_depuis", "horizon_h", "poids_modele", "prix_backtest",
     "fuseau", "heure_donnees", "heure_rapport", "intervalle_analyse_h",
     "odds_api_key", "odds_api_credits_jour", "odds_api_credits_scores", "odds_api_marches", "odds_api_regions",

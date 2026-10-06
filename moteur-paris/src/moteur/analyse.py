@@ -155,7 +155,8 @@ def analyser(
     for m in matchs:
         params, familles = params_ligue(parametres, m.ligue, r)
         f = Filtre(
-            valeur_min=r.valeur_min, seuil_suspect=r.seuil_suspect, seuil_desaccord=r.seuil_desaccord,
+            valeur_min=r.valeur_min, ecart_min_sharp=r.ecart_min_sharp, seuil_suspect=r.seuil_suspect,
+            seuil_desaccord=r.seuil_desaccord,
             poids_modele=params.poids_modele, bookmaker_cible=r.bookmaker_cible,
             bookmaker_reference=r.bookmaker_reference, familles_validees=familles,
         )
