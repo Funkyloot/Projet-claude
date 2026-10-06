@@ -297,7 +297,7 @@ def test_cotes_relevees_juste_avant_les_matchs(service, sessions, scenario):
         (reco,) = s.query(Recommandation).filter(Recommandation.chasseur == "S").all()
         assert reco.valide and reco.selection == Selection("1x2", "1").cle
         assert s.query(Pari).filter(Pari.mode == "simulation", Pari.recommandation_id == reco.id).count() == 1
-        assert lire_etat(s, "odds_api:budget")["credits"] == 3
+        assert lire_etat(s, "odds_api:budget")["credits"] == 2  # h2h + totals, région eu
     service.horloge_modifiable["t"] = debut - timedelta(minutes=40)
     service.tick()  # relevé trop récent : pas de nouvel appel payant
     assert service.odds.cotes_demandees == ["E1"]
