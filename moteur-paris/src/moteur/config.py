@@ -57,7 +57,7 @@ class Reglages(BaseSettings):
 
     # Cotes en direct (optionnel)
     odds_api_key: str = ""
-    odds_api_credits_jour: int = Field(15, ge=0)
+    odds_api_credits_jour: int = Field(0, ge=0)  # 0 = automatique : crédits restants du mois / jours restants
     odds_api_credits_scores: int = Field(4, ge=0)  # part du budget réservée aux scores (règlement rapide)
     odds_api_marches: str = "h2h,totals"  # 2 crédits par relevé : plus de relevés avant match
     odds_api_regions: str = "eu"

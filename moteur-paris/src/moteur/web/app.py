@@ -31,6 +31,7 @@ from ..donnees.football_data import LIGUES, etat_historique
 from ..donnees.odds_api import SPORTS, ClientOdds
 from ..format import argent, cote, pct
 from ..journal import (
+    ecrire_etat,
     alertes_depuis,
     changer_mode,
     conditions_reel,
@@ -85,7 +86,8 @@ SECTIONS: dict[str, tuple[str, list[Champ]]] = {
               "sert d'indicateur. « Vérifier l'API » liste les clés possibles."),
         Champ("bookmaker_reference", "Bookmaker de référence", "texte", "Bookmaker « sharp » servant de prix juste."),
         Champ("odds_api_credits_jour", "Crédits par jour", "entier",
-              "Budget quotidien de requêtes (offre gratuite : 500 par mois, soit environ 16 par jour)."),
+              "0 = automatique (conseillé) : l'app répartit les crédits restants du mois sur les jours "
+              "restants, sans jamais les dépasser. Un nombre fixe sinon."),
         Champ("odds_api_credits_scores", "Dont crédits réservés aux scores", "entier",
               "Pour connaître les résultats quelques heures après les matchs (2 crédits par championnat)."),
         Champ("odds_api_regions", "Régions", "texte", "eu, uk, us… séparées par des virgules."),
@@ -497,12 +499,14 @@ def creer_app(service: Service) -> FastAPI:
             client = ClientOdds(r.odds_api_key)
             disponibles = {x["key"] for x in client.sports()}
             absents = [c for c in r.liste_ligues if SPORTS.get(c) not in disponibles]
-            ligue = next((c for c in r.liste_ligues if SPORTS.get(c) in disponibles), None)
-            bookmakers = sorted({c.bookmaker for ev in client.cotes(ligue, "h2h", r.odds_api_regions)
-                                 for c in ev.cotes}) if ligue else []
         except Exception as e:
             return retour("/reglages", erreur=f"API injoignable ou clé refusée : {e}")
-        texte = (f"Clé valide · crédits restants : {client.restant} · bookmakers vus : {', '.join(bookmakers) or 'aucun'}"
+        # Vérification gratuite : la liste des sports ne consomme aucun crédit.
+        if client.restant is not None:
+            with service.sessions() as s:
+                ecrire_etat(s, "odds_api:restant", client.restant)
+        texte = (f"Clé valide · crédits restants ce mois-ci : {client.restant if client.restant is not None else '?'}"
+                 " · vérification gratuite (aucun crédit utilisé)"
                  + (f" · championnats non couverts : {', '.join(absents)}" if absents else ""))
         return retour("/reglages", msg=texte)
 

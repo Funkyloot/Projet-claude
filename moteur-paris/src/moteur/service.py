@@ -256,8 +256,25 @@ class Service:
         self._calendrier = calendrier
         return calendrier
 
-    def _limite_cotes(self) -> int:
-        return self.r.odds_api_credits_jour - self.r.odds_api_credits_scores  # le reste va aux scores
+    def limite_jour(self, quand: datetime) -> int:
+        """Crédits utilisables aujourd'hui. Automatique par défaut : les crédits restants du mois
+        (lus dans les réponses de l'API) répartis sur les jours restants, jamais plus."""
+        if self.r.odds_api_credits_jour > 0:
+            return self.r.odds_api_credits_jour
+        with self.sessions() as s:
+            restant = lire_etat(s, "odds_api:restant")
+        if restant is None:
+            return 15  # avant la première réponse de l'API : prudence (offre gratuite ≈ 16 par jour)
+        local = quand.astimezone(ZoneInfo(self.r.fuseau))
+        suivant = (local.replace(day=28) + timedelta(days=4)).replace(day=1)
+        jours = max(1, (suivant.date() - local.date()).days)
+        deja = self._budget_api(quand)["credits"]
+        return deja + int(restant) // jours
+
+    def _limite_cotes(self, quand: datetime) -> int:
+        """Ce que les cotes peuvent dépenser aujourd'hui ; le reste est gardé pour les scores."""
+        limite = self.limite_jour(quand)
+        return limite - min(self.r.odds_api_credits_scores, limite // 2)
 
     def ligues_avant_match(self, quand: datetime) -> list[str]:
         """Championnats dont un match commence dans les 2 h et dont les cotes sont à relever."""
@@ -265,7 +282,7 @@ class Service:
         if not calendrier:
             return []
         cout = ClientOdds.credits_par_appel(self.r.odds_api_marches, self.r.odds_api_regions)
-        if self._budget_api(quand)["credits"] + cout > self._limite_cotes():
+        if self._budget_api(quand)["credits"] + cout > self._limite_cotes(quand):
             return []
         with self.sessions() as s:
             derniers = lire_etat(s, "cotes:dernier", {})
@@ -287,7 +304,7 @@ class Service:
         with self.sessions() as s:
             derniers = lire_etat(s, "cotes:dernier", {})
         for ligue in self.ligues_avant_match(quand):
-            if budget["credits"] + cout > self._limite_cotes():
+            if budget["credits"] + cout > self._limite_cotes(quand):
                 self._alerte("Crédits The Odds API du jour épuisés : des cotes d'avant-match n'ont pas été relevées "
                              "(Réglages → Crédits par jour, si ton offre le permet).", quand)
                 break
@@ -366,7 +383,7 @@ class Service:
         budget = self._budget_api(quand)
         scores = []
         for ligue in ligues:
-            if budget["credits"] + 2 > self.r.odds_api_credits_jour:
+            if budget["credits"] + 2 > self.limite_jour(quand):
                 break
             try:
                 scores += self.odds.scores(ligue)

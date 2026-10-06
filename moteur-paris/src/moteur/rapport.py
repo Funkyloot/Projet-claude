@@ -57,8 +57,9 @@ def bloc_reco(s: Session, r: Reglages, reco: Recommandation, quand: datetime) ->
         f"  {reco.match.libelle} · {_libelle(reco)}",
     ]
     if reco.cote_vue is not None:
+        lignes.append(f"  ➜ Sur 22bet : jouer si la cote est ≥ {cote(reco.cote_min)} · mise {argent(mise)}")
         lignes.append(f"  Cote {nom_bookmaker(reco.bookmaker)} {cote(reco.cote_vue)} · prix juste {cote(reco.cote_juste)} · "
-                      f"espérance {pct(reco.ev)} · mise {argent(mise)}")
+                      f"espérance {pct(reco.ev)}")
     else:
         lignes.append(f"  Prix juste {cote(reco.cote_juste)} · jouer si 22bet ≥ {cote(reco.cote_min)} · "
                       f"mise {argent(mise)}")
@@ -70,7 +71,11 @@ def bloc_reco(s: Session, r: Reglages, reco: Recommandation, quand: datetime) ->
 
 
 def alerte(s: Session, r: Reglages, reco: Recommandation, quand: datetime) -> str:
-    return (f"Nouveau signal ({CHASSEURS.get(reco.chasseur, reco.chasseur)})\n{bloc_reco(s, r, reco, quand)}\n"
+    urgence = ""
+    if reco.chasseur == "S":
+        minutes = int((reco.match.debut - quand).total_seconds() // 60)
+        urgence = f"⏱ URGENT : coup d'envoi dans {minutes} min, la cote peut changer vite.\n"
+    return (f"Nouveau signal ({CHASSEURS.get(reco.chasseur, reco.chasseur)})\n{urgence}{bloc_reco(s, r, reco, quand)}\n"
             f"Cote 22bet à vérifier : /cote {reco.id} <cote>. Pari pris : /pari {reco.id} <cote> [mise].")
 
 

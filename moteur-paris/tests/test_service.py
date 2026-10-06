@@ -301,6 +301,8 @@ def test_cotes_relevees_juste_avant_les_matchs(service, sessions, scenario):
     service.horloge_modifiable["t"] = debut - timedelta(minutes=40)
     service.tick()  # relevé trop récent : pas de nouvel appel payant
     assert service.odds.cotes_demandees == ["E1"]
+    alerte = next(x for x, _ in service.telegram.envoyes if "URGENT" in x)  # utilisable sans ouvrir l'app
+    assert "coup d'envoi dans 60 min" in alerte and "Sur 22bet : jouer si la cote est ≥" in alerte
 
 
 def test_mouvement_de_pinnacle_et_clv_par_les_releves(service, sessions, scenario):
@@ -367,3 +369,23 @@ def test_pas_de_releve_payant_pour_les_grands_championnats(service, scenario):
     service.odds, service.reseau = OddsGrands([]), True
     service.r.ligues = "E0,E1"
     assert service.ligues_avant_match(scenario["maintenant"]) == ["E1"]  # Premier League exclue
+
+
+def test_budget_de_credits_automatique(service, sessions):
+    from datetime import datetime, timezone
+
+    from moteur.journal import ecrire_etat
+
+    quand = datetime(2026, 10, 6, 12, tzinfo=timezone.utc)  # 26 jours jusqu'au 1er novembre
+    service.r.odds_api_credits_jour, service.r.fuseau = 0, "UTC"
+    assert service.limite_jour(quand) == 15  # crédits restants encore inconnus : prudence
+    with sessions() as s:
+        ecrire_etat(s, "odds_api:restant", 312)
+        ecrire_etat(s, "odds_api:budget", {"jour": "2026-10-06", "credits": 4})
+    assert service.limite_jour(quand) == 4 + 312 // 26
+    with sessions() as s:
+        ecrire_etat(s, "odds_api:restant", 0)
+    assert service.limite_jour(quand) == 4  # mois épuisé : plus rien aujourd'hui
+    assert service._limite_cotes(quand) == 4 - 2  # la moitié au plus réservée aux scores
+    service.r.odds_api_credits_jour = 20  # nombre fixe choisi dans les réglages
+    assert service.limite_jour(quand) == 20
