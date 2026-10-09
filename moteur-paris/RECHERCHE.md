@@ -111,3 +111,27 @@ offre gratuite de The Odds API = 500 crédits par mois (≈ 4 relevés avant-mat
 
 Choix de l'utilisateur : moins de paris, chacun avec une vraie marge. Le gain total sur une saison
 reste du même ordre (les petits écarts sont plus nombreux mais rapportent peu chacun).
+
+## 7. Contexte des matchs : enjeux, forme, confrontations directes (onglet Simulateur)
+
+Question : quand ces facteurs sont présents, Pinnacle se trompe-t-il de façon répétée ? Mesure sur
+86 157 matchs (16 championnats, 2012-2026) : écart entre la fréquence réelle et la probabilité juste
+de Pinnacle à la clôture, sur deux périodes indépendantes.
+
+| Facteur | 2012-2020 | 2020-2026 | Verdict |
+|---|---|---|---|
+| Domicile a un enjeu, extérieur rien (8 dernières journées) | victoire dom. +1,3 pt | −0,8 pt | le sens s'inverse : bruit |
+| Domicile sans enjeu, extérieur avec | +0,6 pt | −1,6 pt | bruit |
+| Forme : domicile nettement meilleur sur 5 matchs | +0,6 pt | −1,1 pt | bruit |
+| Forme : extérieur nettement meilleur | +1,5 pt | +0,3 pt | s'efface |
+| Confrontations : domicile domine | +0,3 pt | −0,8 pt | bruit |
+| Confrontations : domicile dominé | +1,1 pt | −0,4 pt | bruit |
+| Plus de 2,5 buts, une équipe sans enjeu (3 dernières journées) | +3,7 pts (2019-23) | +1,1 pt (2023-27) | effet passé, corrigé par le marché |
+
+Conclusion : Pinnacle intègre déjà ces informations. Les ajouter aux probabilités ajouterait du bruit,
+donc **elles n'entrent pas dans le calcul**. L'onglet Simulateur les affiche pour comprendre un match :
+scores les plus probables, forme, confrontations, classement, et fin de saison simulée 10 000 fois
+(chances de titre, de haut et de bas de tableau, enjeu réel de chaque match).
+
+Météo : non testée (service Open-Meteo saturé depuis la machine de recherche ce jour-là) et elle
+demande la ville du stade de chaque équipe, absente des données. À refaire avant tout affichage.

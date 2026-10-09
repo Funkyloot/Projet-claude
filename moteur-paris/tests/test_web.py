@@ -247,3 +247,18 @@ def test_historique_garde_les_anciens_matchs(connecte, service, sessions, scenar
     page = connecte.get("/historique").text  # par défaut : depuis le début
     assert "Depuis le début" in page and ("gagné" in page or "perdu" in page)
     assert "Aucun résultat connu" in connecte.get("/historique?jours=7").text  # fenêtre courte : hors période
+
+
+def test_onglet_simulateur(connecte, service):
+    page = connecte.get("/simulateur").text
+    assert "Simulation de la fin de saison" in page and "Matchs à venir" in page
+    page = connecte.get("/simulateur?ligue=E1").text
+    assert "matchs restants" in page and "Points finaux" in page
+    m = service.matchs[0]
+    page = connecte.get("/simulateur", params={"ligue": m.ligue, "dom": m.dom, "ext": m.ext}).text
+    assert "Sur <strong>100 matchs</strong>" in page and "Scores les plus probables" in page
+    assert "Forme · " + m.dom in page and "Dernières confrontations" in page and "Classement et enjeu" in page
+    assert "ne changent" in page  # rappel : affiché pour comprendre, pas utilisé pour parier
+    # l'enjeu de ce match est mesuré, même si la saison avait été simulée avant de connaître le match
+    assert "gagner" in page or "presque rien à jouer" in page
+    assert "Pas assez d&#39;historique" in connecte.get("/simulateur", params={"ligue": "D2", "dom": "X", "ext": "Y"}).text

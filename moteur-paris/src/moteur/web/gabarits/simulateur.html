@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block contenu %}
+<h1>Simulateur</h1>
+{% if erreur_simulateur %}<div class="message erreur">{{ erreur_simulateur }}</div>{% endif %}
+
+{% if detail %}{% set d = detail %}
+<div class="carte">
+<h2>{{ d.dom }} – {{ d.ext }}</h2>
+<p class="doux petit">{{ d.ligue|ligue }}{% if d.debut %} · {{ d.debut|local }}{% endif %}</p>
+<p>Sur <strong>100 matchs</strong> comme celui-ci :</p>
+<div class="grille">
+<div class="carte"><div class="doux petit">{{ d.dom }} gagne</div><div class="chiffre">{{ '%.0f'|format(d.p[0]*100) }} fois</div></div>
+<div class="carte"><div class="doux petit">Match nul</div><div class="chiffre">{{ '%.0f'|format(d.p[1]*100) }} fois</div></div>
+<div class="carte"><div class="doux petit">{{ d.ext }} gagne</div><div class="chiffre">{{ '%.0f'|format(d.p[2]*100) }} fois</div></div>
+</div>
+<p class="petit">Buts attendus : {{ d.dom }} {{ '%.1f'|format(d.buts[0]) }} · {{ d.ext }} {{ '%.1f'|format(d.buts[1]) }}
+· plus de 2,5 buts {{ '%.0f'|format(d.plus*100) }} fois sur 100 · les deux équipes marquent {{ '%.0f'|format(d.btts*100) }} fois sur 100.</p>
+<p class="petit"><strong>Scores les plus probables :</strong>
+{% for s, p in d.scores %}{{ s }} ({{ '%.0f'|format(p*100) }} %){% if not loop.last %} · {% endif %}{% endfor %}</p>
+<p class="doux petit">D'où viennent ces chiffres : {% if d.reference %}{{ '%.0f'|format((1-d.poids_modele)*100) }} % Pinnacle
+({{ '%.0f'|format(d.reference[0]*100) }} / {{ '%.0f'|format(d.reference[1]*100) }} / {{ '%.0f'|format(d.reference[2]*100) }})
+et {{ '%.0f'|format(d.poids_modele*100) }} % notre modèle{% else %}notre modèle seul (pas encore de cote Pinnacle pour ce match){% endif %}
+({{ '%.0f'|format(d.modele[0]*100) }} / {{ '%.0f'|format(d.modele[1]*100) }} / {{ '%.0f'|format(d.modele[2]*100) }}).
+Ce sont les mêmes probabilités que celles utilisées pour les paris.</p>
+</div>
+
+{% if d.simulation %}{% set s = d.simulation %}{% set zh = d.zones[0] %}{% set zb = d.zones[1] %}
+<div class="carte"><h2>Classement et enjeu</h2>
+<p class="doux petit">Fin de saison jouée {{ '{:,}'.format(s.n).replace(',', ' ') }} fois par le serveur, avec les forces actuelles des équipes.
+« En haut » = top {{ zh }} ({{ d.zones[2] }}), « en bas » = {{ zb }} dernières places.</p>
+<table><thead><tr><th>Équipe</th><th>Place</th><th>Points</th><th>En haut</th><th>En bas</th></tr></thead><tbody>
+{% for eq in (d.dom, d.ext) %}{% set l = s.ligne(eq) %}{% if l %}
+<tr><td>{{ eq }}</td><td>{{ l.rang }}e</td><td>{{ l.points }} ({{ l.joues }} j)</td><td>{{ '%.0f'|format(l.p_haut*100) }} %</td><td>{{ '%.0f'|format(l.p_bas*100) }} %</td></tr>
+{% endif %}{% endfor %}</tbody></table>
+{% if d.enjeu %}{% set e = d.enjeu %}
+{% for eq in (d.dom, d.ext) %}{% set imp = e.importance(eq) %}
+<p class="petit"><strong>{{ eq }} :</strong>
+{% if imp < 0.03 %}presque rien à jouer sur ce match (moins de 3 points de chances en jeu).
+{% elif (e.haut_si_victoire[eq] - e.haut_si_defaite[eq])|abs >= (e.bas_si_victoire[eq] - e.bas_si_defaite[eq])|abs %}
+gagner porte ses chances d'être en haut à {{ '%.0f'|format(e.haut_si_victoire[eq]*100) }} %, perdre les ramène à {{ '%.0f'|format(e.haut_si_defaite[eq]*100) }} %.
+{% else %}gagner réduit son risque de finir en bas à {{ '%.0f'|format(e.bas_si_victoire[eq]*100) }} %, perdre le porte à {{ '%.0f'|format(e.bas_si_defaite[eq]*100) }} %.{% endif %}
+</p>{% endfor %}{% endif %}
+</div>{% endif %}
+
+<div class="grille">
+{% for eq, forme in ((d.dom, d.forme_dom), (d.ext, d.forme_ext)) %}
+<div class="carte"><h2>Forme · {{ eq }}</h2>
+{% for m in forme %}<div class="petit"><span class="pastille {{ '' if m.issue == 'V' else 'neutre' if m.issue == 'N' else 'erreur' }}">{{ m.issue }}</span>
+{{ m.score }} {{ 'contre' if m.domicile else 'chez' }} {{ m.adversaire }} <span class="doux">· {{ m.date|jour }}</span></div>
+{% else %}<p class="doux petit">Pas de match récent connu.</p>{% endfor %}</div>
+{% endfor %}
+</div>
+<div class="carte"><h2>Dernières confrontations</h2>
+{% for m in d.duels %}<div class="petit">{{ m.dom }} {{ m.score }} {{ m.ext }} <span class="doux">· {{ m.date|jour }}</span></div>
+{% else %}<p class="doux petit">Pas de confrontation dans l'historique.</p>{% endfor %}
+</div>
+<div class="message">Bon à savoir : sur 86 000 matchs réels, la forme, les confrontations et les enjeux n'ont rien apporté
+de plus que les cotes de Pinnacle, qui en tiennent déjà compte. Ils sont là pour comprendre le match ; ils ne changent
+pas les probabilités utilisées pour parier.</div>
+<p><a href="/simulateur">← Tous les matchs</a></p>
+
+{% else %}
+<div class="carte"><h2>Simulation de la fin de saison</h2>
+<p class="doux petit">Le serveur joue 10 000 fois tous les matchs restants du championnat avec les forces actuelles des équipes.</p>
+<form class="ligne" method="get" action="/simulateur">
+<label>Championnat<select name="ligue">{% for c in ligues %}<option value="{{ c }}" {{ 'selected' if c == ligue }}>{{ c|ligue }}</option>{% endfor %}</select></label>
+<button type="submit">Simuler</button></form>
+{% if ligue and not simulation %}<p class="doux petit">Simulation impossible pour ce championnat pour l'instant (saison pas encore assez connue ou format avec phases finales).</p>{% endif %}
+</div>
+{% if simulation %}{% set s = simulation %}{% set z = zones[ligue] %}
+<div class="carte defile"><h2>{{ ligue|ligue }} · {{ s.restants }} matchs restants</h2>
+<table><thead><tr><th>#</th><th>Équipe</th><th>Points</th><th>Points finaux (moy.)</th><th>Titre</th><th>Top {{ z[0] }} ({{ z[2] }})</th><th>{{ z[1] }} dernières</th></tr></thead><tbody>
+{% for l in s.classement %}<tr><td>{{ l.rang }}</td><td>{{ l.equipe }}</td><td>{{ l.points }} <span class="doux petit">({{ l.joues }} j)</span></td>
+<td>{{ '%.0f'|format(l.points_moyens) }}</td><td>{{ '%.0f'|format(l.p_titre*100) }} %</td><td>{{ '%.0f'|format(l.p_haut*100) }} %</td><td>{{ '%.0f'|format(l.p_bas*100) }} %</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+<div class="carte defile"><h2>Matchs à venir</h2>
+<p class="doux petit">Touchez un match pour voir sa simulation : scores probables, forme, confrontations, enjeu.</p>
+{% for m in matchs %}<div class="petit" style="padding:4px 0"><a href="/simulateur?ligue={{ m.ligue|urlencode }}&dom={{ m.dom|urlencode }}&ext={{ m.ext|urlencode }}">{{ m.dom }} – {{ m.ext }}</a>
+<span class="doux">· {{ m.ligue|ligue }} · {{ m.debut|local }}</span></div>
+{% else %}<p class="doux petit">Aucun match à venir analysé pour l'instant.</p>{% endfor %}
+</div>
+{% endif %}
+{% endblock %}

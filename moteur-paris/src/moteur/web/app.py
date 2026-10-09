@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
@@ -159,7 +160,8 @@ def creer_app(service: Service) -> FastAPI:
     gabarits = Jinja2Templates(directory=str(GABARITS))
     env = gabarits.env
     env.filters.update(argent=argent, cote=cote, pct=pct, ligue=nom_ligue, bookmaker=nom_bookmaker,
-                       local=lambda dt: quand_local(dt, service.r.fuseau) if dt else "—")
+                       local=lambda dt: quand_local(dt, service.r.fuseau) if dt else "—",
+                       jour=lambda dt: dt.astimezone(ZoneInfo(service.r.fuseau)).strftime("%d/%m/%Y") if dt else "—")
 
     def reglages_actuels():
         with service.sessions() as s:
@@ -563,6 +565,23 @@ def creer_app(service: Service) -> FastAPI:
         return page(request, "historique", lignes=lignes, bilan=bilan, jours=jours, voir=voir, nombres=nombres)
 
     # --- bilan ----------------------------------------------------------------------------------
+
+    @app.get("/simulateur", response_class=HTMLResponse)
+    def simulateur(request: Request, ligue: str = "", dom: str = "", ext: str = ""):
+        from ..simulation import SIMULABLES, ZONES
+
+        r = reglages_actuels()
+        matchs = sorted((m for m in service.matchs if m.debut > service.horloge()), key=lambda m: m.debut)
+        ligues = [c for c in r.liste_ligues if c in SIMULABLES]
+        contexte = dict(matchs=matchs, ligues=ligues, ligue=ligue, zones=ZONES, detail=None, simulation=None)
+        if ligue and dom and ext:
+            erreur, detail = service.simulateur_match(ligue, dom, ext)
+            if erreur:
+                return page(request, "simulateur", erreur_simulateur=erreur, **contexte)
+            contexte["detail"] = detail
+        elif ligue:
+            contexte["simulation"] = service.simulation_saison(ligue)
+        return page(request, "simulateur", **contexte)
 
     @app.get("/rapport", response_class=HTMLResponse)
     def rapport(request: Request):

@@ -404,3 +404,15 @@ def test_migration_des_reglages_une_seule_fois(service, sessions):
     assert service.appliquer_migrations() == []  # jamais réappliquée
     with sessions() as s:
         assert surcharges(s)["fraction_kelly"] == 0.3
+
+
+def test_simulation_refaite_quand_les_matchs_arrivent(service, scenario):
+    service.analyser(scenario["maintenant"])
+    matchs, service.matchs = service.matchs, []
+    avant = service.simulation_saison("E1", n=400)  # simulée la nuit, avant l'analyse des matchs
+    assert avant is not None and avant.enjeux == []
+    service.matchs = matchs
+    apres = service.simulation_saison("E1", n=400)
+    m = matchs[0]
+    assert apres.enjeu(m.dom, m.ext) is not None
+    assert service.simulation_saison("E1", n=400) is apres  # sinon : en cache

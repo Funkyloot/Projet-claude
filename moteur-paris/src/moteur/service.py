@@ -60,7 +60,9 @@ from .journal import (
     trouver_ou_creer_match,
 )
 from .chasseurs import LIGUES_EFFICACES
+from .modeles.grille import melanger, probas_1x2, proba_plus
 from .modeles.ligue import ajuster_ligue
+from . import simulation as sim
 from .rapport import alerte, bilan_hebdo, quand_local, rapport_quotidien, texte_fiche
 from .taches import effectifs, enregistrer_reglages, prendre_demandes, suivre
 from .telegram import Telegram
@@ -103,6 +105,7 @@ class Service:
         self._calendrier_maj: datetime | None = None
         self._releves_api: dict[str, tuple[datetime, list]] = {}  # dernières cotes API par championnat
         self.modeles: dict = {}
+        self._simulations: dict[str, tuple[datetime, tuple, sim.Simulation | None]] = {}
         self.derniere_analyse: dict = {}
         self.correspondance = Correspondance(self.fichier_alias)
         self._alias_mtime = self._mtime(self.fichier_alias)
@@ -530,6 +533,87 @@ class Service:
         self._envoyer("Backtest lancé en arrière-plan (plusieurs minutes à quelques heures).")
         return True
 
+    # --- simulateur ------------------------------------------------------------------
+
+    def resultats_connus(self) -> pd.DataFrame:
+        """Tous les résultats : historique football-data + scores déjà réglés par l'app (football-data
+        publie avec plusieurs jours de retard ; les scores de The Odds API ou saisis comblent le trou)."""
+        from .db import Match
+
+        base = self.hist[self.hist["bd"].notna() & self.hist["be"].notna()][["ligue", "date", "dom", "ext", "bd", "be"]]
+        with self.sessions() as s:
+            lignes = [{"ligue": m.competition, "date": pd.Timestamp(m.debut), "dom": m.domicile, "ext": m.exterieur,
+                       "bd": m.buts_domicile, "be": m.buts_exterieur}
+                      for m in s.query(Match).filter(Match.buts_domicile.is_not(None))]
+        if not lignes:
+            return base.reset_index(drop=True)
+        db = pd.DataFrame(lignes)
+        if not base.empty:
+            fusion = db.merge(base, on=["ligue", "dom", "ext"], suffixes=("", "_h"))
+            deja = fusion[(fusion["date"] - fusion["date_h"]).abs() <= pd.Timedelta(hours=36)]
+            db = db[~db.set_index(["ligue", "dom", "ext", "date"]).index.isin(
+                deja.set_index(["ligue", "dom", "ext", "date"]).index)]
+        return pd.concat([base, db], ignore_index=True).sort_values("date", kind="stable").reset_index(drop=True)
+
+    def _modele_ligue(self, ligue: str, quand: datetime, equipes: set[str]):
+        modele = self.modeles.get(ligue)
+        if modele is not None and all(modele.connait(e) for e in equipes):
+            return modele
+        params, _ = params_ligue(charger_parametres(self.r.dossier), ligue, self.r)
+        sup = football_data.LIGUES.get(ligue, ("", None))[1]
+        return ajuster_ligue(self.hist[self.hist["ligue"] == ligue], pd.Timestamp(quand), params, equipes,
+                             self.hist[self.hist["ligue"] == sup] if sup else None)
+
+    def simulation_saison(self, ligue: str, n: int = sim.SIMULATIONS) -> "sim.Simulation | None":
+        """Fin de saison simulée (en cache 6 h, refaite dès qu'un nouveau résultat arrive)."""
+        quand = self.horloge()
+        if self.hist.empty:
+            self.charger_donnees()
+        if ligue not in sim.SIMULABLES or self.hist.empty:
+            return None
+        resultats = self.resultats_connus()
+        debut_saison = datetime(football_data.saison_courante(quand), 7, 1, tzinfo=timezone.utc)
+        saison = resultats[(resultats["ligue"] == ligue) & (resultats["date"] >= pd.Timestamp(debut_saison))]
+        a_suivre = sorted((m.dom, m.ext) for m in self.matchs if m.ligue == ligue)
+        cle = (len(saison), tuple(a_suivre))  # nouveau résultat ou nouveaux matchs à venir : on refait
+        cache = self._simulations.get(ligue)
+        if cache and cache[1] == cle and quand - cache[0] < timedelta(hours=6):
+            return cache[2]
+        equipes = set(saison["dom"]) | set(saison["ext"])
+        modele = self._modele_ligue(ligue, quand, equipes) if equipes else None
+        resultat = sim.simuler_saison(ligue, saison, modele, quand, a_suivre, n=n) if modele is not None else None
+        self._simulations[ligue] = (quand, cle, resultat)
+        return resultat
+
+    def simulateur_match(self, ligue: str, dom: str, ext: str) -> tuple[str | None, dict]:
+        """Tout ce qu'on sait d'un match à venir, pour le comprendre (onglet Simulateur)."""
+        quand = self.horloge()
+        if self.hist.empty:
+            self.charger_donnees()
+        match = next((m for m in self.matchs if m.ligue == ligue and m.dom == dom and m.ext == ext), None)
+        modele = self._modele_ligue(ligue, quand, {dom, ext})
+        if modele is None:
+            return f"Pas assez d'historique pour {football_data.LIGUES.get(ligue, (ligue,))[0]}.", {}
+        params, _ = params_ligue(charger_parametres(self.r.dossier), ligue, self.r)
+        g_modele = modele.grille(dom, ext)
+        ref = reference_pour(match.cotes, self.r) if match else None
+        grille = melanger(g_modele, ref, params.poids_modele)
+        resultats = self.resultats_connus()
+        debut = match.debut if match else quand
+        simulation = self.simulation_saison(ligue)
+        p1, px, p2 = probas_1x2(grille)
+        return None, {
+            "ligue": ligue, "dom": dom, "ext": ext, "debut": match.debut if match else None,
+            "p": (p1, px, p2), "plus": proba_plus(grille), "btts": float(grille[1:, 1:].sum()),
+            "buts": sim.buts_attendus(grille), "scores": sim.scores_probables(grille),
+            "modele": probas_1x2(g_modele), "reference": probas_1x2(ref) if ref is not None else None,
+            "poids_modele": params.poids_modele,
+            "forme_dom": sim.derniers_matchs(resultats, dom, debut), "forme_ext": sim.derniers_matchs(resultats, ext, debut),
+            "duels": sim.confrontations(resultats, dom, ext, debut),
+            "simulation": simulation, "enjeu": simulation.enjeu(dom, ext) if simulation else None,
+            "zones": sim.ZONES.get(ligue),
+        }
+
     def calculer_fiche(self, dom_saisi: str, ext_saisi: str) -> tuple[str | None, dict]:
         """Prix justes d'un match. Renvoie (message d'erreur, données)."""
         quand = self.horloge()
@@ -645,6 +729,11 @@ class Service:
             self.maj_donnees(quand)
             self._fait("donnees", quand)
             faites.append("donnees")
+            for ligue in self.r.liste_ligues:  # fin de saison simulée chaque jour, après les nouveaux résultats
+                try:
+                    self.simulation_saison(ligue)
+                except Exception:
+                    log.exception("Simulation de saison %s", ligue)
         elif self.resultats_api(quand):
             faites.append("scores")
         with self.sessions() as s:
