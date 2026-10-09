@@ -234,3 +234,16 @@ def test_rapport_lisible_dans_l_application(connecte):
     assert "Rapport du jour" in page and "Capital simulation" in page
     assert "Relie Telegram" in page and "L'envoyer maintenant" not in page  # pas de bouton sans Telegram relié
     assert 'href="/rapport"' in connecte.get("/").text
+
+
+def test_historique_garde_les_anciens_matchs(connecte, service, sessions, scenario):
+    from datetime import timedelta
+
+    from moteur.journal import regler_depuis_resultats
+
+    with sessions() as s:
+        regler_depuis_resultats(s, scenario["complet"], scenario["maintenant"] + timedelta(days=3))
+    service.horloge = lambda: scenario["maintenant"] + timedelta(days=40)  # plus d'un mois après
+    page = connecte.get("/historique").text  # par défaut : depuis le début
+    assert "Depuis le début" in page and ("gagné" in page or "perdu" in page)
+    assert "Aucun résultat connu" in connecte.get("/historique?jours=7").text  # fenêtre courte : hors période

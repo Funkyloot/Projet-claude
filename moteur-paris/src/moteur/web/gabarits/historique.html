@@ -2,7 +2,7 @@
 {% block contenu %}
 <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
 <h1>Historique des prédictions</h1>
-<div style="display:flex;gap:6px">{% for j in (4, 7, 30) %}<a class="pastille {{ '' if j == jours else 'neutre' }}" href="/historique?jours={{ j }}&voir={{ voir }}">{{ j }} jours</a>{% endfor %}</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap">{% for j, nom in ((0, 'Depuis le début'), (7, '7 jours'), (30, '30 jours')) %}<a class="pastille {{ '' if j == jours else 'neutre' }}" href="/historique?jours={{ j }}&voir={{ voir }}">{{ nom }}</a>{% endfor %}</div>
 </div>
 <p class="doux petit">Pour chaque match analysé, l'option la plus proche d'une value au dernier passage avant le coup d'envoi,
 puis son résultat une fois le score connu. Les scores arrivent quelques heures après le match avec une clé The Odds API

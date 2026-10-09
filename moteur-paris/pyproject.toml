@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "moteur-paris"
-version = "0.5.5"
+version = "0.5.6"
 description = "Moteur d'analyse de paris sportifs : probabilités, chasseurs d'erreurs, gestion du capital."
 requires-python = ">=3.10"
 dependencies = [

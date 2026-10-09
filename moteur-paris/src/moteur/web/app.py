@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import quote
@@ -544,12 +544,12 @@ def creer_app(service: Service) -> FastAPI:
     # --- historique des prédictions -----------------------------------------------------
 
     @app.get("/historique", response_class=HTMLResponse)
-    def historique(request: Request, jours: int = 4, voir: str = "resultats"):
-        jours = max(1, min(jours, 90))
+    def historique(request: Request, jours: int = 0, voir: str = "resultats"):
+        jours = 0 if jours <= 0 else min(jours, 365)  # 0 = depuis le début (rien n'est jamais effacé)
         voir = voir if voir in ("resultats", "attente", "avenir", "tout") else "resultats"
         quand = service.horloge()
         with service.sessions() as s:
-            liste = predictions(s, quand - timedelta(days=jours))
+            liste = predictions(s, quand - timedelta(days=jours) if jours else datetime(2000, 1, 1, tzinfo=timezone.utc))
             bilan = bilan_predictions(liste)
             groupes = {
                 "resultats": [p for p in liste if p.fraction is not None],
