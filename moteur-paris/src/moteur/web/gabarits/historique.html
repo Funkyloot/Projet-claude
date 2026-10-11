@@ -33,6 +33,7 @@ ou les saisir dans le <a href="/journal">Journal</a>.</p>
 <td>{{ libelle }}</td><td>{{ p.cote|cote }}<div class="doux petit">{{ p.source }}</div></td><td>{{ p.cote_juste|cote }}</td>
 <td>{{ '%.0f %%'|format(100 / p.cote_juste) }}</td><td class="petit">{{ statuts.get(p.statut, p.statut) }}</td>
 <td>{% if p.fraction is none %}<span class="pastille neutre">{{ 'à venir' if p.match.debut > maintenant else 'score attendu' }}</span>
+{% elif p.match_id in annules %}<span class="pastille neutre">match annulé</span>
 {% else %}<span class="pastille {{ '' if p.fraction > 0 else 'neutre' if p.fraction == 0 else 'erreur' }}">{{ {1.0:'gagné', 0.5:'demi-gagné', 0.0:'remboursé', -0.5:'demi-perdu', -1.0:'perdu'}[p.fraction] }}</span>
 <div class="doux petit">{{ p.match.score }}</div>{% endif %}</td>
 <td>{{ p.clv|pct }}</td></tr>

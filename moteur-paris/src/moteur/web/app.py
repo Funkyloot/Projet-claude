@@ -32,6 +32,7 @@ from ..donnees.football_data import LIGUES, etat_historique
 from ..donnees.odds_api import SPORTS, ClientOdds
 from ..format import argent, cote, pct
 from ..journal import (
+    annuler_match,
     ecrire_etat,
     alertes_depuis,
     changer_mode,
@@ -353,6 +354,12 @@ def creer_app(service: Service) -> FastAPI:
             _, texte = regler_manuellement(s, match_id, bd, be, service.horloge())
         return retour("/journal", msg=texte)
 
+    @app.post("/match/{match_id}/annuler")
+    def annuler(match_id: int):
+        with service.sessions() as s:
+            _, texte = annuler_match(s, match_id, service.horloge())
+        return retour("/journal", msg=texte)
+
     # --- fiche et outils --------------------------------------------------------------------
 
     @app.get("/fiche", response_class=HTMLResponse)
@@ -560,9 +567,11 @@ def creer_app(service: Service) -> FastAPI:
                 "tout": liste,
             }
             nombres = {k: len(v) for k, v in groupes.items()}
+            annules = set(lire_etat(s, "matchs_annules", []))
             lignes = [(p, Selection.depuis_cle(p.selection).libelle(p.match.domicile, p.match.exterieur))
                       for p in groupes[voir]]
-        return page(request, "historique", lignes=lignes, bilan=bilan, jours=jours, voir=voir, nombres=nombres)
+        return page(request, "historique", lignes=lignes, bilan=bilan, jours=jours, voir=voir, nombres=nombres,
+                    annules=annules)
 
     # --- bilan ----------------------------------------------------------------------------------
 

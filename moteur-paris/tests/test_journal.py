@@ -145,3 +145,24 @@ def test_arret_automatique(session, reglages_test):
 
 def test_dimensionner_sans_value(session, reglages_test):
     assert dimensionner(session, reglages_test, "simulation", 0.4, 0.6, 2.0, None, T0) == 0
+
+
+def test_match_annule_ou_reporte(session, reglages_test):
+    from moteur.db import Prediction
+    from moteur.journal import annuler_match, lire_etat, matchs_a_regler
+
+    enregistrer_candidats(session, reglages_test, [candidat()], T0)
+    (p,) = session.query(Pari).all()
+    avant = solde(session, "simulation")
+    apres_match = DEBUT + timedelta(hours=3)
+    assert [m.id for m in matchs_a_regler(session, apres_match)] == [p.match_id]
+    n, texte = annuler_match(session, p.match_id, apres_match)
+    assert n == 1 and "remboursé" in texte
+    assert p.statut == "annule" and p.gain_net == 0 and solde(session, "simulation") == avant  # mise rendue
+    assert session.query(Recommandation).one().fraction == 0.0
+    assert matchs_a_regler(session, apres_match) == []  # plus dans « scores à saisir »
+    assert stats_paris(session, "simulation").n == 0  # un pari annulé ne compte pas
+    assert lire_etat(session, "matchs_annules", []) == [p.match_id]
+    assert annuler_match(session, p.match_id, apres_match)[0] == 0  # deux fois : rien de plus
+    assert lire_etat(session, "matchs_annules", []) == [p.match_id] and solde(session, "simulation") == avant
+    assert "introuvable" in annuler_match(session, 999, apres_match)[1]

@@ -262,3 +262,17 @@ def test_onglet_simulateur(connecte, service):
     # l'enjeu de ce match est mesuré, même si la saison avait été simulée avant de connaître le match
     assert "gagner" in page or "presque rien à jouer" in page
     assert "Pas assez d&#39;historique" in connecte.get("/simulateur", params={"ligue": "D2", "dom": "X", "ext": "Y"}).text
+
+
+def test_bouton_match_annule(connecte, service, sessions, scenario):
+    from datetime import timedelta
+
+    service.horloge = lambda: scenario["maintenant"] + timedelta(days=3)
+    page = connecte.get("/journal").text
+    assert "Annulé / reporté" in page
+    import re
+    match_id = int(re.search(r'/match/(\d+)/annuler', page).group(1))
+    r = connecte.post(f"/match/{match_id}/annuler")
+    assert "annulé ou reporté" in r.text
+    assert f"/match/{match_id}/annuler" not in connecte.get("/journal").text
+    assert "match annulé" in connecte.get("/historique?voir=tout").text

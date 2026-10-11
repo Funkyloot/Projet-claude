@@ -409,6 +409,30 @@ def regler_depuis_resultats(s: Session, resultats: pd.DataFrame, quand: datetime
     return regles
 
 
+def annuler_match(s: Session, match_id: int, quand: datetime) -> tuple[int, str]:
+    """Match abandonné ou reporté : règle habituelle des bookmakers, les paris sont annulés et la mise
+    rendue. Les signaux et prédictions sont clos sans compter ni comme gagnés ni comme perdus."""
+    m = s.get(Match, match_id)
+    if m is None:
+        return 0, f"Match #{match_id} introuvable."
+    if m.buts_domicile is not None:
+        return 0, f"Match #{match_id} déjà réglé ({m.score})."
+    paris = list(s.scalars(select(Pari).where(Pari.match_id == m.id, Pari.statut == "en_cours")))
+    for p in paris:
+        p.statut, p.gain_net, p.regle_le = "annule", 0.0, quand
+    for reco in s.scalars(select(Recommandation).where(Recommandation.match_id == m.id,
+                                                       Recommandation.fraction.is_(None))):
+        reco.fraction = 0.0
+        reco.note = (reco.note + " · " if reco.note else "") + "match annulé"
+    for pred in s.scalars(select(Prediction).where(Prediction.match_id == m.id, Prediction.fraction.is_(None))):
+        pred.fraction = 0.0
+    annules = lire_etat(s, "matchs_annules", [])
+    if m.id not in annules:
+        ecrire_etat(s, "matchs_annules", annules + [m.id])
+    s.commit()
+    return len(paris), f"{m.libelle} annulé ou reporté : {len(paris)} pari(s) remboursé(s)."
+
+
 def regler_manuellement(s: Session, match_id: int, bd: int, be: int, quand: datetime) -> tuple[list[Pari], str]:
     m = s.get(Match, match_id)
     if m is None:
@@ -475,7 +499,7 @@ class Stats:
 
 
 def stats_paris(s: Session, mode: str, depuis: datetime | None = None, jusqua: datetime | None = None) -> Stats:
-    q = select(Pari).where(Pari.mode == mode, Pari.statut != "en_cours")
+    q = select(Pari).where(Pari.mode == mode, Pari.statut.not_in(("en_cours", "annule")))  # annulé : ne compte pas
     if depuis:
         q = q.where(Pari.regle_le >= depuis)
     if jusqua:
