@@ -425,12 +425,15 @@ def creer_app(service: Service) -> FastAPI:
             taches = etat_taches(s)
             budget = lire_etat(s, "odds_api:budget")
             restant = lire_etat(s, "odds_api:restant")
+            journal_releves = [dict(e, quand=datetime.fromisoformat(e["quand"]))
+                               for e in reversed(lire_etat(s, "releves_journal", []))]
         return page(
             request, "donnees", historique=historique, ligues=LIGUES, suivies=r.liste_ligues,
             nb_matchs=len(service.hist), nb_fixtures=len(service.fixtures), taches=taches,
             dernier_backtest=rapports[-1].read_text(encoding="utf-8") if rapports else None,
             parametres=parametres.get("ligues", {}), genere_le=parametres.get("genere_le"),
-            budget=budget, restant=restant,
+            budget=budget, restant=restant, journal_releves=journal_releves,
+            limite_jour=service.limite_jour(service.horloge()) if r.odds_api_key else None,
         )
 
     # --- réglages ---------------------------------------------------------------------------

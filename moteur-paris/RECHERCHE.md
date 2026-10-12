@@ -135,3 +135,31 @@ scores les plus probables, forme, confrontations, classement, et fin de saison s
 
 Météo : non testée (service Open-Meteo saturé depuis la machine de recherche ce jour-là) et elle
 demande la ville du stade de chaque équipe, absente des données. À refaire avant tout affichage.
+
+## 8. Correction (octobre 2026) : aucun signal S pendant un week-end entier
+
+Trois causes, toutes corrigées en 0.6.2 :
+
+1. **Bug** : chaque cote venue de The Odds API était datée de son dernier *changement* (« last_update »)
+   et non du moment du relevé. Dans les petits championnats, une cote Pinnacle ou 1xBet peut rester
+   identique des heures : elle était jugée « vieille de plus de 3 h » et écartée, alors qu'elle venait
+   d'être relevée. Désormais : date du relevé (cote figée depuis plus d'un jour : écartée).
+2. **Seuil trop strict pour 1xBet.** Saison 2024-25, championnats suivis hors 5 grands, 1X2 à la clôture
+   (en supposant chaque match relevé) :
+
+   | Écart minimum | Occasions sur la saison | Par semaine | Gain moyen réel |
+   |---|---|---|---|
+   | 3 % | 234 | 5,6 | +8,4 % |
+   | **4 % (nouveau défaut)** | **126** | **3,0** | **+12,5 %** |
+   | 5 % | 74 | 1,8 | −0,3 % |
+   | 6 % (ancien défaut) | 45 | 1,1 | −15,4 % |
+
+   Le 6 % venait de la moyenne de tous les bookmakers ; pour 1xBet seul il ne laisse presque rien.
+   Une seule saison de données 1xBet : ces chiffres restent incertains (le principe, lui, est validé
+   sur 77 000 paris).
+3. **Crédits dispersés.** Un relevé ne coûte plus qu'1 crédit (cotes 1X2 seules, le marché étudié) et
+   n'est refait qu'après 2 h 30 pour un même championnat : avec l'offre gratuite, environ 2 fois plus
+   de matchs couverts.
+
+Nouveau : Données → « Relevés de cotes avant les matchs » montre, pour chaque relevé, les matchs
+comparés et le plus grand écart vu entre 1xBet et Pinnacle, même quand rien ne passe le seuil.

@@ -32,7 +32,7 @@ class Reglages(BaseSettings):
     exposition_match_pct: float = Field(0.05, gt=0, le=0.2)
     valeur_min: float = Field(0.03, ge=0)
     # Chasseur S (contre Pinnacle) : 6 % → moins de paris mais +7,7 % en moyenne chacun (RECHERCHE.md)
-    ecart_min_sharp: float = Field(0.06, ge=0.01, le=0.5)
+    ecart_min_sharp: float = Field(0.04, ge=0.01, le=0.5)  # 1xBet : 4 % ≈ 3 occasions/semaine (RECHERCHE.md §8)
     age_max_cote_s: int = Field(60, gt=0)
     # Au-delà, une value ou un surebet est marqué « risque d'annulation » (section 8)
     seuil_suspect: float = Field(0.10, gt=0)
@@ -61,7 +61,7 @@ class Reglages(BaseSettings):
     odds_api_key: str = ""
     odds_api_credits_jour: int = Field(0, ge=0)  # 0 = automatique : crédits restants du mois / jours restants
     odds_api_credits_scores: int = Field(4, ge=0)  # part du budget réservée aux scores (règlement rapide)
-    odds_api_marches: str = "h2h,totals"  # 2 crédits par relevé : plus de relevés avant match
+    odds_api_marches: str = "h2h"  # 1 crédit par relevé : 2 fois plus de matchs couverts (RECHERCHE.md §8)
     odds_api_regions: str = "eu"
     bookmaker_cible: str = "onexbet"  # 22bet n'est dans aucun flux officiel : 1xBet, même plateforme
     bookmaker_reference: str = "pinnacle"

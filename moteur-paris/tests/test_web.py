@@ -276,3 +276,18 @@ def test_bouton_match_annule(connecte, service, sessions, scenario):
     assert "annulé ou reporté" in r.text
     assert f"/match/{match_id}/annuler" not in connecte.get("/journal").text
     assert "match annulé" in connecte.get("/historique?voir=tout").text
+
+
+def test_journal_des_releves_sur_la_page_donnees(connecte, sessions, service):
+    from datetime import timedelta
+
+    from moteur.journal import ecrire_etat
+
+    quand = service.horloge()
+    with sessions() as s:
+        ecrire_etat(s, "releves_journal", [
+            {"quand": quand.isoformat(), "ligue": "E1", "matchs": 6, "compares": 5, "ecart": 0.021, "pari": "A – B · Victoire A"},
+            {"quand": (quand + timedelta(hours=3)).isoformat(), "ligue": "E1", "matchs": 2, "compares": 0, "ecart": None, "pari": None}])
+    page = connecte.get("/donnees").text
+    assert "Relevés de cotes avant les matchs" in page and "5 / 6" in page and "A – B · Victoire A" in page
+    assert "aucun match avec Pinnacle et 1xBet" in page

@@ -11,7 +11,7 @@ couvert, sinon un bookmaker de la même plateforme comme indicateur).
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -75,14 +75,21 @@ def _date(texte: str) -> datetime:
     return datetime.fromisoformat(texte.replace("Z", "+00:00"))
 
 
-def parser(donnees: list[dict], ligue: str) -> list[EvenementCotes]:
+def parser(donnees: list[dict], ligue: str, releve: datetime | None = None) -> list[EvenementCotes]:
+    """`releve` : moment de la requête. L'API renvoie les cotes valables à cet instant ; son
+    « last_update » est le dernier CHANGEMENT de cote, qui peut dater de plusieurs heures dans les
+    petits championnats sans que la cote soit périmée. Une cote inchangée depuis plus d'un jour est
+    écartée (marché sans doute figé ou suspendu)."""
     evenements = []
     for ev in donnees:
         dom, ext = ev["home_team"], ev["away_team"]
         e = EvenementCotes(ligue, dom, ext, _date(ev["commence_time"]))
         for bk in ev.get("bookmakers", []):
             for marche in bk.get("markets", []):
-                maj = _date(marche.get("last_update") or bk.get("last_update") or ev["commence_time"])
+                changee = _date(marche.get("last_update") or bk.get("last_update") or ev["commence_time"])
+                if releve is not None and releve - changee > timedelta(days=1):
+                    continue
+                maj = releve if releve is not None else changee
                 for o in marche.get("outcomes", []):
                     sel = _selection(marche["key"], o, dom, ext)
                     if sel is not None and o.get("price", 0) > 1:
@@ -142,7 +149,8 @@ class ClientOdds:
             return []
         params = {"markets": marches, "oddsFormat": "decimal", "dateFormat": "iso"}
         params.update({"bookmakers": bookmakers} if bookmakers else {"regions": regions})
-        return parser(self._get(f"/sports/{sport}/odds", **params), ligue)
+        releve = datetime.now(timezone.utc)
+        return parser(self._get(f"/sports/{sport}/odds", **params), ligue, releve)
 
     def evenements(self, ligue: str) -> list[tuple[str, str, datetime]]:
         """Matchs à venir (équipes, coup d'envoi). Gratuit : ne consomme aucun crédit."""

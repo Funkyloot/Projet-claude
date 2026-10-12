@@ -74,7 +74,7 @@ class ContexteMatch:
 @dataclass(frozen=True)
 class Filtre:
     valeur_min: float = 0.03
-    ecart_min_sharp: float = 0.06
+    ecart_min_sharp: float = 0.04
     seuil_suspect: float = 0.10
     seuil_desaccord: float = 0.10
     poids_modele: float = 0.3
@@ -152,6 +152,19 @@ def proba_sharp(ctx: ContexteMatch, sel: Selection, age_max: timedelta | None = 
             continue
         return probas_justes(valeurs, "puissance")[issues.index(sel)], bk
     return None
+
+
+def meilleur_ecart(ctx: ContexteMatch, cible: str = "onexbet") -> tuple[float, Selection] | None:
+    """Plus grand écart entre la cote du bookmaker cible et le prix juste sharp (pour le journal des
+    relevés : montre ce que le moteur a vu, même quand rien ne passe le seuil)."""
+    meilleur = None
+    for (bk, sel), c in ctx.cotes.items():
+        if bk != cible or ctx.quand is None or ctx.quand - c.maj > AGE_MAX_COTE or not COTE_S[0] <= c.cote <= COTE_S[1]:
+            continue
+        ref = proba_sharp(ctx, sel)
+        if ref is not None and (meilleur is None or c.cote * ref[0] - 1 > meilleur[0]):
+            meilleur = (c.cote * ref[0] - 1, sel)
+    return meilleur
 
 
 def chasseur_sharp(ctx: ContexteMatch, f: Filtre) -> list[Candidat]:

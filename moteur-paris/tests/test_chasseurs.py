@@ -194,8 +194,9 @@ def test_ecart_minimum_contre_pinnacle():
 
     quand = DEBUT - timedelta(hours=1)
     cotes = [CoteBrute(bk, Selection("1x2", i), c, quand) for bk, valeurs in
-             (("pinnacle", (2.0, 3.6, 4.0)), ("onexbet", (2.12, 3.3, 3.7))) for i, c in zip("1X2", valeurs)]
+             (("pinnacle", (2.0, 3.6, 4.0)), ("onexbet", (2.10, 3.3, 3.7))) for i, c in zip("1X2", valeurs)]
     ctx = ContexteMatch("E1", "Leeds", "Hull", DEBUT, None, plus_recentes(cotes), quand=quand)
-    assert chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet")) == []  # ≈ +4 % : sous les 6 % par défaut
-    (c,) = chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet", ecart_min_sharp=0.03))
-    assert 0.03 <= c.ev < 0.06
+    assert chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet")) == []  # ≈ +3 % : sous les 4 % par défaut
+    (c,) = chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet", ecart_min_sharp=0.025))
+    assert 0.025 <= c.ev < 0.04
+    assert chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet", ecart_min_sharp=0.06)) == []

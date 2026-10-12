@@ -297,7 +297,13 @@ def test_cotes_relevees_juste_avant_les_matchs(service, sessions, scenario):
         (reco,) = s.query(Recommandation).filter(Recommandation.chasseur == "S").all()
         assert reco.valide and reco.selection == Selection("1x2", "1").cle
         assert s.query(Pari).filter(Pari.mode == "simulation", Pari.recommandation_id == reco.id).count() == 1
-        assert lire_etat(s, "odds_api:budget")["credits"] == 2  # h2h + totals, région eu
+        from moteur.donnees.odds_api import ClientOdds
+        assert lire_etat(s, "odds_api:budget")["credits"] == ClientOdds.credits_par_appel(
+            service.r.odds_api_marches, service.r.odds_api_regions) == 1  # h2h seul, région eu : 1 crédit
+    with sessions() as s:
+        (entree,) = lire_etat(s, "releves_journal")  # journal des relevés (page Données)
+    assert entree["ligue"] == "E1" and entree["compares"] == 1 and entree["ecart"] > 0.04
+    assert m["dom"] in entree["pari"]
     service.horloge_modifiable["t"] = debut - timedelta(minutes=40)
     service.tick()  # relevé trop récent : pas de nouvel appel payant
     assert service.odds.cotes_demandees == ["E1"]
@@ -336,6 +342,7 @@ def test_mouvement_de_pinnacle_et_clv_par_les_releves(service, sessions, scenari
 
     service.odds, service.reseau = OddsQuiBouge(), True
     service.maj_donnees = lambda quand: 0
+    service.DELAI_ENTRE_RELEVES = timedelta(minutes=60)  # ce test porte sur le mouvement, pas le calendrier
     service.horloge_modifiable["t"] = debut - timedelta(minutes=110)
     service.tick()
     with sessions() as s:
@@ -397,7 +404,8 @@ def test_migration_des_reglages_une_seule_fois(service, sessions):
     with sessions() as s:
         enregistrer_reglages(s, {"fraction_kelly": 0.25, "mise_max_pct": 0.03, "odds_api_credits_jour": 15},
                              service.base)  # réglages enregistrés avant la mise à jour
-    assert set(service.appliquer_migrations()) == {"0.5.3-mises", "0.5.2-credits-auto"}
+    assert set(service.appliquer_migrations()) == {"0.5.3-mises", "0.5.2-credits-auto", "0.6.2-couverture"}
+    assert service.r.ecart_min_sharp == 0.04 and service.r.odds_api_marches == "h2h"
     assert service.r.fraction_kelly == 0.5 and service.r.mise_max_pct == 0.05 and service.r.odds_api_credits_jour == 0
     with sessions() as s:
         enregistrer_reglages(s, {"fraction_kelly": 0.3}, service.base)  # choix fait ensuite dans l'interface

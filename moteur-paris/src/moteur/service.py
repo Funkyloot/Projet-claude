@@ -118,6 +118,9 @@ class Service:
     MIGRATIONS = {
         "0.5.3-mises": {"fraction_kelly": 0.5, "mise_max_pct": 0.05},  # croissance plus rapide (RECHERCHE.md §5)
         "0.5.2-credits-auto": {"odds_api_credits_jour": 0},  # crédits répartis automatiquement
+        # 6 % ne laissait qu'environ 1 occasion par semaine avec 1xBet ; 1 crédit par relevé pour
+        # couvrir 2 fois plus de matchs (RECHERCHE.md §8)
+        "0.6.2-couverture": {"ecart_min_sharp": 0.04, "odds_api_marches": "h2h"},
     }
 
     def appliquer_migrations(self) -> list[str]:
@@ -255,9 +258,9 @@ class Service:
     # plus juste et que la stratégie « sharp » a fait ses preuves (RECHERCHE.md). Le calendrier, lui,
     # est gratuit.
     FENETRE_AVANT_MATCH = timedelta(hours=2)
-    # 2 relevés possibles par vague de matchs : vers T-2 h puis dans la dernière heure, après
-    # l'annonce des compositions, quand Pinnacle bouge et que 1xBet/22bet suivent en retard.
-    DELAI_ENTRE_RELEVES = timedelta(minutes=60)
+    # Un relevé par vague de matchs (et il couvre aussi les matchs des 6 h suivantes) : avec les
+    # crédits gratuits, mieux vaut voir plus de matchs que revoir les mêmes (RECHERCHE.md §8).
+    DELAI_ENTRE_RELEVES = timedelta(minutes=150)
     DUREE_RELEVE = timedelta(hours=3)
 
     def _calendrier_api(self, quand: datetime) -> dict[str, list[datetime]]:
@@ -327,6 +330,7 @@ class Service:
         budget = self._budget_api(quand)
         with self.sessions() as s:
             derniers = lire_etat(s, "cotes:dernier", {})
+        self._ligues_relevees = []
         for ligue in self.ligues_avant_match(quand):
             if budget["credits"] + cout > self._limite_cotes(quand):
                 self._alerte("Crédits The Odds API du jour épuisés : des cotes d'avant-match n'ont pas été relevées "
@@ -341,11 +345,38 @@ class Service:
                 break
             budget["credits"] += cout
             derniers[ligue] = quand.isoformat()
+            self._ligues_relevees.append(ligue)
         self._noter_budget_api(budget)
         with self.sessions() as s:
             ecrire_etat(s, "cotes:dernier", derniers)
         return [e for q, evenements in self._releves_api.values() if quand - q <= self.DUREE_RELEVE
                 for e in evenements]
+
+    def _journal_releves(self, matchs: list[MatchAVenir], quand: datetime) -> None:
+        """Pour chaque championnat relevé à l'instant : matchs comparés (Pinnacle et 1xBet présents)
+        et plus grand écart vu. Affiché dans Données → « Relevés de cotes avant les matchs »."""
+        from .chasseurs import ContexteMatch, meilleur_ecart
+        from .donnees.cotes import plus_recentes
+
+        entrees = []
+        for ligue in getattr(self, "_ligues_relevees", []):
+            vus, compares, meilleur = 0, 0, None
+            for m in matchs:
+                if m.ligue != ligue or not timedelta(0) < m.debut - quand <= timedelta(hours=6):
+                    continue
+                vus += 1
+                ctx = ContexteMatch(m.ligue, m.dom, m.ext, m.debut, None, plus_recentes(m.cotes), quand=quand)
+                ecart = meilleur_ecart(ctx, self.r.bookmaker_cible or "onexbet")
+                if ecart is None:
+                    continue
+                compares += 1
+                if meilleur is None or ecart[0] > meilleur[0]:
+                    meilleur = (ecart[0], f"{m.dom} – {m.ext} · {ecart[1].libelle(m.dom, m.ext)}")
+            entrees.append({"quand": quand.isoformat(), "ligue": ligue, "matchs": vus, "compares": compares,
+                            "ecart": meilleur[0] if meilleur else None, "pari": meilleur[1] if meilleur else None})
+        if entrees:
+            with self.sessions() as s:
+                ecrire_etat(s, "releves_journal", (lire_etat(s, "releves_journal", []) + entrees)[-40:])
 
     def _memoriser_releves(self, matchs: list[MatchAVenir], quand: datetime) -> None:
         """Enregistre les relevés Pinnacle/Betfair/1xBet récents et rend aux matchs les relevés
@@ -461,6 +492,7 @@ class Service:
         if evenements:
             matchs, alertes = fusionner_api(matchs, evenements, self._equipes_connues(quand), self.correspondance)
             self._memoriser_releves(matchs, quand)
+            self._journal_releves(matchs, quand)
             for a in sorted(set(alertes)):
                 self._alerte(a, quand)
         res = analyser(matchs, self.hist, self.r, quand)

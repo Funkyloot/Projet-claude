@@ -32,6 +32,17 @@
 <td>{% set p = parametres.get(code) %}{% if p %}{{ p.get('marches_valides')|join(', ') or 'aucun' }}{% else %}—{% endif %}</td></tr>
 {% endfor %}</tbody></table></div>
 
+<div class="carte defile"><h2>Relevés de cotes avant les matchs</h2>
+<p class="doux petit">Chaque relevé compare 1xBet (même logiciel que 22bet) au prix juste de Pinnacle pour les matchs
+des 6 heures suivantes. Un pari est recommandé quand l'écart atteint {{ '%.0f'|format(r.ecart_min_sharp*100) }} %.
+{% if limite_jour is not none %}Crédits : {{ budget.credits if budget else 0 }} utilisés aujourd'hui sur {{ limite_jour }}{% if restant is not none %} · {{ restant }} restants ce mois-ci{% endif %}.{% else %}Aucune clé The Odds API : pas de relevé.{% endif %}</p>
+<table><thead><tr><th>Quand</th><th>Championnat</th><th>Matchs comparés</th><th>Plus grand écart vu</th></tr></thead><tbody>
+{% for e in journal_releves %}<tr><td>{{ e.quand|local }}</td><td>{{ e.ligue|ligue }}</td><td>{{ e.compares }} / {{ e.matchs }}</td>
+<td>{% if e.ecart is not none %}<span class="pastille {{ '' if e.ecart >= r.ecart_min_sharp else 'neutre' }}">{{ e.ecart|pct }}</span>
+<div class="doux petit">{{ e.pari }}</div>{% else %}<span class="doux">aucun match avec Pinnacle et 1xBet</span>{% endif %}</td></tr>
+{% else %}<tr><td colspan="4" class="doux">Pas encore de relevé : ils ont lieu dans les 2 heures avant les matchs.</td></tr>{% endfor %}
+</tbody></table></div>
+
 <div class="carte"><h2>Dernier backtest</h2>
 {% if dernier_backtest %}<pre>{{ dernier_backtest }}</pre>{% else %}<p class="doux">Aucun backtest pour l'instant.</p>{% endif %}
 </div>

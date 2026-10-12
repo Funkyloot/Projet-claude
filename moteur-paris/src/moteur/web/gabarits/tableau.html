@@ -97,6 +97,8 @@ Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé
 {% if mode == 'simulation' %}
 <p class="doux petit">Passage en réel :
 {% if raisons_reel %}impossible pour l'instant ({{ raisons_reel|join(' · ') }}).{% else %}autorisé.{% endif %}</p>
+{% if raisons_reel and 'aucun pari simulé' in raisons_reel|join %}<p class="doux petit">Le compteur démarre au premier signal
+« contre Pinnacle ». Ce que le moteur a vu à chaque relevé : <a href="/donnees">Données → Relevés de cotes</a>.</p>{% endif %}
 <form method="post" action="/mode"><input type="hidden" name="nouveau" value="reel"><button type="submit" {{ 'disabled' if raisons_reel }}>Passer en argent réel</button></form>
 {% else %}
 <form method="post" action="/mode"><input type="hidden" name="nouveau" value="simulation"><button class="danger" type="submit">Repasser en simulation</button></form>

@@ -206,3 +206,23 @@ def test_scores_odds_api():
     assert len(client.scores("E1")) == 1 and client.restant == 480
     assert vus[0].path.endswith("/soccer_efl_champ/scores") and vus[0].params["daysFrom"] == "3"
     assert client.scores("F2") == [] and len(vus) == 1  # Ligue 2 : pas de scores chez ce fournisseur
+
+
+def test_cote_inchangee_depuis_des_heures_reste_utilisable():
+    """Bug corrigé : « last_update » est le dernier changement de cote, pas le moment du relevé."""
+    import copy
+    from datetime import timedelta
+
+    releve = datetime(2026, 9, 27, 13, tzinfo=timezone.utc)
+    donnees = copy.deepcopy(JSON_API)
+    for bk in donnees[0]["bookmakers"]:
+        bk["last_update"] = (releve - timedelta(hours=5)).isoformat()  # inchangée depuis 5 h
+        for m in bk["markets"]:
+            m["last_update"] = (releve - timedelta(hours=5)).isoformat()
+    ev = parser(donnees, "E1", releve)[0]
+    assert ev.cotes and all(c.maj == releve for c in ev.cotes)  # relevée maintenant : fraîche
+    for bk in donnees[0]["bookmakers"]:
+        for m in bk["markets"]:
+            m["last_update"] = (releve - timedelta(days=2)).isoformat()  # figée depuis 2 jours
+    assert parser(donnees, "E1", releve)[0].cotes == []
+    assert parser(JSON_API, "E1")[0].cotes[0].maj.year == 2026  # sans moment de relevé : comme avant
