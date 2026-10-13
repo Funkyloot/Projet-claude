@@ -42,7 +42,7 @@ from .db import Recommandation
 from .donnees import football_data
 from .donnees.equipes import Correspondance
 from .donnees.odds_api import SANS_SCORES, SPORTS, ClientOdds
-from .format import cote, pct
+from .format import cote, masquer_secrets, pct
 from .journal import (
     ajouter_alerte,
     BOOKMAKERS_RELEVES,
@@ -201,9 +201,15 @@ class Service:
             return "clé refusée : vérifie la clé The Odds API dans Réglages."
         if isinstance(e, httpx.HTTPStatusError) and e.response.status_code == 429:
             return "crédits épuisés ou trop de requêtes."
-        return texte
+        if isinstance(e, httpx.HTTPStatusError) and e.response.status_code >= 500:
+            return (f"panne passagère du service (erreur {e.response.status_code}, de leur côté). "
+                    "Rien à faire : nouvel essai automatique.")
+        if isinstance(e, httpx.HTTPStatusError):
+            return f"requête refusée (erreur {e.response.status_code})."
+        return masquer_secrets(texte)
 
     def _alerte(self, texte: str, quand: datetime) -> None:
+        texte = masquer_secrets(texte)
         log.warning(texte)
         with self.sessions() as s:
             ajouter_alerte(s, texte, quand)
@@ -214,7 +220,7 @@ class Service:
         try:
             self.telegram.envoyer(texte)
         except Exception as e:  # le réseau ne doit jamais arrêter le service
-            log.warning("Envoi Telegram impossible : %s", e)
+            log.warning("Envoi Telegram impossible : %s", masquer_secrets(str(e)))
 
     # --- tâches ----------------------------------------------------------------
 
@@ -282,6 +288,16 @@ class Service:
                 break
         self._calendrier = calendrier
         return calendrier
+
+    def surveillance_api(self, quand: datetime) -> dict:
+        """Matchs que le chasseur S va surveiller, d'après le calendrier déjà lu (aucun appel réseau)."""
+        a_venir = sorted(d for ligue, debuts in self._calendrier.items()
+                         if ligue in self.r.liste_ligues and ligue not in LIGUES_EFFICACES
+                         for d in debuts if d > quand)
+        if not a_venir:
+            return {}
+        return {"nb": sum(d <= quand + timedelta(hours=24) for d in a_venir), "prochain": a_venir[0],
+                "releve": max(quand, a_venir[0] - self.FENETRE_AVANT_MATCH)}
 
     def limite_jour(self, quand: datetime) -> int:
         """Crédits utilisables aujourd'hui. Automatique par défaut : les crédits restants du mois
@@ -730,7 +746,7 @@ class Service:
             except Exception as e:
                 log.exception("Action %s", action)
                 with self.sessions() as s:
-                    suivre(s, action, "erreur", str(e))
+                    suivre(s, action, "erreur", masquer_secrets(str(e)))
             faites.append(action)
         return faites
 
@@ -837,7 +853,7 @@ class Service:
                 try:
                     self.traiter_messages(attente=5)
                 except Exception as e:
-                    log.warning("Telegram indisponible : %s", e)
+                    log.warning("Telegram indisponible : %s", masquer_secrets(str(e)))
                     self._pause(15, arreter)
             else:
                 self._pause(20, arreter)

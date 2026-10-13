@@ -19,7 +19,7 @@ from .capital import depot_initial, enregistrer, solde
 from .chasseurs import Candidat
 from .config import Reglages
 from .db import Cote, Etat, Match, Pari, Prediction, Recommandation
-from .format import argent, cote as fcote, pct
+from .format import argent, cote as fcote, masquer_secrets, pct
 from .marches import Selection, cote_juste, esperance, fraction_gagnee, gain_perte, kelly_wl
 from .modeles.grille import grille_depuis_cotes
 
@@ -44,7 +44,8 @@ def ecrire_etat(s: Session, cle: str, valeur) -> None:
 
 def ajouter_alerte(s: Session, texte: str, quand: datetime, silence: timedelta = timedelta(hours=6)) -> None:
     """Ajoute une alerte, sauf si la même a déjà été notée récemment (évite les répétitions)."""
-    alertes = lire_etat(s, "alertes", [])
+    texte = masquer_secrets(texte)
+    alertes = [[q, masquer_secrets(t)] for q, t in lire_etat(s, "alertes", [])]  # efface aussi les anciennes clés
     if any(t == texte and quand - datetime.fromisoformat(q) < silence for q, t in alertes):
         return
     alertes.append([quand.isoformat(), texte])
@@ -52,7 +53,7 @@ def ajouter_alerte(s: Session, texte: str, quand: datetime, silence: timedelta =
 
 
 def alertes_depuis(s: Session, depuis: datetime) -> list[str]:
-    return [t for q, t in lire_etat(s, "alertes", []) if datetime.fromisoformat(q) >= depuis]
+    return [masquer_secrets(t) for q, t in lire_etat(s, "alertes", []) if datetime.fromisoformat(q) >= depuis]
 
 
 def mode_actuel(s: Session, r: Reglages) -> str:

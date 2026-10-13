@@ -38,6 +38,10 @@ Tant que le backtest n'a validé aucun marché, les signaux restent « en observ
 {% elif analyse %}<p class="doux petit">Dernière analyse : {{ analyse_quand|local if analyse_quand else '—' }} · {{ analyse.get('nb_matchs', 0) }} match(s) dans {{ analyse.get('ligues', [])|length }} championnat(s) · {{ analyse.get('nb_signaux', 0) }} signal(aux).
 {% if nb_observation %}{{ nb_observation }} en observation (marchés pas encore validés).{% endif %}
 Le moteur analyse aussi tout seul toutes les {{ r.intervalle_analyse_h }} h.</p>
+{% if surveillance %}<p class="doux petit">Signaux « contre Pinnacle » : {{ surveillance.nb }} match(s) de tes championnats dans les 24 h
+(calendrier gratuit The Odds API){% if not surveillance.nb %}, prochain le {{ surveillance.prochain|local }}{% endif %}.
+Leurs cotes sont relevées toutes seules dans les 2 h avant le coup d'envoi : prochain relevé vers {{ surveillance.releve|local }}.
+Entre deux relevés, ne voir aucun signal est normal.</p>{% endif %}
 {% if analyse.get('nb_matchs', 0) == 0 and programme %}<p class="petit"><strong>Pourquoi aucun match ?</strong>
 Les matchs à venir viennent du programme publié par football-data{% if programme.maj %} (mis à jour {{ programme.maj|local }}){% endif %}.
 {% if programme.prochain %}Prochain match de tes championnats : {{ programme.prochain|local }}. Il sera analysé dès qu'il sera à moins de {{ r.horizon_h }} h.

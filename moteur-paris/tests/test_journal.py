@@ -166,3 +166,23 @@ def test_match_annule_ou_reporte(session, reglages_test):
     assert annuler_match(session, p.match_id, apres_match)[0] == 0  # deux fois : rien de plus
     assert lire_etat(session, "matchs_annules", []) == [p.match_id] and solde(session, "simulation") == avant
     assert "introuvable" in annuler_match(session, 999, apres_match)[1]
+
+
+def test_cles_jamais_affichees_dans_les_alertes(sessions):
+    import json
+    from datetime import datetime, timezone
+
+    from moteur.format import masquer_secrets
+    from moteur.journal import ajouter_alerte, alertes_depuis, ecrire_etat, lire_etat
+
+    adresse = ("Server error '502 Bad Gateway' for url 'https://api.the-odds-api.com/v4/sports/soccer_efl_champ/"
+               "odds?apiKey=CLESECRETE99&markets=h2h&regions=eu'")
+    assert "CLESECRETE99" not in masquer_secrets(adresse) and "apiKey=***&markets=h2h" in masquer_secrets(adresse)
+    assert masquer_secrets("https://api.telegram.org/bot123456:AAH-xyz_9/sendMessage") == \
+        "https://api.telegram.org/bot***/sendMessage"
+    quand = datetime(2026, 10, 12, 12, tzinfo=timezone.utc)
+    with sessions() as s:
+        ecrire_etat(s, "alertes", [[quand.isoformat(), "Scores : " + adresse]])  # alerte d'une ancienne version
+        assert "CLESECRETE99" not in alertes_depuis(s, quand)[0]
+        ajouter_alerte(s, "Autre : " + adresse, quand)
+        assert "CLESECRETE99" not in json.dumps(lire_etat(s, "alertes"))  # la base est nettoyée aussi

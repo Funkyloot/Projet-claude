@@ -55,6 +55,10 @@ ALIAS_BRUTS: dict[str, str] = {
     "Olympiacos": "Olympiakos", "Olympiacos Piraeus": "Olympiakos", "PAOK Thessaloniki": "PAOK",
     "Galatasaray": "Galatasaray", "Fenerbahce": "Fenerbahce", "Besiktas JK": "Besiktas",
     "Glasgow Rangers": "Rangers", "Heart of Midlothian": "Hearts", "Hibernian": "Hibernian",
+    # noms vus dans The Odds API (octobre 2026)
+    "Union Saint-Gilloise": "St. Gilloise", "Union St. Gilloise": "St. Gilloise", "Cercle Brugge KSV": "Cercle Brugge",
+    "Amed SK": "Amedspor", "Basaksehir": "Buyuksehyr", "Istanbul Basaksehir": "Buyuksehyr",
+    "Erzurum BB": "Erzurumspor", "Vitoria SC": "Guimaraes", "Stade Lavallois": "Laval",
 }
 
 

@@ -30,7 +30,7 @@ from ..db import Pari
 from ..donnees.cotes import nom_bookmaker
 from ..donnees.football_data import LIGUES, etat_historique
 from ..donnees.odds_api import SPORTS, ClientOdds
-from ..format import argent, cote, pct
+from ..format import argent, cote, masquer_secrets, pct
 from ..journal import (
     annuler_match,
     ecrire_etat,
@@ -286,6 +286,7 @@ def creer_app(service: Service) -> FastAPI:
             if programme.get(cle):
                 programme[cle] = datetime.fromisoformat(programme[cle])
         contexte["programme"] = programme
+        contexte["surveillance"] = service.surveillance_api(quand)
         with service.sessions() as s:
             contexte["tache_analyse"] = etat_taches(s)["analyse"]
         contexte["service_actif"] = bool(contexte["battement"]) and (
@@ -502,7 +503,7 @@ def creer_app(service: Service) -> FastAPI:
         try:
             Telegram(r.telegram_token, r.telegram_chat_id).envoyer("Message de test du moteur de paris : tout fonctionne.")
         except Exception as e:
-            return retour("/reglages", erreur=f"Envoi impossible : {e}")
+            return retour("/reglages", erreur=f"Envoi impossible : {masquer_secrets(str(e))}")
         return retour("/reglages", msg="Message de test envoyé sur Telegram.")
 
     @app.post("/reglages-cotes/verifier")
@@ -515,7 +516,7 @@ def creer_app(service: Service) -> FastAPI:
             disponibles = {x["key"] for x in client.sports()}
             absents = [c for c in r.liste_ligues if SPORTS.get(c) not in disponibles]
         except Exception as e:
-            return retour("/reglages", erreur=f"API injoignable ou clé refusée : {e}")
+            return retour("/reglages", erreur=f"API injoignable ou clé refusée : {masquer_secrets(str(e))}")
         # Vérification gratuite : la liste des sports ne consomme aucun crédit.
         if client.restant is not None:
             with service.sessions() as s:

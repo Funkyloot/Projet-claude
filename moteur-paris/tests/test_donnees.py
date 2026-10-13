@@ -182,6 +182,14 @@ def test_alias_des_equipes_renommees():
     assert c.trouver("Peterborough United", {"Peterboro", "Plymouth"}) == "Peterboro"
     assert c.trouver("Celta Fortuna", {"Celta B", "Cadiz", "Sociedad B"}) == "Celta B"
     assert c.trouver("Real Sociedad B", {"Celta B", "Cadiz", "Sociedad B"}) == "Sociedad B"
+    # noms de The Odds API vus dans les alertes (octobre 2026)
+    for api, fd, autres in (("Union Saint-Gilloise", "St. Gilloise", {"St Truiden", "Standard"}),
+                            ("Cercle Brugge KSV", "Cercle Brugge", {"Club Brugge"}),
+                            ("Amed SK", "Amedspor", {"Erzurumspor", "Kasimpasa"}),
+                            ("Basaksehir", "Buyuksehyr", {"Besiktas"}), ("İstanbul Başakşehir", "Buyuksehyr", {"Besiktas"}),
+                            ("Erzurum BB", "Erzurumspor", {"Amedspor"}), ("Vitória SC", "Guimaraes", {"Sp Braga"}),
+                            ("Stade Lavallois", "Laval", {"Red Star", "Pau FC"})):
+        assert c.trouver(api, {fd} | autres) == fd, api
 
 
 def test_scores_odds_api():

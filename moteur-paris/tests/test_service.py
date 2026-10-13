@@ -366,6 +366,26 @@ def test_mouvement_de_pinnacle_et_clv_par_les_releves(service, sessions, scenari
         assert cc is not None and 1.8 < cc < 1.95  # la cote prise (2,15) bat la clôture : CLV positive
 
 
+def test_panne_de_l_api_expliquee_sans_la_cle(service):
+    requete = httpx.Request("GET", "https://api.the-odds-api.com/v4/sports/x/scores?apiKey=CLESECRETE99&daysFrom=3")
+    panne = httpx.HTTPStatusError("Server error '502 Bad Gateway' for url "
+                                  "'https://api.the-odds-api.com/v4/sports/x/scores?apiKey=CLESECRETE99&daysFrom=3'",
+                                  request=requete, response=httpx.Response(502, request=requete))
+    texte = service._erreur_lisible(panne)
+    assert "panne passagère" in texte and "502" in texte and "CLESECRETE99" not in texte
+    assert "CLESECRETE99" not in service._erreur_lisible(RuntimeError("echec sur ?apiKey=CLESECRETE99"))
+
+
+def test_matchs_surveilles_affiches_sans_credit(service, scenario):
+    maintenant = scenario["maintenant"]
+    assert service.surveillance_api(maintenant) == {}  # calendrier pas encore lu
+    service._calendrier = {"E1": [maintenant + timedelta(hours=5), maintenant + timedelta(hours=30)],
+                           "E0": [maintenant + timedelta(hours=1)]}  # Premier League : jamais relevée
+    s = service.surveillance_api(maintenant)
+    assert s["nb"] == 1 and s["prochain"] == maintenant + timedelta(hours=5)
+    assert s["releve"] == maintenant + timedelta(hours=3)
+
+
 def test_pas_de_releve_payant_pour_les_grands_championnats(service, scenario):
     debut = scenario["maintenant"] + timedelta(hours=1)
 

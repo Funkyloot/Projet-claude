@@ -216,6 +216,11 @@ def test_tableau_explique_l_absence_de_match(connecte, service):
     assert "Pourquoi aucun match" in page and "National League anglaise" in page and "The Odds API" in page
     service.derniere_analyse["programme"]["prochain"] = "2026-10-03T14:00:00+00:00"
     assert "Prochain match de tes championnats" in connecte.get("/").text
+    from datetime import timedelta
+
+    service._calendrier = {"E1": [service.horloge() + timedelta(hours=4)]}
+    page = connecte.get("/").text
+    assert "1 match(s) de tes championnats dans les 24 h" in page and "prochain relevé vers" in page
 
 
 def test_fuseau_de_l_appareil_a_la_premiere_connexion(client, sessions):
