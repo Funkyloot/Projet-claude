@@ -163,3 +163,35 @@ Trois causes, toutes corrigées en 0.6.2 :
 
 Nouveau : Données → « Relevés de cotes avant les matchs » montre, pour chaque relevé, les matchs
 comparés et le plus grand écart vu entre 1xBet et Pinnacle, même quand rien ne passe le seuil.
+
+## 9. Pinnacle d'abord, notre modèle en complément ? (octobre 2026)
+
+Question : notre modèle (Dixon-Coles, buts + tirs cadrés) ajoute-t-il quelque chose aux prédictions de Pinnacle ?
+Mesure sur 33 118 matchs de 8 deuxièmes divisions (2016-2026), modèle réajusté chaque semaine avec le passé
+seulement ; prix de Pinnacle publiés avant le match (football-data), sa marge retirée.
+
+**A. Mélanger le modèle aux probabilités de Pinnacle** (log-loss, plus bas = mieux) :
+
+| Part du modèle | 1X2 2016-23 | 1X2 2023-26 | Plus/moins 2,5 2016-23 | Plus/moins 2,5 2023-26 |
+|---|---|---|---|---|
+| **0 % (Pinnacle seul)** | **1,04173** | **1,03727** | 0,68278 | **0,68494** |
+| 5 % | 1,04182 | 1,03753 | 0,68255 | 0,68493 |
+| 10 % | 1,04199 | 1,03785 | 0,68237 | 0,68496 |
+| 30 % (ancien défaut) | 1,04339 | 1,03988 | 0,68215 | 0,68544 |
+
+Sur le 1X2, tout mélange est moins bon, sur les deux périodes. Sur le plus/moins, le petit gain d'avant
+2023 a disparu. **Décision : les prédictions sont celles de Pinnacle telles quelles** (réglage « Part de
+notre modèle face à Pinnacle » = 0 %) ; le modèle ne sert que si Pinnacle n'a pas de cote, et pour le Simulateur.
+
+**B. Le modèle comme filtre des value bets** (cote ≥ prix juste de Pinnacle + 4 %, cote 1,25 à 4,5) :
+
+| Avis du modèle | Paris (meilleure cote) | ROI 2016-23 | ROI 2023-26 |
+|---|---|---|---|
+| confirme (≥ 2 points au-dessus de Pinnacle) | 1 201 | −7,9 % | −19,9 % |
+| neutre | 1 621 | −1,4 % | −6,8 % |
+| contredit (≥ 2 points en dessous) | 5 717 | −1,3 % | +2,7 % |
+
+Quand le modèle « confirme » une value, le résultat est même le plus mauvais : c'est le prix de Pinnacle qui
+avait raison. Le modèle ne sert donc pas non plus de filtre. Ce qui marche en complément de Pinnacle reste
+ce qui est mesuré plus haut : relever les cotes au bon moment (§3 bis), choisir les championnats où les
+bookmakers suivent Pinnacle avec retard, et le prix de 1xBet/22bet face au prix juste de Pinnacle (§6, §8).

@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from .calcul import probas_justes, surebet
-from .donnees.cotes import BET365, MOYENNE, CoteBrute
+from .donnees.cotes import BET365, MOYENNE, CoteBrute, nom_bookmaker
 from .marches import (
     Selection,
     cote_juste,
@@ -261,14 +261,21 @@ class Apercu:
     ev: float
     statut: str  # recommande | observation | contredit | trop_belle | sous_seuil
     selection: Selection | None = None
+    base: str = ""  # d'où vient le prix juste : « Pinnacle », « moyenne du marché » ou « notre modèle »
 
 
 def meilleure_option(ctx: ContexteMatch, f: Filtre) -> Apercu | None:
     """Applique les mêmes filtres que le chasseur B et dit pourquoi l'option est retenue ou non."""
-    ref, _ = grille_reference(ctx, f)
+    ref, source_ref = grille_reference(ctx, f)
     if ctx.grille_modele is None and ref is None:
         return None
     grille = melanger(ctx.grille_modele, ref, f.poids_modele) if ctx.grille_modele is not None else ref
+    if ref is None:
+        base = "notre modèle"
+    elif ctx.grille_modele is None or f.poids_modele == 0:
+        base = nom_bookmaker(source_ref)
+    else:
+        base = f"{nom_bookmaker(source_ref)} + notre modèle ({f.poids_modele * 100:.0f} %)"
     vmin = f.valeur_min if ref is not None else 2 * f.valeur_min
     prix = {sel: (c, MOYENNE) for sel, c in (_cotes_de(ctx, MOYENNE) or _cotes_de(ctx, BET365)).items()}
     if f.bookmaker_cible:
@@ -294,7 +301,7 @@ def meilleure_option(ctx: ContexteMatch, f: Filtre) -> Apercu | None:
         else:
             statut = "observation"
         options.append(Apercu(ctx.ligue, ctx.dom, ctx.ext, ctx.debut, sel.libelle(ctx.dom, ctx.ext), cote, source,
-                              cote_juste(W, L), cote_minimale(W, L, vmin), ev, statut, sel))
+                              cote_juste(W, L), cote_minimale(W, L, vmin), ev, statut, sel, base))
     if not options:
         return None
     retenues = [o for o in options if o.statut != "contredit"] or options

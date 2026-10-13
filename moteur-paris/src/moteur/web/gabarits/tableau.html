@@ -82,7 +82,7 @@ Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé
 {% set statuts = {'recommande': ('', 'recommandé'), 'observation': ('alerte', 'en observation'), 'contredit': ('erreur', 'bloqué : contredit la référence'), 'trop_belle': ('erreur', 'trop belle, risque d’annulation'), 'sous_seuil': ('neutre', 'sous le seuil')} %}
 <table><thead><tr><th>Match</th><th>Option</th><th>Cote vue</th><th>Prix juste</th><th>Cote min</th><th>Écart</th><th>Statut</th></tr></thead><tbody>
 {% for a in apercus %}<tr><td>{{ a.match }}<div class="doux petit">{{ a.ligue|ligue }} · {{ a.debut|local }}</div></td>
-<td>{{ a.option }}</td><td>{{ a.cote|cote }}<div class="doux petit">{{ a.source }}</div></td><td>{{ a.cote_juste|cote }}</td>
+<td>{{ a.option }}</td><td>{{ a.cote|cote }}<div class="doux petit">{{ a.source }}</div></td><td>{{ a.cote_juste|cote }}{% if a.get('base') %}<div class="doux petit">{{ a.base }}</div>{% endif %}</td>
 <td><strong>{{ a.cote_min|cote }}</strong></td><td>{{ a.ev|pct }}</td>
 {% set st = statuts.get(a.get('statut', 'sous_seuil'), ('erreur', '')) %}<td><span class="pastille {{ st[0] }}">{{ st[1] }}</span></td></tr>{% endfor %}
 </tbody></table></div>

@@ -121,6 +121,8 @@ class Service:
         # 6 % ne laissait qu'environ 1 occasion par semaine avec 1xBet ; 1 crédit par relevé pour
         # couvrir 2 fois plus de matchs (RECHERCHE.md §8)
         "0.6.2-couverture": {"ecart_min_sharp": 0.04, "odds_api_marches": "h2h"},
+        # Pinnacle d'abord : y mélanger le modèle rend les prédictions moins précises (RECHERCHE.md §9)
+        "0.6.5-pinnacle": {"poids_modele": 0.0},
     }
 
     def appliquer_migrations(self) -> list[str]:
@@ -528,7 +530,7 @@ class Service:
             "apercus": [
                 {"ligue": a.ligue, "match": f"{a.dom} – {a.ext}", "debut": a.debut.isoformat(), "option": a.libelle,
                  "cote": a.cote, "source": a.source, "cote_juste": a.cote_juste, "cote_min": a.cote_min, "ev": a.ev,
-                 "statut": a.statut}
+                 "statut": a.statut, "base": a.base}
                 for a in res.apercus
             ],
         }

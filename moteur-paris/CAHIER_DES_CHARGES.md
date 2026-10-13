@@ -331,7 +331,7 @@ Bilan final : profit réel, CLV, performance par chasseur, décision de continue
 **Règle de validation d'un marché** (filtre n° 3 de la section 9) : sur un championnat, une famille de
 marchés (1X2, plus/moins, handicap) est validée si elle a au moins 30 paris dans le coffre-fort, un ROI
 positif à la fois en développement et dans le coffre-fort, et une CLV moyenne positive quand elle est connue.
-Les réglages (ξ, poids du modèle) sont choisis sur la log-loss, jamais sur le profit. Un signal hors marché
+Les réglages du modèle (ξ, part des tirs cadrés) sont choisis sur sa propre log-loss, jamais sur le profit. La part du modèle face à Pinnacle est un réglage, 0 par défaut : Pinnacle d'abord (RECHERCHE.md §9). Un signal hors marché
 validé reste « en observation » : enregistré et mesuré, jamais recommandé.
 
 ## 16. Risques connus

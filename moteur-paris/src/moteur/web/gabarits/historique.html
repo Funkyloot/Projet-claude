@@ -25,6 +25,9 @@ ou les saisir dans le <a href="/journal">Journal</a>.</p>
 {% for cle, nom in (('resultats', 'Résultats connus'), ('attente', 'Score attendu'), ('avenir', 'À venir'), ('tout', 'Tout')) %}
 <a class="pastille {{ '' if cle == voir else 'neutre' }}" href="/historique?jours={{ jours }}&voir={{ cle }}">{{ nom }} ({{ nombres[cle] }})</a>{% endfor %}
 </div>
+<p class="doux petit">Prix juste et proba : ceux de Pinnacle, sa marge retirée (depuis la version 0.6.5) ; notre modèle ne les donne
+que si Pinnacle n'a pas de cote. La CLV compare la cote vue au prix juste de Pinnacle juste avant le match : avec la cote
+moyenne des bookmakers, elle est négative d'environ 5 % (leur marge), c'est normal.</p>
 <div class="carte defile">
 <table><thead><tr><th>Match</th><th>Option</th><th>Cote vue</th><th>Prix juste</th><th>Proba</th><th>Statut</th><th>Résultat</th><th>CLV</th></tr></thead><tbody>
 {% set statuts = {'recommande': 'recommandé', 'observation': 'en observation', 'contredit': 'contredit la référence', 'trop_belle': 'trop belle', 'sous_seuil': 'sous le seuil'} %}

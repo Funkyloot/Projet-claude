@@ -5,7 +5,7 @@ Fonctions pures autant que possible : le service (service.py) s'occupe du résea
 
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -74,7 +74,8 @@ def params_ligue(parametres: dict, ligue: str, r: Reglages) -> tuple[ParamsLigue
     info = parametres.get("ligues", {}).get(ligue)
     if not info:
         return ParamsLigue(poids_modele=r.poids_modele), frozenset()
-    return ParamsLigue.depuis_dict(info), frozenset(info.get("marches_valides", []))
+    # la part du modèle face à Pinnacle est un réglage (Pinnacle seul par défaut), pas un choix du backtest
+    return replace(ParamsLigue.depuis_dict(info), poids_modele=r.poids_modele), frozenset(info.get("marches_valides", []))
 
 
 def matchs_depuis_fixtures(

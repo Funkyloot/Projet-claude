@@ -114,8 +114,9 @@ SECTIONS: dict[str, tuple[str, list[Champ]]] = {
     "modele": ("Modèle et données", [
         Champ("saison_depuis", "Historique depuis l'année", "entier", "2005 = 20 ans de données."),
         Champ("horizon_h", "Horizon d'analyse (heures)", "entier", "Matchs pris en compte à l'avance."),
-        Champ("poids_modele", "Poids du modèle par défaut", "pct",
-              "Utilisé tant que le backtest n'a pas choisi le poids de chaque championnat."),
+        Champ("poids_modele", "Part de notre modèle face à Pinnacle", "pct",
+              "0 % (conseillé) : les prédictions de Pinnacle telles quelles ; notre modèle ne sert que si Pinnacle "
+              "n'a pas de cote. Testé sur 33 000 matchs : y mélanger notre modèle les rend moins précises."),
         Champ("prix_backtest", "Cotes supposées au backtest", "choix", "", ("moy", "b365", "max")),
     ]),
     "calendrier": ("Calendrier", [

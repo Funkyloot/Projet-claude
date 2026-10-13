@@ -142,7 +142,7 @@ def cmd_backtest(args) -> int:
     o = OptionsBacktest(
         valeur_min=r.valeur_min, seuil_suspect=r.seuil_suspect, seuil_desaccord=r.seuil_desaccord,
         prix=args.prix or r.prix_backtest, capital=r.capital_initial, fraction_kelly=r.fraction_kelly,
-        mise_max_pct=r.mise_max_pct,
+        mise_max_pct=r.mise_max_pct, poids_modele=r.poids_modele,
         grille_xi=tuple(_nombre(x) for x in args.xi.split(",")) if args.xi else OptionsBacktest.grille_xi,
     )
     from .taches import suivre

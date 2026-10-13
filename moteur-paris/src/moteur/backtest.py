@@ -34,7 +34,6 @@ log = logging.getLogger(__name__)
 SUFFIXES = ("1", "x", "2", "plus", "moins", "ah1", "ah2")
 FAMILLE_SUFFIXE = {"1": "1x2", "x": "1x2", "2": "1x2", "plus": "total", "moins": "total", "ah1": "ah", "ah2": "ah"}
 GRILLE_XI = (0.001, 0.0019, 0.004)
-GRILLE_POIDS = (0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0)
 GRILLE_BUTS = (0.3,)  # part des buts face aux tirs cadrés : 0,3 gagne partout (RECHERCHE.md)
 SAISONS_COFFRE = 2
 SAISONS_CHAUFFE = 2
@@ -244,6 +243,9 @@ class OptionsBacktest:
     capital: float = 100.0
     fraction_kelly: float = 0.25
     mise_max_pct: float = 0.03
+    # Part du modèle face à Pinnacle : 0 = Pinnacle tel quel. Le mélange rend les prédictions moins
+    # précises sur les saisons récentes (RECHERCHE.md §9) : c'est un réglage, plus un choix du backtest.
+    poids_modele: float = 0.0
 
 
 def tournoi_ligue(ligue: str, df: pd.DataFrame, df_sup: pd.DataFrame | None, o: OptionsBacktest) -> ResultatLigue:
@@ -263,20 +265,19 @@ def tournoi_ligue(ligue: str, df: pd.DataFrame, df_sup: pd.DataFrame | None, o: 
             if pred.empty:
                 continue
             j = prep.join(pred, how="inner")
-            dev = j[~j["saison"].isin(coffre)]
-            for w in GRILLE_POIDS:
-                ll = log_loss(dev, w)
-                if meilleur is None or ll < meilleur[0]:
-                    meilleur = (ll, xi, alpha, w, j)
+            ll = log_loss(j[~j["saison"].isin(coffre)], 1.0)  # le modèle est réglé sur sa propre précision
+            if meilleur is None or ll < meilleur[0]:
+                meilleur = (ll, xi, alpha, j)
     if meilleur is None:
         res.erreur = "aucune prédiction possible"
         return res
-    ll, xi, alpha, w, j = meilleur
+    ll_modele, xi, alpha, j = meilleur
+    w = o.poids_modele
     res.params = ParamsLigue(xi=xi, reg=o.reg, fenetre_jours=o.fenetre_jours, poids_modele=w, poids_buts=alpha)
     dev, cof = j[~j["saison"].isin(coffre)], j[j["saison"].isin(coffre)]
     res.log_loss = {
-        "melange": round(ll, 5),
-        "modele_seul": round(log_loss(dev, 1.0), 5),
+        "melange": round(log_loss(dev, w), 5),
+        "modele_seul": round(ll_modele, 5),
         "reference_seule": round(log_loss(dev, 0.0), 5),
         "coffre_melange": round(log_loss(cof, w), 5),
     }

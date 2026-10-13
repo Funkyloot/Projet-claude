@@ -135,6 +135,27 @@ def test_apercu_dit_pourquoi_une_option_est_bloquee():
     assert meilleure_option(_ctx(g, cotes), Filtre()).statut == "observation"
 
 
+def test_prix_juste_de_pinnacle_d_abord():
+    from moteur.analyse import params_ligue
+    from moteur.chasseurs import meilleure_option
+    from moteur.config import Reglages
+
+    g, modele = grille_dc(1.5, 1.0, -0.05), grille_dc(1.1, 1.3)
+    cotes = _cotes_justes(g, "pinnacle", 0.02) + _cotes_justes(g, "moyenne", 0.05)
+    a = meilleure_option(_ctx(modele, cotes), Filtre(poids_modele=0.0))
+    assert a.base == "Pinnacle"
+    autre = meilleure_option(_ctx(grille_dc(2.5, 0.4), cotes), Filtre(poids_modele=0.0))
+    assert (autre.libelle, autre.cote_juste) == (a.libelle, a.cote_juste)  # le modèle n'y change rien
+    assert meilleure_option(_ctx(modele, cotes), Filtre(poids_modele=0.3)).base == "Pinnacle + notre modèle (30 %)"
+    seul_1xbet = _cotes_justes(g, "onexbet", 0.05)  # ni Pinnacle ni moyenne : notre modèle prend le relais
+    assert meilleure_option(_ctx(modele, seul_1xbet), Filtre(poids_modele=0.0, bookmaker_cible="onexbet")).base == "notre modèle"
+    # le poids choisi par un ancien backtest ne remplace plus le réglage
+    r = Reglages(_env_file=None, poids_modele=0.0)
+    params, familles = params_ligue({"ligues": {"E1": {"xi": 0.004, "poids_modele": 0.3, "marches_valides": ["total"]}}},
+                                    "E1", r)
+    assert params.poids_modele == 0.0 and params.xi == 0.004 and familles == {"total"}
+
+
 def _sharp(quand, debut, ref=(2.0, 3.6, 4.0), cible=(2.2, 3.3, 3.7), age_ref=10, age_cible=5, bk_ref="pinnacle",
            totaux=None):
     from datetime import timedelta
