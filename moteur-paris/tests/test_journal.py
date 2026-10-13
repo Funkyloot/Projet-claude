@@ -186,3 +186,15 @@ def test_cles_jamais_affichees_dans_les_alertes(sessions):
         assert "CLESECRETE99" not in alertes_depuis(s, quand)[0]
         ajouter_alerte(s, "Autre : " + adresse, quand)
         assert "CLESECRETE99" not in json.dumps(lire_etat(s, "alertes"))  # la base est nettoyée aussi
+
+
+def test_rapport_sans_signal_cite_le_seuil_contre_pinnacle(sessions, reglages_test):
+    from datetime import datetime, timezone
+
+    from moteur.rapport import rapport_quotidien
+
+    quand = datetime(2026, 10, 13, 12, tzinfo=timezone.utc)
+    with sessions() as s:
+        assert "pas encore de cotes à comparer" in rapport_quotidien(s, reglages_test, quand, {"nb_matchs": 0})
+        texte = rapport_quotidien(s, reglages_test, quand, {"nb_matchs": 8, "ligues": ["E1"]})
+    assert "1xBet au moins 4 % au-dessus du prix juste de Pinnacle" in texte

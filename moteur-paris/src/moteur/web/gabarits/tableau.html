@@ -71,7 +71,7 @@ Prix juste {{ reco.cote_juste|cote }} · <strong>jouer si 22bet ≥ {{ reco.cote
 </div>
 </div>
 {% else %}
-<p>Rien de bon pour l'instant{% if analyse %} : aucune cote au-dessus du prix juste + {{ '%.0f'|format(r.valeur_min*100) }} % dans un marché validé{% endif %}.</p>
+<p>Rien de bon pour l'instant{% if analyse.get('nb_matchs', 0) %} : aucune cote 1xBet au moins {{ '%.0f'|format(r.ecart_min_sharp*100) }} % au-dessus du prix juste de Pinnacle{% elif analyse %} : pas encore de cotes à comparer (elles sont relevées 2 h avant chaque match){% endif %}.</p>
 {% endfor %}
 </div>
 

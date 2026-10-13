@@ -126,8 +126,9 @@ def rapport_quotidien(s: Session, r: Reglages, quand: datetime, derniere_analyse
     else:
         info = derniere_analyse or {}
         n, nl = info.get("nb_matchs", 0), len(info.get("ligues", []))
-        raison = (f"{n} match(s) analysé(s) dans {nl} championnat(s), aucune cote au-dessus du prix juste "
-                  f"+ {r.valeur_min:.0%} dans un marché validé.") if n else "aucun match à venir dans les sources."
+        raison = (f"{n} match(s) analysé(s) dans {nl} championnat(s), aucune cote 1xBet au moins "
+                  f"{r.ecart_min_sharp * 100:.0f} % au-dessus du prix juste de Pinnacle.") if n else \
+            "pas encore de cotes à comparer (elles sont relevées 2 h avant chaque match)."
         lignes.append(f"Rien de bon aujourd'hui : {raison}")
     if observation:
         lignes.append(f"En observation : {len(observation)} signal(aux) dans des marchés pas encore validés.")
