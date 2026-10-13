@@ -195,3 +195,25 @@ Quand le modèle « confirme » une value, le résultat est même le plus mauvai
 avait raison. Le modèle ne sert donc pas non plus de filtre. Ce qui marche en complément de Pinnacle reste
 ce qui est mesuré plus haut : relever les cotes au bon moment (§3 bis), choisir les championnats où les
 bookmakers suivent Pinnacle avec retard, et le prix de 1xBet/22bet face au prix juste de Pinnacle (§6, §8).
+
+## 10. Rendre le prix de Pinnacle plus juste ? (octobre 2026)
+
+**Notre modèle prévoit-il les mouvements de Pinnacle ?** (33 101 matchs, ouverture → clôture) Quand le modèle
+voit une équipe 6 points au-dessus de Pinnacle, Pinnacle bouge ensuite de +0,1 point (2016-23) puis de
+−0,1 point (2023-26) : corrélation 0,02 à 0,08. Rien d'exploitable face à une marge de 5 %.
+
+**Combiner plusieurs prix « sharp » à la clôture** (19 championnats, 2019-2027, log-loss 1X2) : Pinnacle
+seul 0,99994 / 0,98980 ; y ajouter la moyenne du marché est moins bon à tous les poids ; avec Betfair Exchange,
+0,99341 → 0,99332 (écart négligeable, une seule période).
+
+Signaux à la clôture (Bet365, Bwin, William Hill, 1xBet ; écart ≥ 4 %, hors 5 grands, cote 1,25-4,5) :
+
+| Prix juste | 2019-23 | 2023-27 |
+|---|---|---|
+| **Pinnacle seul** | **1 371 paris, +8,7 %** | **761 paris, +12,2 %** |
+| Pinnacle 80 % + moyenne 20 % | 1 173 paris, +9,0 % | 554 paris, +12,4 % |
+| Pinnacle 60 % + moyenne 40 % | 1 048 paris, +7,1 % | 410 paris, +5,8 % |
+
+Conclusion : Pinnacle seul reste le meilleur prix juste ; la puissance de calcul n'y change rien (ces tests
+prennent quelques secondes), c'est l'information qui manque, et Pinnacle l'a déjà. La règle actuelle de
+l'app (Pinnacle seul, écart ≥ 4 %) est confirmée sur 2 132 paris et deux périodes.
