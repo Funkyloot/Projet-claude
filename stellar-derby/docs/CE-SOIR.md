@@ -59,11 +59,11 @@ course et se voient.
 1. **View → Toolbox**, onglet **Models**.
 2. Colle un numéro de la liste de [ASSETS.md](ASSETS.md) dans la recherche
    (par exemple `10586979345`, le cerisier), clique dessus : il apparaît dans
-   le Workspace.
+   le Workspace. La liste a des miniatures : choisis à l'œil.
 3. Dans l'**Explorer**, fais-le glisser dans
-   **ServerStorage → Ressources → Arbres**. Fais pareil avec 2 ou 3 autres
-   arbres, puis des buissons (dans **Buissons**) et des rochers (dans
-   **Rochers**).
+   **ServerStorage → Ressources → Arbres**. Fais pareil avec un ou deux
+   arbres verts (n° 4 à 9 de la liste), puis des buissons (dans **Buissons**)
+   et des rochers (dans **Rochers**).
 4. **Contrôle de sécurité** : ouvre `tools/studio/controle-modeles.lua`,
    copie tout, colle-le dans la **barre de commande** (View → Command Bar),
    Entrée. Si une ligne **[SUSPECT]** apparaît, supprime le modèle concerné.

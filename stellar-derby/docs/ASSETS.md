@@ -49,23 +49,47 @@ Trois règles pour les modèles gratuits :
 
 ### Sélection déjà vérifiée pour Stellar Derby
 
-Tous de créateurs vérifiés et bien notés, miniatures vérifiées. Pour les
-trouver : Toolbox → Models → coller le numéro dans la recherche, ou ouvrir
-`https://create.roblox.com/store/asset/<numéro>`.
+Tous de créateurs vérifiés, bien notés, gratuits et **sans aucun script**.
+Pour les trouver : Toolbox → Models → coller le numéro dans la recherche, ou
+ouvrir `https://create.roblox.com/store/asset/<numéro>`.
 
-| Dossier de dépôt | Modèle | Numéro | Créateur | Votes |
-|---|---|---|---|---|
-| `Ressources/Arbres` | Cherry Blossom Tree (cerisier) | 10586979345 | TheLunar_Mothz | 1 000, 98 % |
-| `Ressources/Arbres` | Falling Blossom Cherry Tree | 8651908577 | softlypoetic | 100, 96 % |
-| `Ressources/Arbres` | Low Poly Tree | 4893246329 | Abishpc | 1 000, 93 % |
-| `Ressources/Arbres` | Low-Poly Tree | 3287226226 | akbarbinta | 600, 95 % |
-| `Ressources/Arbres` | Low poly pine tree (sapin) | 5616880673 | smartycar23 | 80, 98 % |
-| `Ressources/Buissons` | Pink Flower Bush | 8174229353 | Unlimitens | 400, 97 % |
-| `Ressources/Buissons` | Flower Bush | 8344171779 | Woof_HDPlay | 300, 95 % |
-| `Ressources/Buissons` | Bush | 8647777369 | Seespotbyte | 2 000, 93 % |
-| `Ressources/Buissons` | Fern Bush (fougère) | 7979002756 | TheLegoGuy137 | 70, 96 % |
-| `Ressources/Rochers` | Rock | 4038061999 | FinisMaps | 800, 94 % |
-| `Ressources/Rochers` | Realistic Rock | 1192366796 | woahitsdylx | 1 000, 94 % |
+![Les modèles de la sélection, numérotés comme dans le tableau](images/selection-decor.png)
+
+| # | Dossier de dépôt | Modèle | Numéro | Créateur | Votes |
+|---:|---|---|---|---|---|
+| 1 | `Ressources/Arbres` | Cherry Blossom Tree (cerisier) | 10586979345 | TheLunar_Mothz | 1 000, 98 % |
+| 2 | `Ressources/Arbres` | Falling Blossom Cherry Tree | 8651908577 | softlypoetic | 100, 96 % |
+| 3 | `Ressources/Arbres` | Sakura Tree (cerisier) | 3725991689 | plentune | 2 000, 96 % |
+| 4 | `Ressources/Arbres` | Realistic Tree (feuillu clair) | 6020696518 | Adrijan0830 | 1 000, 97 % |
+| 5 | `Ressources/Arbres` | Realistic Tree (feuillu sombre) | 10131972958 | Mrwalter87 | 1 000, 97 % |
+| 6 | `Ressources/Arbres` | tree (grand feuillu) | 3755594081 | Astrooworlld | 700, 92 % |
+| 7 | `Ressources/Arbres` | Maple Leaf Tree (érable) | 12827398629 | 2FuriousDev | 70, 99 % |
+| 8 | `Ressources/Arbres` | Realistic Oak Tree (chêne) | 128707014921507 | Letaij | 40, 93 % |
+| 9 | `Ressources/Arbres` | Realistic Pine Tree (sapin) | 5392132809 | GabeQZ | 100, 97 % |
+| 10 | `Ressources/Buissons` | Pink Flower Bush | 8174229353 | Unlimitens | 400, 97 % |
+| 11 | `Ressources/Buissons` | Flower Bush | 8344171779 | Woof_HDPlay | 300, 95 % |
+| 12 | `Ressources/Buissons` | Bush | 8647777369 | Seespotbyte | 2 000, 93 % |
+| 13 | `Ressources/Buissons` | Fern Bush (fougère) | 7979002756 | TheLegoGuy137 | 70, 96 % |
+| 14 | `Ressources/Rochers` | Rock | 4038061999 | FinisMaps | 800, 94 % |
+| 15 | `Ressources/Rochers` | Realistic Rock | 1192366796 | woahitsdylx | 1 000, 94 % |
+| 16 | `Ressources/Rochers` | Rock Pack (rochers moussus) | 8421400545 | RedWood Roleplay GROUP | 80, 98 % |
+
+Conseils :
+
+- **Deux ou trois arbres suffisent**, par exemple un cerisier et deux
+  feuillus verts. Le jeu les répartit au hasard et règle lui-même leur
+  taille, quelle que soit celle du modèle d'origine.
+- **Un pack** (comme le n° 16) arrive parfois en un seul bloc de plusieurs
+  objets. Posé tel quel, il fait un groupe de rochers ; pour des rochers
+  isolés, sors-les du pack un par un dans le dossier.
+- Les mêmes cerisiers circulent sous plusieurs noms (« Sakura Park Tree »,
+  « Japanese Sakura Tree »…) : ce sont des copies du n° 1, inutile de les
+  ajouter en plus.
+
+**Écartés à ta demande** (style low-poly, anguleux) : Low Poly Tree
+4893246329, Low-Poly Tree 3287226226, Low poly pine tree 5616880673, Classic
+Rock 5314247866. Le cerisier 12800074855 n'est pas dans la liste non plus : il
+contient deux scripts.
 
 Les sons déjà choisis (bibliothèque Roblox, gratuits pour tous) :
 
@@ -97,8 +121,7 @@ utiliser gratuitement, même dans un jeu qui rapporte de l'argent :
 
 | Site | Contenu | Licence |
 |---|---|---|
-| [Kenney](https://kenney.nl/assets) | kits 3D low-poly (nature, course, villes), interfaces, sons | CC0 : tout permis, rien à citer |
-| [Quaternius](https://quaternius.com) | modèles low-poly (nature, animaux, personnages) | CC0 |
+| [Kenney](https://kenney.nl/assets) | interfaces, icônes, sons (ses modèles 3D sont low-poly) | CC0 : tout permis, rien à citer |
 | [Poly Haven](https://polyhaven.com) | textures, ciels, modèles réalistes | CC0 |
 | [ambientCG](https://ambientcg.com) | textures (herbe, terre, sable…) | CC0 |
 | [Freesound](https://freesound.org) | bruitages | **à vérifier son par son** : CC0, ou CC-BY (il faut alors citer l'auteur) |
