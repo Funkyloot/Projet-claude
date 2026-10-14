@@ -17,6 +17,13 @@
 -- Le serveur l'applique au lancement. Pour le voir dans Studio sans lancer
 -- le jeu, coller dans la barre de commande (View > Command Bar) :
 --     require(game.ServerScriptService.Serveur.Habillage).appliquer()
+--
+-- On peut l'appliquer autant de fois qu'on veut : chaque passage reprend
+-- l'habillage du précédent au lieu de s'y ajouter. Un aperçu enregistré avec
+-- la place ne double donc rien au lancement, et un changement de modèles
+-- dans Ressources est toujours pris en compte. Seule limite : une fois les
+-- arbres en boules remplacés, vider Ressources > Arbres ne les fait pas
+-- revenir (les vrais arbres restent en place).
 
 local ServerStorage = game:GetService("ServerStorage")
 local Workspace = game:GetService("Workspace")
@@ -28,6 +35,10 @@ local Monde = require(Partage:WaitForChild("Monde"))
 local Aleatoire = require(Partage:WaitForChild("Course"):WaitForChild("Aleatoire"))
 
 local Habillage = {}
+
+-- Attribut posé sur chaque buisson ou rocher semé : il vaut le nom du
+-- dossier d'origine, pour retrouver le semis au passage suivant.
+local SEMIS = "SemisHabillage"
 
 local function modelesDans(ressources: Instance, nom: string): { Instance }
 	local dossier = ressources:FindFirstChild(nom)
@@ -92,11 +103,12 @@ function Habillage.appliquer(): number
 	local rng = Aleatoire.nouveau(4242)
 	local poses = 0
 
-	-- Les arbres en boules cèdent leur place aux vrais arbres
+	-- Les arbres en boules, ou ceux d'un habillage précédent, cèdent leur
+	-- place aux vrais arbres
 	local arbres = modelesDans(ressources, "Arbres")
 	if #arbres > 0 then
 		for _, ancien in decor:GetChildren() do
-			if ancien:IsA("Model") and ancien.Name == "Arbre" then
+			if ancien:IsA("Model") and (ancien.Name == "Arbre" or ancien.Name == "ArbreHabille") then
 				local cadre, taille = (ancien :: Model):GetBoundingBox()
 				local sol = cadre.Position - Vector3.new(0, taille.Y / 2, 0)
 				local nouveau = copiePropre(rng:choisir(arbres))
@@ -115,6 +127,12 @@ function Habillage.appliquer(): number
 		{ dossier = "Rochers", nombre = 25, couloirMin = largeur + 40, couloirMax = largeur + 90, hauteur = { 4, 12 } },
 	}
 	for _, s in semis do
+		-- Le semis d'un habillage précédent est retiré avant d'en refaire un
+		for _, ancien in decor:GetChildren() do
+			if ancien:GetAttribute(SEMIS) == s.dossier then
+				ancien:Destroy()
+			end
+		end
 		local modeles = modelesDans(ressources, s.dossier)
 		if #modeles > 0 then
 			for _ = 1, s.nombre do
@@ -123,7 +141,9 @@ function Habillage.appliquer(): number
 				local relatif = (abscisse + Monde.piste.longueur / 2) % Monde.piste.longueur - Monde.piste.longueur / 2
 				if relatif < -200 or relatif > 70 then
 					local sol = Monde.point(abscisse, rng:entre(s.couloirMin, s.couloirMax), 0)
-					poser(copiePropre(rng:choisir(modeles)), sol, rng:entre(s.hauteur[1], s.hauteur[2]), rng, decor)
+					local modele = copiePropre(rng:choisir(modeles))
+					modele:SetAttribute(SEMIS, s.dossier)
+					poser(modele, sol, rng:entre(s.hauteur[1], s.hauteur[2]), rng, decor)
 					poses += 1
 				end
 			end

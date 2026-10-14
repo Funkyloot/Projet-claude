@@ -6,7 +6,9 @@
 -- On dépose de faux modèles (un arbre de 10 studs avec un script piégé, un
 -- buisson, un rocher) dans ServerStorage.Ressources, on lance
 -- Habillage.appliquer(), et on vérifie : arbres remplacés, posés au sol,
--- à la bonne hauteur, et plus aucun script dans le décor.
+-- à la bonne hauteur, et plus aucun script dans le décor. Puis on le relance
+-- (aperçu enregistré avec la place, puis lancement du jeu) : rien ne doit
+-- doubler ; et après avoir vidé un dossier, son semis doit disparaître.
 -- Lune n'a pas les méthodes de Model : on les imite ici (boîte englobante
 -- alignée sur les axes, pivot au centre, mise à l'échelle autour du pivot).
 
@@ -159,4 +161,40 @@ assert(hauteurMin >= 17.9 and hauteurMax <= 32.1, "hauteur hors bornes")
 assert(solMax < 0.01, "arbres pas posés au sol")
 assert(scripts == 0, "un script est entré dans le décor")
 assert(#ressources.Arbres.FauxArbre:GetChildren() == 3, "le modèle source a été modifié")
+
+-- Deuxième passage, comme au lancement d'une place enregistrée après un
+-- aperçu : le décor doit rester identique, sans rien doubler
+local function compter()
+	local n = { total = 0, ArbreHabille = 0, Arbre = 0, Buissons = 0, Rochers = 0 }
+	for _, m in decor:GetChildren() do
+		n.total += 1
+		if n[m.Name] then
+			n[m.Name] += 1
+		end
+		local semis = m:GetAttribute("SemisHabillage")
+		if semis then
+			n[semis] += 1
+		end
+	end
+	return n
+end
+local avant = compter()
+local poses2 = Habillage.appliquer()
+local apres = compter()
+print(
+	`2e passage : {poses2} posés ; décor {avant.total} → {apres.total} éléments `
+		.. `(arbres {apres.ArbreHabille}, buissons {apres.Buissons}, rochers {apres.Rochers})`
+)
+assert(poses2 == poses, "le deuxième passage n'a pas posé autant d'éléments que le premier")
+for _, cle in { "total", "ArbreHabille", "Arbre", "Buissons", "Rochers" } do
+	assert(apres[cle] == avant[cle], `le deuxième passage a changé le nombre de « {cle} »`)
+end
+
+-- Dossier Buissons vidé : son semis disparaît, le reste ne bouge pas
+ressources.Buissons:ClearAllChildren()
+Habillage.appliquer()
+local vide = compter()
+print(`Buissons retirés : {vide.Buissons} buissons, {vide.Rochers} rochers, {vide.ArbreHabille} arbres`)
+assert(vide.Buissons == 0, "des buissons sont restés après qu'on a vidé leur dossier")
+assert(vide.Rochers == avant.Rochers and vide.ArbreHabille == avant.ArbreHabille, "le reste du décor a changé")
 print("Habillage : OK")
