@@ -1,0 +1,28 @@
+{
+  "name": "StellarDerby",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Partage": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Serveur": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false
+      }
+    }
+  }
+}

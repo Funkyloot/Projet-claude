@@ -1,0 +1,5 @@
+std = "roblox"
+
+[lints]
+# Les modules typés exposent des tables qu'on remplit après coup
+mixed_table = "allow"

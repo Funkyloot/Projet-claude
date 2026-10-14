@@ -1,0 +1,538 @@
+<title>Rediffusions Stellar Derby</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+/* Mise en page : un écran de retransmission — la piste en grand, le classement
+   et « ta » coureuse à côté (empilés sur téléphone), les commandes de lecture dessous. */
+:root {
+  --bg: #fbf6fa;
+  --surface: #ffffff;
+  --ink: #2a2140;
+  --muted: #76698b;
+  --line: #eadfeb;
+  --accent: #e3407a;
+  --accent-ink: #ffffff;
+  --sky: #2f9be0;
+  --turf: #5c9c48;
+  --turf-2: #69a955;
+  --infield: #8cc070;
+  --field: #a8cf8e;
+  --water: #7fc1e6;
+  --rail: #ffffff;
+  --good: #2e9e62;
+  --warn: #e2732b;
+  --font-display: "Dela Gothic One", "Arial Black", "Hiragino Kaku Gothic StdN", system-ui, sans-serif;
+  --font-body: "M PLUS Rounded 1c", "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15111d; --surface: #201a2c; --ink: #f4edf8; --muted: #a99bbd; --line: #342a47;
+    --accent: #ff6b9c; --accent-ink: #1b1022; --sky: #5cb8f2;
+    --turf: #3d7832; --turf-2: #46843a; --infield: #4f7f42; --field: #3a5a33; --water: #3f7ea6; --rail: #ececf3;
+    --good: #48c483; --warn: #f39a55;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15111d; --surface: #201a2c; --ink: #f4edf8; --muted: #a99bbd; --line: #342a47;
+  --accent: #ff6b9c; --accent-ink: #1b1022; --sky: #5cb8f2;
+  --turf: #3d7832; --turf-2: #46843a; --infield: #4f7f42; --field: #3a5a33; --water: #3f7ea6; --rail: #ececf3;
+  --good: #48c483; --warn: #f39a55;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 28px;
+}
+.page { max-width: 1180px; margin: 0 auto; display: grid; gap: 14px; }
+
+header { display: grid; gap: 6px; }
+.surtitre { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 5vw, 40px); line-height: 1.05; margin: 0; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--accent); }
+.chapo { margin: 0; color: var(--muted); max-width: 65ch; }
+
+.courses { display: flex; flex-wrap: wrap; gap: 8px; }
+.courses button {
+  font: inherit; font-weight: 700; cursor: pointer;
+  border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  border-radius: 999px; padding: 6px 14px; display: flex; gap: 8px; align-items: baseline;
+}
+.courses button small { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.courses button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.courses button[aria-pressed="true"] small { color: inherit; opacity: .85; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+.ecran { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+@media (max-width: 860px) { .ecran { grid-template-columns: minmax(0, 1fr); } }
+
+.scene { position: relative; border-radius: 18px; overflow: hidden; background: var(--field); border: 2px solid var(--line); }
+canvas { display: block; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; }
+@media (max-width: 560px) { canvas { aspect-ratio: 4 / 3; } }
+
+.bandeau {
+  position: absolute; left: 10px; right: 10px; top: 10px;
+  display: flex; justify-content: space-between; gap: 8px; pointer-events: none;
+}
+.plaque {
+  background: var(--surface); color: var(--ink); border-radius: 12px; padding: 4px 10px;
+  box-shadow: 0 2px 0 var(--line); font-weight: 700; font-size: 13px; min-width: 0;
+}
+.plaque strong { font-family: var(--font-display); font-weight: 400; color: var(--accent); font-size: 15px; }
+.chrono { font-variant-numeric: tabular-nums; }
+.commentaire {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  max-width: calc(100% - 24px); background: var(--ink); color: var(--bg);
+  border-radius: 999px; padding: 6px 16px; font-weight: 800; font-size: 14px; text-align: center;
+  transition: opacity .25s;
+}
+.commentaire.fort { background: var(--accent); color: var(--accent-ink); }
+.commentaire.vide { opacity: 0; }
+.alerte {
+  position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%);
+  font-family: var(--font-display); font-size: clamp(22px, 5vw, 44px); color: var(--accent);
+  -webkit-text-stroke: 2px var(--surface); paint-order: stroke fill; pointer-events: none; white-space: nowrap;
+}
+
+.lecture { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lecture button {
+  font: inherit; font-weight: 800; cursor: pointer; border: 0; border-radius: 12px;
+  background: var(--surface); color: var(--ink); padding: 8px 12px; box-shadow: inset 0 0 0 2px var(--line);
+}
+.lecture button.principal { background: var(--accent); color: var(--accent-ink); box-shadow: none; min-width: 92px; }
+.lecture button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); color: var(--accent); }
+.lecture .groupe { display: flex; gap: 4px; }
+.lecture input[type="range"] { flex: 1 1 200px; min-width: 0; accent-color: var(--accent); }
+.lecture .temps { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 700; min-width: 7ch; text-align: right; }
+
+aside { display: grid; gap: 12px; min-width: 0; }
+.panneau { background: var(--surface); border: 2px solid var(--line); border-radius: 18px; padding: 12px 14px; min-width: 0; }
+.panneau h2 { font-family: var(--font-display); font-weight: 400; font-size: 16px; margin: 0 0 8px; }
+.toi .ligne { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.toi .ligne b { color: var(--ink); }
+.jauge { height: 12px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 4px 0 8px; }
+.jauge span { display: block; height: 100%; border-radius: 999px; background: var(--good); transition: width .15s linear; }
+.puces { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; min-height: 26px; }
+.puce { font-size: 12px; font-weight: 800; border-radius: 999px; padding: 2px 10px; background: var(--line); color: var(--ink); }
+.puce.sprint { background: var(--accent); color: var(--accent-ink); }
+.puce.bout { background: var(--warn); color: var(--accent-ink); }
+.puce.duel { background: #ff7a3c; color: #1b1022; }
+.puce.sillage { background: var(--sky); color: var(--accent-ink); }
+
+ol.classement { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.classement li { display: grid; grid-template-columns: 22px 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.classement li.moi { font-weight: 800; color: var(--accent); }
+.classement .rang { font-variant-numeric: tabular-nums; color: var(--muted); text-align: right; }
+.classement .num { border-radius: 6px; text-align: center; font-weight: 800; font-size: 12px; line-height: 20px; }
+.classement .nom { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.classement .ecart { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
+
+footer { color: var(--muted); font-size: 13px; max-width: 75ch; }
+@media (max-width: 560px) {
+  .plaque { font-size: 12px; padding: 3px 8px; }
+  .plaque strong { font-size: 13px; }
+  .courses button { padding: 4px 12px; font-size: 14px; }
+  .commentaire { font-size: 13px; }
+}
+footer code { font-size: 12px; }
+@media (prefers-reduced-motion: reduce) { .commentaire, .jauge span { transition: none; } }
+</style>
+
+<div class="page">
+  <header>
+    <span class="surtitre">Prototype · moteur de course réel</span>
+    <h1>Stellar Derby — <em>rediffusions</em></h1>
+    <p class="chapo">Quatre courses calculées par la simulation du jeu, rejouées ici en vue d'hélicoptère. « Toi » est pilotée par l'IA, avec le profil Équilibrée et la stratégie Ombre : c'est une course bien jouée.</p>
+  </header>
+
+  <nav class="courses" id="courses" aria-label="Choisir une course"></nav>
+
+  <div class="ecran">
+    <div>
+      <div class="scene">
+        <canvas id="piste" aria-label="Vue de la course"></canvas>
+        <div class="bandeau">
+          <div class="plaque"><strong id="nomCourse"></strong> <span class="chrono" id="chrono"></span></div>
+          <div class="plaque" id="phase"></div>
+        </div>
+        <div class="alerte" id="alerte"></div>
+        <div class="commentaire vide" id="commentaire"></div>
+      </div>
+      <div class="lecture" style="margin-top:10px">
+        <button class="principal" id="lire" type="button">Pause</button>
+        <button id="recommencer" type="button" aria-label="Recommencer">↺</button>
+        <div class="groupe" role="group" aria-label="Vitesse de lecture">
+          <button type="button" data-vitesse="1" aria-pressed="true">1×</button>
+          <button type="button" data-vitesse="2" aria-pressed="false">2×</button>
+          <button type="button" data-vitesse="4" aria-pressed="false">4×</button>
+        </div>
+        <button id="vue" type="button" aria-pressed="true">Suivre « Toi »</button>
+        <input id="curseur" type="range" min="0" max="1000" value="0" step="1" aria-label="Position dans la course">
+        <span class="temps" id="temps">0:00</span>
+      </div>
+    </div>
+
+    <aside>
+      <section class="panneau toi">
+        <h2>Toi</h2>
+        <div class="ligne"><span>Rang</span><b id="toiRang">–</b></div>
+        <div class="ligne"><span>Souffle</span><b id="toiSouffle">100 %</b></div>
+        <div class="jauge"><span id="toiJauge" style="width:100%"></span></div>
+        <div class="ligne"><span>Rythme</span><b id="toiRythme">Normal</b></div>
+        <div class="ligne"><span>Couloir</span><b id="toiCouloir">–</b></div>
+        <div class="puces" id="toiPuces"></div>
+      </section>
+      <section class="panneau">
+        <h2 id="titreClassement">Classement</h2>
+        <ol class="classement" id="classement"></ol>
+      </section>
+    </aside>
+  </div>
+
+  <footer>
+    Ces courses sortent du vrai moteur (<code>src/shared/Course</code>) : vitesse de base selon la distance, consommation d'endurance au carré de l'effort, sillage, blocages, duels, compétences et sprint final. Elles sont enregistrées par <code>tools/rediffusion.luau</code> à 6 images par seconde, puis interpolées. Au photo-finish, la lecture passe au ralenti comme dans le jeu.
+  </footer>
+</div>
+
+<script type="application/json" id="donnees">/*DONNEES*/</script>
+<script>
+(() => {
+  const D = JSON.parse(document.getElementById("donnees").textContent);
+  const P = D.piste;
+  const CADRES = ["#f5f5f5", "#232328", "#dc323c", "#2d6edc", "#fad228", "#28aa5a", "#fa8c1e", "#f582b4"];
+  const TEXTE_CADRES = ["#141414", "#ffffff", "#ffffff", "#ffffff", "#141414", "#ffffff", "#141414", "#141414"];
+  const AURAS = [null, "#ffd73c", "#5abeff", "#5ae68c"];
+  const STRATEGIES = { fusee: "🚀 Fusée", ombre: "🌑 Ombre", vague: "🌊 Vague", tempete: "🌪️ Tempête" };
+  const RYTHMES = ["", "Économie", "Normal", "Pousser"];
+  const LONGUEUR = 2.5;
+
+  const $ = (id) => document.getElementById(id);
+  const canvas = $("piste");
+  const ctx = canvas.getContext("2d");
+  const reduitMouvement = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let course = D.courses[0];
+  let t = 0, tMin = 0, tMax = 1;
+  let vitesse = 1, enLecture = true, suivre = true;
+  let camX = 0, camZ = 0, camEchelle = 1;
+  let derniereImage = performance.now();
+
+  // ─── Géométrie : la piste est échantillonnée tous les ~3 m depuis la ligne d'arrivée
+  const N = P.trace.length;
+  function pose(s) {
+    const u = (((s % P.longueur) + P.longueur) % P.longueur) / P.pasTrace;
+    const i = Math.floor(u) % N, j = (i + 1) % N, f = u - Math.floor(u);
+    const a = P.trace[i], b = P.trace[j];
+    return { x: a[0] + (b[0] - a[0]) * f, z: a[1] + (b[1] - a[1]) * f, nx: a[2] + (b[2] - a[2]) * f, nz: a[3] + (b[3] - a[3]) * f };
+  }
+  function point(s, couloir) {
+    const p = pose(s);
+    return [p.x + p.nx * couloir, p.z + p.nz * couloir];
+  }
+  let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+  for (let i = 0; i < N; i++) {
+    for (const c of [0, P.largeur]) {
+      const [x, z] = point(i * P.pasTrace, c);
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x); minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
+    }
+  }
+
+  // ─── Lecture
+  function trouverImage(images, temps) {
+    let bas = 0, haut = images.length - 1;
+    if (temps <= images[0].t) return [0, 0, 0];
+    if (temps >= images[haut].t) return [haut, haut, 0];
+    while (haut - bas > 1) {
+      const m = (bas + haut) >> 1;
+      if (images[m].t <= temps) bas = m; else haut = m;
+    }
+    const a = images[bas], b = images[haut];
+    return [bas, haut, (temps - a.t) / (b.t - a.t)];
+  }
+  function etats() {
+    const images = course.images;
+    const [i, j, f] = trouverImage(images, t);
+    const A = images[i].c, B = images[j].c;
+    return {
+      ralenti: images[j].r === 1,
+      coureuses: B.map((b, k) => {
+        const a = A[k];
+        return {
+          id: k + 1, d: a[0] + (b[0] - a[0]) * f, couloir: a[1] + (b[1] - a[1]) * f, v: a[2] + (b[2] - a[2]) * f,
+          endurance: b[3], rang: b[4], drapeaux: b[5], aura: b[6], rythme: b[7],
+        };
+      }),
+    };
+  }
+
+  function choisirCourse(c) {
+    course = c;
+    tMin = course.images[0].t;
+    tMax = course.images[course.images.length - 1].t;
+    t = tMin;
+    enLecture = true;
+    $("lire").textContent = "Pause";
+    $("nomCourse").textContent = course.nom;
+    document.querySelectorAll("#courses button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === course.id)));
+    const [x, z] = point(course.depart, P.largeur / 2);
+    camX = x; camZ = z;
+  }
+
+  // ─── Dessin
+  function couleur(nom) { return getComputedStyle(document.documentElement).getPropertyValue(nom).trim(); }
+  let palette = {};
+  function lirePalette() {
+    palette = { turf: couleur("--turf"), turf2: couleur("--turf-2"), infield: couleur("--infield"), field: couleur("--field"), water: couleur("--water"), rail: couleur("--rail"), accent: couleur("--accent"), ink: couleur("--ink"), surface: couleur("--surface") };
+  }
+  lirePalette();
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", lirePalette);
+  new MutationObserver(lirePalette).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  function redimensionner() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(r.width * dpr);
+    canvas.height = Math.round(r.height * dpr);
+  }
+  window.addEventListener("resize", redimensionner);
+
+  function dessiner(e) {
+    const W = canvas.width, H = canvas.height;
+    const marge = 0.06;
+    const echelleEnsemble = Math.min(W * (1 - 2 * marge) / (maxX - minX), H * (1 - 2 * marge) / (maxZ - minZ));
+    let cibleX = (minX + maxX) / 2, cibleZ = (minZ + maxZ) / 2, cibleEchelle = echelleEnsemble;
+    const toi = e.coureuses[0];
+    if (suivre && toi) {
+      [cibleX, cibleZ] = point(course.depart + toi.d, toi.couloir);
+      cibleEchelle = Math.max(echelleEnsemble * 5, Math.min(W, H) / 55);
+    }
+    const lissage = reduitMouvement ? 1 : 0.12;
+    camX += (cibleX - camX) * lissage; camZ += (cibleZ - camZ) * lissage;
+    camEchelle += (cibleEchelle - camEchelle) * lissage;
+    const vx = (x) => W / 2 + (x - camX) * camEchelle;
+    const vz = (z) => H / 2 + (z - camZ) * camEchelle;
+
+    ctx.fillStyle = palette.field;
+    ctx.fillRect(0, 0, W, H);
+
+    // Herbe intérieure et étang
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) { const [x, z] = point(i * P.pasTrace, 0); i ? ctx.lineTo(vx(x), vz(z)) : ctx.moveTo(vx(x), vz(z)); }
+    ctx.fillStyle = palette.infield; ctx.fill();
+    const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2;
+    ctx.beginPath();
+    ctx.ellipse(vx(cx), vz(cz), (maxX - minX) * 0.24 * camEchelle, (maxZ - minZ) * 0.2 * camEchelle, 0, 0, Math.PI * 2);
+    ctx.fillStyle = palette.water; ctx.fill();
+
+    // Gazon tondu en bandes de 9 m
+    for (let i = 0; i < N; i++) {
+      const s0 = i * P.pasTrace, s1 = s0 + P.pasTrace;
+      const [ax, az] = point(s0, 0), [bx, bz] = point(s1, 0), [cx2, cz2] = point(s1, P.largeur), [dx, dz] = point(s0, P.largeur);
+      ctx.beginPath();
+      ctx.moveTo(vx(ax), vz(az)); ctx.lineTo(vx(bx), vz(bz)); ctx.lineTo(vx(cx2), vz(cz2)); ctx.lineTo(vx(dx), vz(dz)); ctx.closePath();
+      ctx.fillStyle = Math.floor(s0 / 9) % 2 ? palette.turf : palette.turf2;
+      ctx.fill(); ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 1; ctx.stroke();
+    }
+    // Lices
+    for (const c of [-0.3, P.largeur + 0.3]) {
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) { const [x, z] = point(i * P.pasTrace, c); i ? ctx.lineTo(vx(x), vz(z)) : ctx.moveTo(vx(x), vz(z)); }
+      ctx.strokeStyle = palette.rail; ctx.lineWidth = Math.max(1.5, 0.35 * camEchelle); ctx.stroke();
+    }
+    // Ligne d'arrivée en damier
+    const cases = 10;
+    for (let k = 0; k < cases; k++) {
+      for (let r = 0; r < 2; r++) {
+        const c0 = k * P.largeur / cases, c1 = (k + 1) * P.largeur / cases;
+        const s0 = r * 0.8, s1 = (r + 1) * 0.8;
+        const pts = [point(s0, c0), point(s1, c0), point(s1, c1), point(s0, c1)];
+        ctx.beginPath(); pts.forEach(([x, z], i) => i ? ctx.lineTo(vx(x), vz(z)) : ctx.moveTo(vx(x), vz(z))); ctx.closePath();
+        ctx.fillStyle = (k + r) % 2 ? "#1d1d1d" : "#ffffff"; ctx.fill();
+      }
+    }
+    // Poteaux de distance (mètres restants)
+    if (camEchelle > echelleEnsemble * 1.5) {
+      ctx.font = `800 ${Math.round(Math.max(11, camEchelle * 2.2))}px ${getComputedStyle(document.body).fontFamily}`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      for (let reste = 200; reste < P.longueur - 60; reste += 200) {
+        const [x, z] = point(-reste, -3.2);
+        ctx.fillStyle = reste === 200 ? palette.accent : palette.surface;
+        ctx.fillText(String(reste), vx(x), vz(z));
+      }
+    }
+    // Stalles, jusqu'au départ
+    if (t < 0.4) {
+      const [ax, az] = point(course.depart, -0.2), [bx, bz] = point(course.depart, P.largeur + 0.2);
+      ctx.beginPath(); ctx.moveTo(vx(ax), vz(az)); ctx.lineTo(vx(bx), vz(bz));
+      ctx.strokeStyle = "#3c7a50"; ctx.lineWidth = Math.max(3, 1.6 * camEchelle); ctx.stroke();
+    }
+
+    // Coureuses : la tienne en dernier, au-dessus des autres
+    const rayon = Math.max(4, 0.7 * camEchelle);
+    const ordre = e.coureuses.slice().sort((a, b) => (a.id === 1) - (b.id === 1));
+    for (const c of ordre) {
+      const fiche = course.peloton[c.id - 1];
+      const s = course.depart + c.d;
+      const [x, z] = point(s, c.couloir);
+      const X = vx(x), Z = vz(z);
+      const sprint = c.drapeaux & 1, bout = c.drapeaux & 2, duel = c.drapeaux & 16;
+      if (sprint && !bout) {
+        const [px, pz] = point(s - 3.5, c.couloir);
+        ctx.beginPath(); ctx.moveTo(X, Z); ctx.lineTo(vx(px), vz(pz));
+        ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.lineWidth = rayon * 0.9; ctx.lineCap = "round"; ctx.stroke();
+      }
+      const halo = AURAS[c.aura] || (duel ? "#ff7a3c" : null);
+      if (halo) {
+        ctx.beginPath(); ctx.arc(X, Z, rayon * 2.1, 0, Math.PI * 2);
+        ctx.fillStyle = halo + "88"; ctx.fill();
+      }
+      if (c.id === 1) {
+        ctx.beginPath(); ctx.arc(X, Z, rayon * 1.6, 0, Math.PI * 2);
+        ctx.strokeStyle = palette.accent; ctx.lineWidth = Math.max(2, rayon * 0.35); ctx.stroke();
+      }
+      ctx.beginPath(); ctx.arc(X, Z, rayon, 0, Math.PI * 2);
+      ctx.fillStyle = CADRES[fiche.cadre - 1]; ctx.fill();
+      ctx.lineWidth = Math.max(1, rayon * 0.18); ctx.strokeStyle = bout ? "#7a8aa0" : "#1b1022"; ctx.stroke();
+      if (rayon >= 9) {
+        ctx.fillStyle = TEXTE_CADRES[fiche.cadre - 1];
+        ctx.font = `800 ${Math.round(rayon * 1.1)}px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(String(fiche.numero), X, Z + 0.5);
+      }
+    }
+  }
+
+  // ─── Interface
+  const fmt = (s) => {
+    const neg = s < 0; s = Math.abs(s);
+    const m = Math.floor(s / 60), r = s - m * 60;
+    return (neg ? "−" : "") + m + ":" + r.toFixed(1).padStart(4, "0");
+  };
+  function libellePhase(d) {
+    const restant = course.distance - d;
+    if (restant <= P.ligneDroiteFinale) return "Dernière ligne droite";
+    if (restant <= P.ligneDroiteFinale + P.dernierVirage) return "Dernier virage";
+    const f = d / course.distance;
+    return D.phases[f < 1 / 6 ? 0 : f < 2 / 3 ? 1 : 2];
+  }
+  let commentaireAffiche = "";
+  function majInterface(e) {
+    $("chrono").textContent = t < 0 ? "Prêtes…" : fmt(t);
+    const tete = e.coureuses.reduce((a, b) => (b.rang < a.rang ? b : a));
+    const toi = e.coureuses[0];
+    $("phase").textContent = t < 0 ? `${course.distance} m · ${course.categorie}` :
+      tete.drapeaux & 32 ? "Arrivée" : `${libellePhase(tete.d)} · reste ${Math.max(0, Math.ceil(course.distance - tete.d))} m`;
+
+    // Commentaire : la dernière phrase des 3,5 dernières secondes
+    let ligne = null;
+    for (const c of course.commentaires) { if (c.t <= t && t - c.t < 3.5) ligne = c; if (c.t > t) break; }
+    const el = $("commentaire");
+    if (ligne) {
+      if (ligne.texte !== commentaireAffiche) { el.textContent = ligne.texte; commentaireAffiche = ligne.texte; }
+      el.className = "commentaire" + (ligne.priorite >= 3 ? " fort" : "");
+    } else { el.className = "commentaire vide"; }
+
+    $("alerte").textContent = e.ralenti ? "PHOTO-FINISH" : t > -0.2 && t < 1 ? "PARTEZ !" : "";
+
+    // Toi
+    $("toiRang").textContent = `${toi.rang}${toi.rang === 1 ? "re" : "e"} sur ${e.coureuses.length}`;
+    $("toiSouffle").textContent = `${Math.round(toi.endurance * 100)} %`;
+    const jauge = $("toiJauge");
+    jauge.style.width = `${Math.max(0, Math.min(1, toi.endurance)) * 100}%`;
+    jauge.style.background = toi.endurance < 0.2 ? "var(--warn)" : "var(--good)";
+    $("toiRythme").textContent = toi.drapeaux & 1 ? "Sprint" : RYTHMES[toi.rythme] || "Normal";
+    $("toiCouloir").textContent = `${toi.couloir.toFixed(1)} m de la corde`;
+    const puces = [];
+    if (toi.drapeaux & 1) puces.push(["sprint", "⚡ sprint"]);
+    if (toi.drapeaux & 2) puces.push(["bout", "à bout"]);
+    if (toi.drapeaux & 4) puces.push(["sillage", "dans le sillage"]);
+    if (toi.drapeaux & 8) puces.push(["", "bloquée"]);
+    if (toi.drapeaux & 16) puces.push(["duel", "🔥 duel"]);
+    if (toi.aura) puces.push(["sprint", "✨ compétence"]);
+    $("toiPuces").innerHTML = puces.map(([c, txt]) => `<span class="puce ${c}">${txt}</span>`).join("");
+
+    // Classement : écart à la tête en longueurs, puis temps et écarts officiels à l'arrivée
+    const fini = t >= tMax - 0.01;
+    $("titreClassement").textContent = fini ? "Résultats" : "Classement";
+    const lignes = [];
+    if (fini) {
+      for (const r of course.resultats) {
+        const f = course.peloton[r.id - 1];
+        lignes.push([r.rang, f, r.rang === 1 ? fmt(r.temps) : r.ecart || "", r.id === 1]);
+      }
+    } else {
+      const tri = e.coureuses.slice().sort((a, b) => a.rang - b.rang);
+      for (const c of tri) {
+        const f = course.peloton[c.id - 1];
+        const ecart = c.rang === 1 || t < 0 ? (STRATEGIES[f.strategie] || "").split(" ")[0] : `+${((tete.d - c.d) / LONGUEUR).toFixed(1)} L`;
+        lignes.push([c.rang, f, ecart, c.id === 1]);
+      }
+    }
+    $("classement").innerHTML = lignes.map(([rang, f, ecart, moi]) =>
+      `<li class="${moi ? "moi" : ""}"><span class="rang">${rang}</span><span class="num" style="background:${CADRES[f.cadre - 1]};color:${TEXTE_CADRES[f.cadre - 1]}">${f.numero}</span><span class="nom">${f.nom}</span><span class="ecart">${ecart}</span></li>`
+    ).join("");
+
+    $("curseur").value = String(Math.round((t - tMin) / (tMax - tMin) * 1000));
+    $("temps").textContent = fmt(Math.max(0, t));
+  }
+
+  // ─── Boucle
+  let dernierUi = 0;
+  function boucle(maintenant) {
+    const dt = Math.min(0.1, (maintenant - derniereImage) / 1000);
+    derniereImage = maintenant;
+    let e = etats();
+    if (enLecture) {
+      t = Math.min(tMax, t + dt * vitesse * (e.ralenti ? 0.3 : 1));
+      if (t >= tMax) { enLecture = false; $("lire").textContent = "Revoir"; }
+      e = etats();
+    }
+    dessiner(e);
+    if (maintenant - dernierUi > 90) { majInterface(e); dernierUi = maintenant; }
+    requestAnimationFrame(boucle);
+  }
+
+  // ─── Commandes
+  const nav = $("courses");
+  for (const c of D.courses) {
+    const b = document.createElement("button");
+    b.type = "button"; b.dataset.id = c.id;
+    b.innerHTML = `${c.nom} <small>${c.distance} m</small>`;
+    b.addEventListener("click", () => choisirCourse(c));
+    nav.appendChild(b);
+  }
+  $("lire").addEventListener("click", () => {
+    if (t >= tMax) t = tMin;
+    enLecture = !enLecture;
+    $("lire").textContent = enLecture ? "Pause" : "Lecture";
+  });
+  $("recommencer").addEventListener("click", () => { t = tMin; enLecture = true; $("lire").textContent = "Pause"; });
+  document.querySelectorAll("[data-vitesse]").forEach((b) => b.addEventListener("click", () => {
+    vitesse = Number(b.dataset.vitesse);
+    document.querySelectorAll("[data-vitesse]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  }));
+  $("vue").addEventListener("click", () => {
+    suivre = !suivre;
+    $("vue").setAttribute("aria-pressed", String(suivre));
+    $("vue").textContent = suivre ? "Suivre « Toi »" : "Vue d'ensemble";
+  });
+  $("curseur").addEventListener("input", (ev) => {
+    t = tMin + (Number(ev.target.value) / 1000) * (tMax - tMin);
+    if (t < tMax && $("lire").textContent === "Revoir") $("lire").textContent = "Lecture";
+  });
+
+  redimensionner();
+  choisirCourse(D.courses[2]);
+  requestAnimationFrame(boucle);
+})();
+</script>

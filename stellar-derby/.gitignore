@@ -1,0 +1,4 @@
+# Fichiers générés : seule la place jouable est gardée, pour qui n'a pas Rojo
+build/*
+!build/StellarDerby.rbxl
+sourcemap.json
