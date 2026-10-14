@@ -238,7 +238,7 @@ def test_mouvement_anormal_de_pinnacle(scenario, reglages_test):
     assert sel == Selection("1x2", "1") and p1 - p0 > 0.10
     assert mouvement_anormal(pinnacle((1.55, 4.2, 6.5), t1), 0.10) is None  # un seul prix : rien à comparer
 
-    # dans l'analyse : le signal 1xBet existe mais il est mis de côté, et le match est listé « à éviter »
+    # dans l'analyse : le signal 1xBet existe mais il est mis de côté, et le match est listé dans les « matchs plan »
     m0 = scenario["fixtures"].iloc[0]
     maintenant = scenario["maintenant"]
     cotes = (pinnacle((3.4, 3.6, 2.15), maintenant - timedelta(days=2)) + pinnacle((2.0, 3.6, 4.0), maintenant)
@@ -246,7 +246,7 @@ def test_mouvement_anormal_de_pinnacle(scenario, reglages_test):
     match = MatchAVenir("E1", m0["dom"], m0["ext"], maintenant + timedelta(hours=2), cotes)
     res = analyser([match], scenario["hist"], reglages_test, maintenant)
     (s,) = [c for c in res.candidats if c.chasseur == "S"]
-    assert s.suspect and "match à éviter" in s.note
+    assert s.suspect and "match plan" in s.note
     assert len(res.a_eviter) == 1 and "Pinnacle a bougé de" in res.a_eviter[0]["texte"]
     normal = MatchAVenir("E1", m0["dom"], m0["ext"], maintenant + timedelta(hours=2), cotes[3:])
     res = analyser([normal], scenario["hist"], reglages_test, maintenant)

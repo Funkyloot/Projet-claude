@@ -200,5 +200,5 @@ def test_rapport_sans_signal_cite_le_seuil_contre_pinnacle(sessions, reglages_te
     assert "1xBet au moins 4 % au-dessus du prix juste de Pinnacle" in texte
     with sessions() as s:
         texte = rapport_quotidien(s, reglages_test, quand, {"nb_matchs": 1, "ligues": ["E1"], "a_eviter": [
-            {"ligue": "E1", "match": "Leeds – Hull", "debut": "2026-10-13T18:00:00+00:00", "texte": "match à éviter."}]})
-    assert "Matchs à éviter, mouvement anormal de Pinnacle (1)" in texte and "Leeds – Hull" in texte
+            {"ligue": "E1", "match": "Leeds – Hull", "debut": "2026-10-13T18:00:00+00:00", "texte": "match plan, aucun signal."}]})
+    assert "Matchs plan, mouvement anormal de Pinnacle (1)" in texte and "Leeds – Hull" in texte

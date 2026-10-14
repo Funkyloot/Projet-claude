@@ -179,7 +179,7 @@ def analyser(
         if anormal is not None:
             sel, p0, p1 = anormal
             texte = (f"Pinnacle a bougé de {abs(p1 - p0) * 100:.0f} points avant le match "
-                     f"({sel.libelle(m.dom, m.ext)} : {p0:.0%} → {p1:.0%}) : match à éviter.")
+                     f"({sel.libelle(m.dom, m.ext)} : {p0:.0%} → {p1:.0%}) : match plan, aucun signal.")
             a_eviter.append({"ligue": m.ligue, "match": f"{m.dom} – {m.ext}", "debut": m.debut.isoformat(),
                              "texte": texte})
             for c in du_match:  # mis de côté : ni recommandé, ni simulé

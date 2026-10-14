@@ -218,7 +218,7 @@ Conclusion : Pinnacle seul reste le meilleur prix juste ; la puissance de calcul
 prennent quelques secondes), c'est l'information qui manque, et Pinnacle l'a déjà. La règle actuelle de
 l'app (Pinnacle seul, écart ≥ 4 %) est confirmée sur 2 132 paris et deux périodes.
 
-## 11. Matchs à éviter : mouvement anormal de Pinnacle (octobre 2026)
+## 11. Matchs plan : mouvement anormal de Pinnacle (octobre 2026)
 
 But : repérer les matchs où la cote de Pinnacle change brutalement avant le coup d'envoi (nouvelle de
 dernière minute, ou argent suspect dans un match arrangé) pour **les éviter**, jamais pour parier dessus.
@@ -241,4 +241,4 @@ négatifs au seuil de 10 points ; les écarter coûte environ 6 % des signaux et
 données ne montrent pas, c'est le risque propre à ces matchs : paris annulés, comptes surveillés.
 
 **Règle de l'app (0.6.6)** : mouvement ≥ 10 points (réglable) entre le premier et le dernier prix connu de
-Pinnacle → match listé « à éviter » (tableau de bord et rapport), aucun signal recommandé ni simulé.
+Pinnacle → « match plan » listé sur le tableau de bord et dans le rapport, aucun signal recommandé ni simulé.

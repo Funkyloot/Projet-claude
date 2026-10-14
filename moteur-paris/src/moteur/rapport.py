@@ -135,7 +135,7 @@ def rapport_quotidien(s: Session, r: Reglages, quand: datetime, derniere_analyse
     suspects = recommandations_suspectes(s, quand)
     a_eviter = [a for a in (derniere_analyse or {}).get("a_eviter", []) if datetime.fromisoformat(a["debut"]) > quand]
     if a_eviter:
-        lignes.append(f"Matchs à éviter, mouvement anormal de Pinnacle ({len(a_eviter)}) :")
+        lignes.append(f"Matchs plan, mouvement anormal de Pinnacle ({len(a_eviter)}) :")
         lignes += [f"  {a['match']} · {a['texte']}" for a in a_eviter[:5]]
     if suspects:
         lignes.append(f"Signaux mis de côté, cote trop belle ou mouvement anormal ({len(suspects)}) :")

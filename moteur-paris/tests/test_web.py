@@ -308,4 +308,4 @@ def test_tableau_liste_les_matchs_a_eviter(connecte, service):
         {"ligue": "E1", "match": "Leeds – Hull", "debut": debut, "texte": "Pinnacle a bougé de 14 points avant le match."},
         {"ligue": "E1", "match": "Ancien – Match", "debut": "2020-01-01T15:00:00+00:00", "texte": "passé"}])
     page = connecte.get("/").text
-    assert "Matchs à éviter (1)" in page and "Leeds – Hull" in page and "Ancien – Match" not in page
+    assert "Matchs plan (1)" in page and "Leeds – Hull" in page and "Ancien – Match" not in page
