@@ -20,7 +20,7 @@ Il te faut : ton PC avec Roblox Studio, ton compte Roblox, et ce dépôt GitHub.
 > Rojo n'est pas nécessaire ce soir. Il sert seulement si on veut
 > synchroniser le code du dépôt avec Studio en direct.
 
-## 2. Premier essai, seule (10 min)
+## 2. Premier essai, en solo (10 min)
 
 Appuie sur **Play** (F5). Ce qui doit se passer :
 
@@ -88,7 +88,7 @@ le numéro dans `SONS`.
 ## 6. Jouer sur ton téléphone (10 min)
 
 1. **File → Publish to Roblox** → **Create new experience**, nom par exemple
-   « Stellar Derby (test) ». Elle reste **privée** : toi seule peux y jouer.
+   « Stellar Derby (test) ». Elle reste **privée** : personne d'autre que toi ne peut y jouer.
 2. Sur [create.roblox.com](https://create.roblox.com/dashboard/creations),
    ouvre l'expérience, puis **View on Roblox**, et copie le lien.
 3. Ouvre ce lien sur ton téléphone : bouton **Jouer** dans l'appli Roblox.
