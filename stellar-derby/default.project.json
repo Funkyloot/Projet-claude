@@ -23,6 +23,24 @@
       "$properties": {
         "StreamingEnabled": false
       }
+    },
+    "ServerStorage": {
+      "Ressources": {
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true,
+        "Arbres": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true
+        },
+        "Buissons": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true
+        },
+        "Rochers": {
+          "$className": "Folder",
+          "$ignoreUnknownInstances": true
+        }
+      }
     }
   }
 }

@@ -4,12 +4,14 @@ Un jeu de course inspiré de l'esprit d'*Uma Musume: Pretty Derby* : des
 coureuses à oreilles et queue de cheval qui s'affrontent sur un hippodrome,
 avec un vrai moteur de course derrière. Univers, noms et visuels originaux.
 
-C'est la **phase 1** de la feuille de route : la course elle-même. Le pourquoi
-et la suite sont dans [`docs/CONCEPTION.md`](docs/CONCEPTION.md).
+C'est la **phase 1** de la feuille de route : la course elle-même, jouée en
+direct sur Roblox. Chaque course est calculée par le serveur au moment où elle
+se court, avec les commandes des joueuses : rien n'est préenregistré.
 
-**Voir une course sans Roblox** : des rediffusions calculées par le vrai
-moteur sont visibles dans le navigateur, téléphone compris (page générée par
-`tools/apercu.luau`, voir plus bas).
+- **Ce soir sur ton PC** : [`docs/CE-SOIR.md`](docs/CE-SOIR.md), pas à pas.
+- **Les assets gratuits** (où les trouver, comment les ajouter) :
+  [`docs/ASSETS.md`](docs/ASSETS.md).
+- **Le pourquoi et la suite** : [`docs/CONCEPTION.md`](docs/CONCEPTION.md).
 
 ## Ce qu'il y a dedans
 
@@ -17,8 +19,11 @@ moteur sont visibles dans le navigateur, téléphone compris (page générée pa
   lices, arche d'arrivée, poteaux de distance, tribune, écran géant, podium,
   étang, cerisiers. Aucun asset à importer.
 - **Un moteur de course** : vitesse de base selon la distance, endurance,
-  quatre stratégies, couloirs et virages, sillage, blocages, duels,
-  compétences, sprint final, photo-finish au ralenti, écarts à la japonaise.
+  quatre stratégies, couloirs, sillage, blocages, duels, compétences, sprint
+  final, photo-finish au ralenti, écarts à la japonaise.
+- **Une course équitable** : même total de stats pour toutes (joueuses comme
+  bots), même distance pour toutes quel que soit le couloir, et un numéro de
+  stalle qui ne pèse rien sur le résultat (mesuré).
 - **Des bots** qui disposent des mêmes leviers que les joueuses, et qui
   complètent toujours le peloton à 12.
 - **Une partie complète** : lobby (stratégie, profil, « Prête ! »),
@@ -27,8 +32,15 @@ moteur sont visibles dans le navigateur, téléphone compris (page générée pa
 - **Une interface pensée pour le téléphone** : boutons sous les pouces,
   mini-carte, commentateur, indice de sprint (« Souffle pour 320 m · reste
   450 m »).
-- **Ton avatar Roblox** en course, avec le kit oreilles + queue et un dossard
-  aux couleurs de ton cadre.
+- **Ton avatar Roblox** en course, avec les oreilles et la queue de la
+  **robe** choisie au lobby (dix couleurs, accessoires du catalogue Roblox),
+  et un dossard aux couleurs de ton cadre. Les bots ont des coiffures
+  assorties et un maillot aux couleurs de leur cadre.
+- **Du son** : musique de course, foule à l'arrivée, fanfare au podium
+  (bibliothèque sous licence de Roblox).
+- **Un décor qu'on habille sans être graphiste** : dépose des modèles
+  gratuits de la boutique dans `ServerStorage → Ressources`, le jeu les pose
+  lui-même (et en retire tout script, par sécurité).
 
 ## Ouvrir le jeu dans Roblox Studio
 
@@ -69,9 +81,9 @@ lune run tools/decor build/StellarDerby.rbxl   # enregistre l'hippodrome dans la
 
 - **Au départ**, appuie pile au « PARTEZ ! » : départ parfait. Trop tôt :
   faux départ.
-- **En course**, colle à la corde dans les virages (c'est plus court),
-  profite du sillage des autres pour économiser, et évite de te faire
-  enfermer.
+- **En course**, glisse-toi dans le sillage d'une concurrente pour
+  économiser ton souffle, et évite de te faire enfermer : pour doubler, il
+  faut trouver une ouverture.
 - **En finale**, le bouton passe à « SPRINT ! » quand ton souffle te permet
   de tenir jusqu'à la ligne. Trop tôt, tu finis à bout ; trop tard, tu
   laisses des longueurs.
@@ -81,11 +93,11 @@ lune run tools/decor build/StellarDerby.rbxl   # enregistre l'hippodrome dans la
 ```
 src/shared/Course/   le moteur de course, sans aucune API Roblox
 src/shared/          réglages, couleurs, conversion mètres → studs, réseau
-src/server/          boucle de partie, hippodrome, modèles, lumière
+src/server/          boucle de partie, hippodrome, habillage du décor, modèles, lumière
 src/client/          rendu, caméras, contrôles, HUD, lobby, résultats
 tests/               tests et équilibrage (Lune)
-tools/               décor, rediffusions, page d'aperçu
-docs/                document de conception, rapport d'équilibrage
+tools/               décor de la place, contrôle des modèles (Studio), outils de développement
+docs/                conception, équilibrage, assets, plan pour ce soir
 ```
 
 Les commentaires et les noms sont en français, comme le reste du dépôt.
@@ -96,12 +108,15 @@ Tout tourne avec [Lune](https://lune-org.github.io/docs), sans Roblox.
 Depuis ce dossier :
 
 ```sh
-lune run tests/tests                      # 19 tests du moteur
+lune run tests/tests                      # 21 tests du moteur
 lune run tests/equilibrage 150 --ecrire   # rapport → docs/EQUILIBRAGE.md (~5 min)
-lune run tests/reglage 7 30               # auto-réglage des stratégies
-lune run tools/rediffusion build/rediffusion.json
-lune run tools/apercu build/rediffusion.json build/apercu.html
+lune run tests/reglage 10 30              # auto-réglage des stratégies
 ```
+
+Pour le développement seulement, `tools/rediffusion.luau` et
+`tools/apercu.luau` produisent une page web qui rejoue des courses simulées :
+utile pour juger l'équilibrage sur un téléphone, sans rapport avec le jeu,
+où chaque course se calcule en direct.
 
 Le moteur (`src/shared/Course`) est écrit pour tourner à l'identique dans
 Roblox et dans Lune : le harnais `tests/harnais.luau` reconstitue
@@ -111,9 +126,11 @@ Roblox et dans Lune : le harnais `tests/harnais.luau` reconstitue
 
 Le prototype a été écrit sans accès à Roblox Studio. Ce qui a été vérifié :
 
-- **Le moteur** : 19 tests (géométrie, déterminisme, absence de
-  chevauchement, sprint, départs, compétences, réseau, commentaire), et des
-  centaines de courses simulées pour l'équilibrage.
+- **Le moteur** : 21 tests (géométrie, déterminisme, absence de
+  chevauchement, sprint, départs, compétences, égalité des stats, stalles
+  centrées, réseau,
+  commentaire), et des centaines de courses simulées pour l'équilibrage et
+  l'équité des stalles.
 - **Tout le code Roblox** : vérifié en mode `--!strict` par `luau-analyze`
   contre les définitions de l'API Roblox, `require` entre modules compris.
   Cette vérification a corrigé deux API dépréciées et plusieurs erreurs de
@@ -128,6 +145,8 @@ Ce qui reste à valider en jouant, dans Studio :
 - le rendu et le ressenti (vitesse apparente, caméras, lisibilité du HUD sur
   téléphone) ;
 - les identifiants d'animation par défaut de Roblox (dans `Config`) ;
-- le chargement des avatars des joueurs (`CreateHumanoidModelFromDescriptionAsync`) ;
+- le chargement des avatars et des accessoires du catalogue
+  (`CreateHumanoidModelFromDescriptionAsync`) ;
+- les sons choisis (je ne les ai pas écoutés) ;
 - le comportement réseau réel (latence, joueurs qui arrivent en cours de
   course).

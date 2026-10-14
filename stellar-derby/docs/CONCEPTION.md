@@ -92,34 +92,34 @@ Une coureuse moyenne a 600 partout. Les quatre profils proposés au joueur total
 
 | | Stratégie | Idée | Coef. vitesse (début / milieu / finale) | Réserve |
 |---|---|---|---|---:|
-| 🚀 | **Fusée** | part en tête et tient | 1,000 / 0,983 / 0,968 | 0,95 |
-| 🌑 | **Ombre** | colle aux meneuses, frappe au dernier virage | 0,978 / 0,991 / 0,978 | 0,89 |
-| 🌊 | **Vague** | reste au milieu, remonte en finale | 0,938 / 0,998 / 0,990 | 1,00 |
-| 🌪️ | **Tempête** | attend au fond et explose | 0,931 / 1,000 / 1,000 | 0,995 |
+| 🚀 | **Fusée** | part en tête et tient ; régulière, forte en sprint | 1,000 / 0,983 / 0,9787 | 0,95 |
+| 🌑 | **Ombre** | colle aux meneuses, frappe au dernier virage | 0,978 / 0,991 / 0,9775 | 0,89 |
+| 🌊 | **Vague** | reste au milieu, remonte en finale | 0,938 / 0,998 / 0,9859 | 1,00 |
+| 🌪️ | **Tempête** | attend au fond et explose ; tout ou rien, forte sur le long | 0,931 / 1,000 / 0,9941 | 0,995 |
 
-Les coefficients de finale sortent de l'outil d'auto-réglage (`tests/reglage.luau`). Le résultat est mesuré dans [`EQUILIBRAGE.md`](EQUILIBRAGE.md) : chaque stratégie gagne entre 0,8 et 1,3 fois sa juste part, sur chaque distance.
+Les coefficients de finale sortent de l'outil d'auto-réglage (`tests/reglage.luau`), qui égalise le **rang moyen** des stratégies et réduit l'écart de victoires. Il reste un écart voulu : la Fusée finit souvent bien placée sans gagner beaucoup, la Tempête gagne plus souvent mais finit aussi plus souvent loin. Mesures dans [`EQUILIBRAGE.md`](EQUILIBRAGE.md).
 
 ### 5.5 Ce que le joueur contrôle
 
 | Levier | Effet | Tension |
 |---|---|---|
 | **Rythme** (Économie / Normal / Pousser) | ±2,5 % de vitesse visée | Pousser coûte ~8 % d'endurance en plus ; économiser en fait gagner autant. |
-| **Couloir** (◀ ▶) | un pas = 1,2 m | La corde est le chemin le plus court en virage, mais on peut s'y faire enfermer. |
+| **Couloir** (◀ ▶) | un pas = 1,2 m | Se glisser dans le sillage d'une concurrente, sortir d'un blocage, dépasser. Le couloir ne change pas la distance à courir. |
 | **Sprint** | se déclenche en finale, sans retour possible | Trop tôt, on finit « à bout » ; trop tard, on laisse des longueurs. |
 | **Compétence** | à déclencher dans sa fenêtre (≈ 2,5 s) | Manquée, elle est perdue pour la course. |
 | **Départ** | appuyer pile au « Partez ! » | Parfait : sortie immédiate et relance plus vive. Trop tôt : faux départ, −0,25 s. |
 
-**Garde-fous pour les débutantes.** Sans ordre de couloir pendant 3 s, la coureuse regagne seule la corde quand la place est libre. Si la joueuse ne sprinte pas, sa coureuse le fait d'elle-même 4 s après que le sprint est devenu tenable. La joueuse qui ne touche à rien finit en moyenne 8ᵉ sur 12 : moins bien qu'un bot, sans être ridicule.
+**Garde-fous pour les débutantes.** Enfermée depuis plus d'une seconde et demie, et sans ordre de couloir depuis 3 s, la coureuse se décale seule là où il y a de la place. Si la joueuse ne sprinte pas, sa coureuse le fait d'elle-même 4 s après que le sprint est devenu tenable. La joueuse qui ne touche à rien finit en moyenne 9ᵉ sur 12 : moins bien qu'un bot, sans être ridicule.
 
 **L'indice de sprint.** En finale, le HUD calcule combien de mètres de sprint le souffle permet (« Souffle pour 320 m · reste 450 m »), et le bouton passe à « SPRINT ! » quand c'est le moment. C'est exactement le calcul de l'IA, sans son erreur d'estimation.
 
 ### 5.6 Le peloton
 
-- **Virages** : un couloir extérieur parcourt plus de terrain (facteur `1 / (1 + courbure × couloir × 0,5)`).
+- **Virages** : toutes les coureuses parcourent la même distance, quel que soit leur couloir (voir §5.10).
 - **Sillage** : entre 0,6 et 6 m derrière une concurrente, dans son couloir : −15 % de consommation et +0,1 m/s.
 - **Blocage** : à moins de 1,6 m, on ne peut pas aller plus vite que celle de devant ; à 1,1 m, on ne la traverse jamais.
 - **Changement de couloir** : impossible si quelqu'un est à côté, du côté où l'on veut aller.
-- **Duel** : deux coureuses côte à côte dans la dernière ligne droite se poussent mutuellement (bonus selon le Cœur).
+- **Duel** : deux coureuses au coude-à-coude (moins de 2 m d'écart) dans la dernière ligne droite se poussent mutuellement (bonus selon le Cœur), quel que soit leur couloir.
 - **Allure** : petite variation à chaque 24ᵉ de la course, décalée vers le positif par l'Instinct.
 
 ### 5.7 Compétences
@@ -131,8 +131,8 @@ Chaque coureuse a la signature de sa stratégie, plus une compétence générale
 | Échappée belle (Fusée) | début de course, 1re ou 2e | +0,3 m/s, 3,5 s |
 | Coup de reins (Ombre) | dernier virage, 2e à 5e | +0,35 m/s, 3,5 s |
 | Remontée (Vague) | finale, au cœur du peloton | +0,35 m/s, 4 s |
-| Ouragan (Tempête) | dernière ligne droite, seconde moitié du peloton | +0,45 m/s, 3,5 s |
-| Corde serrée | en virage, à moins de 1,5 m de la corde | +0,2 m/s, 3 s |
+| Ouragan (Tempête) | dernière ligne droite, seconde moitié du peloton | +0,35 m/s, 3,5 s |
+| Virage parfait | en virage, la voie libre devant soi | +0,2 m/s, 3 s |
 | Second souffle | milieu de course, endurance < 55 % | +5,5 % d'endurance |
 | Dans le sillage | 3 s à l'abri | +4 % d'endurance |
 | Tête froide | en tête au milieu de course | +3,5 % d'endurance |
@@ -141,7 +141,7 @@ Chaque coureuse a la signature de sa stratégie, plus une compétence générale
 
 ### 5.8 L'arrivée
 
-- **Photo-finish** : si les deux premières sont à moins de 25 cm à 8 m de la ligne, toute la course passe au ralenti (×0,3) pour tout le monde, caméra latérale sur la ligne.
+- **Photo-finish** : si les deux premières sont à moins de 15 cm à 6 m de la ligne, toute la course passe au ralenti (×0,3) pour tout le monde, caméra latérale sur la ligne.
 - **Écarts à la japonaise** : Nez, Tête, Encolure, ½, ¾, 1 longueur, 1 ¼… jusqu'à « Large ».
 - **Cadres de couleur** : blanc, noir, rouge, bleu, jaune, vert, orange, rose, selon la règle japonaise (au-delà de 8 partantes, les derniers cadres prennent deux numéros).
 
@@ -154,7 +154,20 @@ Chaque coureuse a la signature de sa stratégie, plus une compétence générale
 | Grand Prix de l'Archipel | 2 000 m | Moyenne | bon | couchant |
 | Trophée des Marées | 2 600 m | Longue | lourd | pluie |
 
-Les courtes distances se jouent surtout au placement : tout le monde peut sprinter toute la finale. Les longues se jouent à la gestion : il faut économiser, et choisir son moment.
+Les courtes distances se jouent surtout au placement : tout le monde peut sprinter toute la finale. Les longues se jouent à la gestion : il faut économiser, et choisir son moment. Sur le Trophée des Marées, la moitié du peloton finit à bout de souffle, presque toujours dans les trente derniers mètres.
+
+### 5.10 Une course équitable
+
+Personne n'est avantagée au départ :
+
+- **Même total de stats pour toutes** : 3 000 points, joueuses comme bots. Seule leur répartition change.
+- **Même distance pour toutes** : en virage, le couloir ne change pas la distance à parcourir. Avec la géométrie réelle, le numéro de stalle tiré au sort pesait jusqu'à quatre places au classement, et aucun réglage intermédiaire ne l'annulait sur toutes les distances. Désormais, le rang moyen de chaque stalle reste dans le bruit statistique (mesuré dans [`EQUILIBRAGE.md`](EQUILIBRAGE.md)).
+- **Mêmes leviers pour toutes** : les bots n'ont aucun avantage caché, et les aides des joueuses (se dégager quand on est enfermée, sprint automatique) sont des aides de débutante, pas des avantages.
+- **Aucune position privilégiée** : quand un bot change de couloir, il choisit le côté au hasard, sans préférer l'intérieur ni l'extérieur.
+- **Des stalles centrées** : les stalles laissent un couloir libre contre chaque lice.
+- **Des duels au coude-à-coude** : le duel se déclenche entre deux coureuses à la même hauteur, quel que soit leur couloir. Quand il fallait être côte à côte, les coureuses du milieu de la piste, qui ont une voisine de chaque côté, en profitaient plus que celles des bords : sur 800 courses, les stalles du milieu gagnaient environ une demi-place.
+
+Le couloir garde tout son intérêt tactique : se mettre dans le sillage d'une concurrente fait économiser 15 % d'endurance, et il faut trouver une ouverture pour doubler.
 
 ## 6. Interface et contrôles
 
@@ -174,16 +187,17 @@ HUD : mini-carte, nom de la course, phase lisible (« Dernier virage »), distan
 
 Classées par ordre de mise en œuvre. ✅ = déjà dans le prototype.
 
-1. ✅ **Le commentateur.** Une phrase par événement (départ, tête, dernier virage, duel, à bout, compétence, photo-finish, victoire), avec priorités pour ne pas saturer l'écran.
-2. ✅ **Le photo-finish au ralenti**, partagé par tout le serveur, avec la marge exacte à la japonaise.
-3. ✅ **Ton avatar, avec oreilles et queue.** On garde l'avatar Roblox du joueur et on y ajoute le kit ; la queue laisse une traînée qui flotte en course.
-4. ✅ **L'écran géant et le podium**, visibles depuis la tribune.
-5. **Le Winning Live jouable.** La gagnante joue un mini-jeu de rythme au centre de la scène, avec la 2e et la 3e à ses côtés. Les autres joueurs sont dans la fosse : ils choisissent la couleur de leur bâton lumineux et remplissent une jauge d'ambiance qui augmente les récompenses de tous. *Aucun jeu de fan ne le fait.*
-6. **Les compétences signature en cinématique.** 1,5 s de mise en scène (zoom, fond stylisé, phrase signature) au déclenchement, comme les *unique skills* d'Uma Musume.
-7. **Les rivales du destin.** Le jeu mémorise qui t'a battue d'une encolure ; elle réapparaît marquée « RIVALE », et la battre rapporte un titre.
-8. **Le duo entraîneuse–coureuse.** Un joueur court, l'autre entraîne : une roue d'ordres (« Garde ton souffle ! », « Passe à la corde ! », « MAINTENANT ! ») donne de petits bonus s'ils tombent au bon moment. C'est la relation centrale de l'anime, transformée en coopération.
-9. **La carrière roguelite et l'héritage.** Trois années en 30–45 min ; la coureuse devient une Légende qui peut transmettre des bonus aux prochaines carrières, les tiennes ou celles de tes amies.
-10. **Des pistes vivantes.** *Coupe des Marées* : le raccourci côté mer se ferme quand la marée monte ; courses de nuit aux lanternes ; une mécanique propre à chaque île.
+1. ✅ **Les robes.** Au lobby, chaque joueuse choisit la couleur de son pelage parmi dix (Noir, Bai brun, Alezan, Alezan cuivré, Isabelle, Gris perle, Rose poudré, Framboise, Prune, Bleu nuit). Ses oreilles et sa queue, tirées du catalogue Roblox, prennent cette couleur.
+2. ✅ **Le commentateur.** Une phrase par événement (départ, tête, dernier virage, duel, à bout, compétence, photo-finish, victoire), avec priorités pour ne pas saturer l'écran.
+3. ✅ **Le photo-finish au ralenti**, partagé par tout le serveur, avec la marge exacte à la japonaise.
+4. ✅ **Ton avatar, avec oreilles et queue.** On garde l'avatar Roblox du joueur et on y ajoute celles de sa robe ; la queue laisse une traînée qui flotte en course.
+5. ✅ **L'écran géant, le podium et les sons** (musique de course, foule, fanfare).
+6. **Le Winning Live jouable.** La gagnante joue un mini-jeu de rythme au centre de la scène, avec la 2e et la 3e à ses côtés. Les autres joueurs sont dans la fosse : ils choisissent la couleur de leur bâton lumineux et remplissent une jauge d'ambiance qui augmente les récompenses de tous. *Aucun jeu de fan ne le fait.*
+7. **Les compétences signature en cinématique.** 1,5 s de mise en scène (zoom, fond stylisé, phrase signature) au déclenchement, comme les *unique skills* d'Uma Musume.
+8. **Les rivales du destin.** Le jeu mémorise qui t'a battue d'une encolure ; elle réapparaît marquée « RIVALE », et la battre rapporte un titre.
+9. **Le duo entraîneuse–coureuse.** Un joueur court, l'autre entraîne : une roue d'ordres (« Garde ton souffle ! », « Dans son sillage ! », « MAINTENANT ! ») donne de petits bonus s'ils tombent au bon moment. C'est la relation centrale de l'anime, transformée en coopération.
+10. **La carrière roguelite et l'héritage.** Trois années en 30–45 min ; la coureuse devient une Légende qui peut transmettre des bonus aux prochaines carrières, les tiennes ou celles de tes amies.
+11. **Des pistes vivantes.** *Coupe des Marées* : le raccourci côté mer se ferme quand la marée monte ; courses de nuit aux lanternes ; une mécanique propre à chaque île.
 
 ## 8. Le mode Live (TikTok)
 
@@ -240,7 +254,7 @@ Uniquement du cosmétique et du confort :
 | Phase | Durée (solo) | Contenu | Critère de sortie |
 |---|---|---|---|
 | **0 — Préproduction** ✅ | 1–2 sem | Identité, document de conception, calendrier | L'identité tient sans aucun élément d'Uma Musume. |
-| **1 — Prototype de course** ✅ | 3–4 sem | Moteur, bots, stratégies, rythme, couloirs, sillage, sprint, compétences, photo-finish, HUD, mini-carte, commentateur, podium | Une course de 60–120 s est intéressante **sans** décor final. *À valider en jeu avec 5 testeurs.* |
+| **1 — Prototype de course** ✅ | 3–4 sem | Moteur, bots, stratégies, rythme, couloirs, sillage, sprint, compétences, photo-finish, HUD, mini-carte, commentateur, podium, course équitable, robes du catalogue, sons, décor habillable | Une course de 60–120 s est intéressante **sans** décor final. *À valider en jeu avec 5 testeurs (voir [`CE-SOIR.md`](CE-SOIR.md)).* |
 | **2 — Tranche verticale** | 4–6 sem | Sauvegarde (ProfileStore), entraînement (5 mini-jeux), une île finale, sons et musique, cinématiques de compétences | Les testeurs relancent d'eux-mêmes une deuxième session. |
 | **3 — Alpha fermée** | 4 sem | Winning Live, carrière courte, rivales, 3 pistes, matchmaking | Rétention J1 ≥ 25 % sur les testeurs Discord. |
 | **4 — Lancement** | 4 sem | Tutoriel, mode Live streamer, statistiques, boutique cosmétique | Rétention J1 ≥ 20 %, J7 ≥ 6 % en public. |
@@ -251,8 +265,8 @@ Uniquement du cosmétique et du confort :
 | Risque | Parade |
 |---|---|
 | Plainte pour contrefaçon | Univers 100 % original ; relecture « rien d'officiel » avant chaque mise à jour. |
-| La course semble « automatique » | Décisions visibles (indice de sprint, alertes « bloquée », « sillage ») ; écarts serrés : jusqu'à 2 000 m, environ la moitié des courses se jouent à une encolure ou moins, et une sur sept finit en photo-finish. |
-| Avantage des stalles intérieures | Mesuré : rang moyen de 4,4 à 5,8 pour la stalle 1, contre 7,2 à 8,4 pour la 12, selon la distance. L'écart le plus fort est sur 1 800 m, où le départ n'est qu'à 65 m d'un virage. Pistes : départs sur « chute » plus loin des virages, ou bonus de départ pour les stalles extérieures. |
+| La course semble « automatique » | Décisions visibles (indice de sprint, alertes « bloquée », « sillage ») ; écarts serrés : jusqu'à 2 000 m, sept courses sur dix se jouent à une encolure ou moins, et une sur sept finit en photo-finish. |
+| Avantage d'une stalle | Réglé : la distance ne dépend plus du couloir, et les bots choisissent leur côté au hasard. Le rapport d'équilibrage vérifie à chaque fois qu'aucune stalle ne s'écarte du rang neutre au-delà du hasard. |
 | Latence mobile | Ordres lents par nature (rythme, couloir) ; affichage interpolé ; le départ parfait se mesure côté client. |
 | Triche sur le départ parfait | L'heure d'appui vient du client (accepté au prototype). Plus tard : la borner par la latence mesurée. |
 | Serveurs vides | Bots pour compléter, et courses qui tournent même avec une seule joueuse. |

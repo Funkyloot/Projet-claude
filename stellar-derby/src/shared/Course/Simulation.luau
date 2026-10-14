@@ -65,6 +65,7 @@ export type Coureuse = {
 	aspiration: boolean,
 	aspirationDepuis: number,
 	bloquee: boolean,
+	bloqueeDepuis: number, -- secondes passées enfermée
 	duel: boolean,
 	duelReste: number,
 	devant: Coureuse?,
@@ -122,7 +123,7 @@ local SPRINT_AUTO_DELAI = 4
 local SPRINT_AUTO_DISTANCE = 200
 local DUREE_APRES_VAINQUEUR = 25
 local PERIODE_IA = 0.25
-local REPRISE_CORDE = 3 -- s sans ordre de couloir avant que la coureuse ne regagne la corde seule
+local REPRISE_AUTO = 3 -- s sans ordre de couloir avant que la coureuse ne se dégage seule
 
 local Simulation = {}
 Simulation.__index = Simulation
@@ -178,13 +179,11 @@ function Simulation.nouvelle(
 	end
 	rng:melanger(numeros)
 
-	local ecartStalles = math.min(1.1, (piste.largeur - 2 * F.COULOIR_MIN) / math.max(1, n - 1))
-
 	local coureuses: { Coureuse } = {}
 	for id, def in definitions do
 		local strategie = Strategies.obtenir(def.strategie)
 		local numero = numeros[id]
-		local couloir = F.COULOIR_MIN + (numero - 1) * ecartStalles
+		local couloir = F.couloirDepart(numero, n, piste.largeur)
 		local enduranceMax = F.enduranceMax(strategie, def.stats.souffle, distance)
 
 		local competences: { EtatCompetence } = {}
@@ -224,6 +223,7 @@ function Simulation.nouvelle(
 			aspiration = false,
 			aspirationDepuis = 0,
 			bloquee = false,
+			bloqueeDepuis = 0,
 			duel = false,
 			duelReste = 0,
 			devant = nil,
@@ -360,6 +360,7 @@ function Simulation.contexte(self: Simulation, c: Coureuse): Competences.Context
 		couloir = c.couloir,
 		enduranceRelative = c.endurance / c.enduranceMax,
 		aspirationDepuis = c.aspirationDepuis,
+		bloquee = c.bloquee,
 		duel = c.duel,
 	}
 end
@@ -534,6 +535,11 @@ function Simulation._voisinages(self: Simulation, dt: number)
 		else
 			c.aspirationDepuis = 0
 		end
+		if c.bloquee then
+			c.bloqueeDepuis += dt
+		else
+			c.bloqueeDepuis = 0
+		end
 	end
 end
 
@@ -550,7 +556,10 @@ function Simulation._duels(self: Simulation, dt: number, evenements: { Evenement
 				if c.d - o.d > 2 then
 					break
 				end
-				if o.partie and not o.arrivee and o.endurance > 0 and math.abs(o.couloir - c.couloir) < 2.5 then
+				-- Au coude-à-coude, quel que soit le couloir : si le duel exigeait
+				-- d'être côte à côte, les coureuses du milieu de la piste (une
+				-- voisine de chaque côté) en profiteraient plus que celles des bords.
+				if o.partie and not o.arrivee and o.endurance > 0 then
 					if c.duelReste <= 0 and o.duelReste <= 0 then
 						table.insert(evenements, { genre = "duel", id = c.id, autre = o.id })
 					end
@@ -671,8 +680,8 @@ function Simulation._avancer(self: Simulation, c: Coureuse, dt: number, evenemen
 
 	self:_deplacerLateralement(c, dt)
 
-	-- En virage, un couloir extérieur parcourt plus de terrain pour la même
-	-- progression le long de la corde.
+	-- Progression le long de la corde. En virage, un couloir extérieur peut
+	-- coûter du terrain (désactivé par défaut : voir Formules.PENALITE_VIRAGE).
 	local courbure = self.piste:courbure(self:abscisse(c.d))
 	local dPrecedente = c.d
 	c.d += c.v * dt * F.progressionEnVirage(courbure, c.couloir)
@@ -802,8 +811,8 @@ function Simulation._decisions(self: Simulation, dt: number, evenements: { Evene
 					IA.decider(self, c, evenements)
 				end
 			else
-				if decide and self.t - c.dernierCouloirManuel > REPRISE_CORDE then
-					IA.regagnerCorde(self, c)
+				if decide and self.t - c.dernierCouloirManuel > REPRISE_AUTO then
+					IA.seDegager(self, c)
 				end
 				if not c.sprint and self:phaseDe(c) == F.FINALE then
 					local restant = self:restant(c)
@@ -873,7 +882,7 @@ function Simulation._suivreCourse(self: Simulation, dt: number, evenements: { Ev
 	-- de la ligne. Le ralenti dure jusqu'à un peu après le franchissement.
 	if not self.photoFinish and self.arrivees == 0 then
 		local seconde: Coureuse? = self.ordre[2]
-		if seconde and not seconde.arrivee and restant < 8 and tete.d - seconde.d < 0.25 then
+		if seconde and not seconde.arrivee and restant < 6 and tete.d - seconde.d < 0.15 then
 			self.photoFinish = true
 			self.ralenti = true
 			table.insert(evenements, { genre = "photoFinish", id = tete.id, autre = seconde.id })

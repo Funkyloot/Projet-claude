@@ -311,6 +311,34 @@ H.test("un joueur qui quitte la course est repris par l'IA", function()
 	assert(sim.coureuses[1].arrivee)
 end)
 
+H.test("personne n'est avantagée : toutes les partantes ont le même total de stats", function()
+	for graine = 1, 50 do
+		for _, def in pelotonDeBots(graine, 16) do
+			local s = def.stats
+			local total = s.vitesse + s.souffle + s.puissance + s.coeur + s.instinct
+			assert(total == Peloton.TOTAL_STATS, `{def.nom} : {total}`)
+		end
+	end
+	for _, profil in Peloton.profils do
+		local s = profil.stats
+		assert(s.vitesse + s.souffle + s.puissance + s.coeur + s.instinct == Peloton.TOTAL_STATS, profil.nom)
+	end
+end)
+
+H.test("les stalles sont centrées et jamais plus serrées qu'un corps", function()
+	for _, n in { 4, 8, 12, 16 } do
+		local premier = F.couloirDepart(1, n, Config.LARGEUR_PISTE)
+		local dernier = F.couloirDepart(n, n, Config.LARGEUR_PISTE)
+		H.proche(premier, Config.LARGEUR_PISTE - dernier, 1e-9, `{n} partantes : symétrie`)
+		assert(premier >= F.COULOIR_MIN - 1e-9, `{n} partantes : stalle 1 contre la lice`)
+		if n > 1 then
+			assert(F.ecartStalles(n, Config.LARGEUR_PISTE) >= F.LARGEUR_CORPS, `{n} partantes : stalles trop serrées`)
+		end
+	end
+	-- Jusqu'à 12 partantes, il reste un couloir libre de chaque côté
+	assert(F.couloirDepart(1, 12, Config.LARGEUR_PISTE) >= F.COULOIR_MIN + F.LARGEUR_CORPS)
+end)
+
 print("Réseau et commentaire")
 
 H.test("un instantané survit à l'aller-retour binaire", function()

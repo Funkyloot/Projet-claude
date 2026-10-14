@@ -107,8 +107,8 @@ Peloton.NOMS = {
 
 local STATS = { "vitesse", "souffle", "puissance", "coeur", "instinct" }
 
--- Stats d'un bot : un total proche de celui des joueuses, réparti au hasard
--- mais sans extrêmes absurdes.
+-- Stats d'un bot : exactement le même total que les joueuses (personne
+-- n'est avantagée), réparti au hasard mais sans extrêmes absurdes.
 function Peloton.statsBot(rng: Aleatoire.Aleatoire): Stats
 	local poids = {}
 	local somme = 0
@@ -116,11 +116,14 @@ function Peloton.statsBot(rng: Aleatoire.Aleatoire): Stats
 		poids[i] = rng:entre(0.75, 1.25)
 		somme += poids[i]
 	end
-	local total = Peloton.TOTAL_STATS + rng:entre(-150, 150)
 	local stats = {} :: any
+	local reparti = 0
 	for i, nom in STATS do
-		stats[nom] = math.floor(total * poids[i] / somme + 0.5)
+		stats[nom] = math.floor(Peloton.TOTAL_STATS * poids[i] / somme + 0.5)
+		reparti += stats[nom]
 	end
+	-- Les arrondis peuvent faire déborder d'un ou deux points : on corrige
+	stats[STATS[#STATS]] += Peloton.TOTAL_STATS - reparti
 	return stats :: Stats
 end
 

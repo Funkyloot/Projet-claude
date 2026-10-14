@@ -12,8 +12,9 @@
 --
 -- La « corde » est la lice intérieure. Le couloir d'une coureuse est sa
 -- distance à la corde, mesurée vers l'extérieur selon la normale (nx, nz).
--- En virage, un couloir extérieur parcourt plus de terrain : le facteur
--- 1 / (1 + courbure × couloir) en rend compte dans la simulation.
+-- En réalité, un couloir extérieur parcourt plus de terrain en virage. La
+-- simulation peut en tenir compte (Formules.PENALITE_VIRAGE), mais Stellar
+-- Derby a choisi la même distance pour toutes : voir Formules.
 
 export type Troncon = {
 	genre: "droite" | "virage",

@@ -24,6 +24,7 @@ local Course = Partage:WaitForChild("Course")
 local Config = require(Partage:WaitForChild("Config"))
 local Monde = require(Partage:WaitForChild("Monde"))
 local Reseau = require(Partage:WaitForChild("Reseau"))
+local Robes = require(Partage:WaitForChild("Robes"))
 local Aleatoire = require(Course:WaitForChild("Aleatoire"))
 local Courses = require(Course:WaitForChild("Courses"))
 local Paquet = require(Course:WaitForChild("Paquet"))
@@ -38,6 +39,7 @@ local Hippodrome = require(script.Parent:WaitForChild("Hippodrome"))
 type Choix = {
 	strategie: string,
 	profil: string,
+	robe: string,
 	participer: boolean,
 	pret: boolean,
 }
@@ -74,7 +76,7 @@ end
 local function choixDe(joueur: Player): Choix
 	local c = choix[joueur]
 	if not c then
-		c = { strategie = "ombre", profil = "equilibree", participer = true, pret = false }
+		c = { strategie = "ombre", profil = "equilibree", robe = Robes.PAR_DEFAUT, participer = true, pret = false }
 		choix[joueur] = c
 	end
 	return c :: Choix
@@ -87,6 +89,7 @@ local function publierChoix(joueur: Player)
 	local c = choixDe(joueur)
 	joueur:SetAttribute("Strategie", c.strategie)
 	joueur:SetAttribute("Profil", c.profil)
+	joueur:SetAttribute("Robe", c.robe)
 	joueur:SetAttribute("Participer", c.participer)
 	joueur:SetAttribute("Pret", c.pret)
 end
@@ -118,6 +121,9 @@ local function recevoirCommande(joueur: Player, genre: unknown, valeur: unknown)
 		end
 		if type(v.profil) == "string" and Peloton.profil(v.profil).id == v.profil then
 			c.profil = v.profil
+		end
+		if Robes.existe(v.robe) then
+			c.robe = v.robe :: string
 		end
 		if type(v.participer) == "boolean" then
 			c.participer = v.participer
@@ -230,6 +236,10 @@ local function publierPeloton(sim: Simulation.Simulation)
 end
 
 local function creerModeles(sim: Simulation.Simulation)
+	local robeDe: { [number]: string } = {}
+	for joueur, id in coureuseDe do
+		robeDe[id] = choixDe(joueur).robe
+	end
 	for _, c in sim.coureuses do
 		task.spawn(function()
 			local fiche = {
@@ -239,6 +249,7 @@ local function creerModeles(sim: Simulation.Simulation)
 				cadre = c.cadre,
 				userId = c.userId,
 				apparence = c.apparence,
+				robe = robeDe[c.id],
 			}
 			Coureuses.creer(fiche, Monde.cadre(sim:abscisse(0), c.couloir, 0), dossierCoureuses)
 		end)

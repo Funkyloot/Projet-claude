@@ -56,7 +56,7 @@ Formules.ETAT_PISTE_VITESSE = { bon = 0, lourd = -0.25 } -- m/s sur V0
 -- Corps (mètres) : sert aux blocages, au sillage et aux écarts à l'arrivée
 Formules.LONGUEUR_CORPS = 2.5 -- une « longueur », unité des écarts
 Formules.ESPACE_CORPS = 1.1 -- distance minimale entre deux coureuses alignées
-Formules.LARGEUR_CORPS = 0.9 -- en dessous, deux coureuses sont dans le même couloir
+Formules.LARGEUR_CORPS = 0.8 -- en dessous, deux coureuses sont dans le même couloir
 Formules.DISTANCE_BLOCAGE = 1.6
 Formules.SILLAGE_MIN, Formules.SILLAGE_MAX = 0.6, 6
 Formules.PAS_COULOIR = 1.2 -- déplacement latéral demandé par un appui
@@ -67,10 +67,14 @@ Formules.COULOIR_MIN = 0.6 -- ne pas frotter la lice
 -- peut sprinter toute la finale ou s'il faut choisir son moment.
 Formules.FACTEUR_SOUFFLE = 0.7
 
--- En virage, un couloir extérieur parcourt plus de terrain. La géométrie
--- exacte (facteur 1) rendait le numéro de stalle trop décisif : on n'en
--- garde qu'une part, comme si les coureuses coupaient un peu la courbe.
-Formules.PENALITE_VIRAGE = 0.5
+-- En virage, un couloir extérieur parcourt en réalité plus de terrain
+-- (facteur 1 = géométrie exacte). Stellar Derby choisit 0 : toutes les
+-- coureuses courent la même distance, quel que soit leur couloir. Avec la
+-- géométrie, le numéro de stalle tiré au sort pesait jusqu'à quatre places
+-- au classement ; aucune valeur intermédiaire ne l'annulait sur toutes les
+-- distances (mesures dans docs/EQUILIBRAGE.md). Le couloir garde son rôle
+-- tactique : sillage, blocages, dépassements.
+Formules.PENALITE_VIRAGE = 0
 
 function Formules.phase(d: number, distance: number): number
 	local f = d / distance
@@ -122,6 +126,23 @@ end
 
 function Formules.enduranceMax(strategie: Strategie, souffle: number, distance: number): number
 	return Formules.FACTEUR_SOUFFLE * strategie.endurance * souffle + distance
+end
+
+-- Les stalles : centrées sur la piste, espacées de ECART_STALLES, en laissant
+-- si possible un couloir libre de chaque côté. Une stalle collée à la lice
+-- n'aurait qu'un côté pour se dégager : elle serait désavantagée.
+Formules.ECART_STALLES = 0.9
+
+-- Écart entre deux stalles voisines, et couloir de la stalle `numero`.
+function Formules.ecartStalles(partantes: number, largeur: number): number
+	local place = largeur - 2 * Formules.COULOIR_MIN
+	return math.min(Formules.ECART_STALLES, place / math.max(1, partantes - 1))
+end
+
+function Formules.couloirDepart(numero: number, partantes: number, largeur: number): number
+	local ecart = Formules.ecartStalles(partantes, largeur)
+	local etendue = ecart * (partantes - 1)
+	return (largeur - etendue) / 2 + (numero - 1) * ecart
 end
 
 -- Facteur de progression le long de la corde pour un couloir donné.

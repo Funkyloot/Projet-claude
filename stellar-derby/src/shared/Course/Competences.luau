@@ -21,6 +21,7 @@ export type Contexte = {
 	couloir: number,
 	enduranceRelative: number,
 	aspirationDepuis: number, -- secondes passées dans un sillage
+	bloquee: boolean,
 	duel: boolean,
 }
 
@@ -81,20 +82,20 @@ Competences.parId = {
 		id = "ouragan",
 		nom = "Ouragan",
 		description = "Dernière ligne droite, dans la seconde moitié du peloton : tout donner.",
-		effet = { genre = "vitesse", valeur = 0.45, duree = 3.5 },
+		effet = { genre = "vitesse", valeur = 0.35, duree = 3.5 },
 		condition = function(c)
 			return c.ligneDroiteFinale and rangRelatif(c) >= 0.45
 		end,
 	},
 
 	-- Compétences générales
-	cordeSerree = {
-		id = "cordeSerree",
-		nom = "Corde serrée",
-		description = "En virage, collée à la lice : prend le virage au plus court.",
+	virageParfait = {
+		id = "virageParfait",
+		nom = "Virage parfait",
+		description = "En virage, la voie libre devant soi : enroule la courbe sans perdre d'élan.",
 		effet = { genre = "vitesse", valeur = 0.2, duree = 3 },
 		condition = function(c)
-			return c.phase >= 2 and c.enVirage and c.couloir < 1.5
+			return c.phase >= 2 and c.enVirage and not c.bloquee
 		end,
 	},
 	secondSouffle = {
@@ -144,7 +145,7 @@ Competences.parId = {
 	},
 } :: { [string]: Competence }
 
-Competences.generales = { "cordeSerree", "secondSouffle", "sillage", "teteFroide", "regardAcier", "departCanon" }
+Competences.generales = { "virageParfait", "secondSouffle", "sillage", "teteFroide", "regardAcier", "departCanon" }
 
 -- Durée pendant laquelle une compétence prête attend d'être déclenchée
 function Competences.fenetre(instinct: number): number

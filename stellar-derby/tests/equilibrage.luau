@@ -61,6 +61,11 @@ sortie("1,00 = juste part ; au-dessus, la stratégie est avantagée.")
 
 -- ─────────────── 1. Stratégies et stalles, par distance ───────────────
 
+local rangStallesTotal = {}
+for i = 1, TAILLE do
+	rangStallesTotal[i] = 0
+end
+
 for _, course in Courses.liste do
 	local victoires, partants, podiums, sommeRangs = {}, {}, {}, {}
 	for _, id in Strategies.ordre do
@@ -98,6 +103,7 @@ for _, course in Courses.liste do
 			partants[r.strategie] += 1
 			sommeRangs[r.strategie] += r.rang
 			rangParStalle[r.numero] += r.rang
+			rangStallesTotal[r.numero] += r.rang
 			if r.rang == 1 then
 				victoires[r.strategie] += 1
 			end
@@ -151,6 +157,53 @@ for _, course in Courses.liste do
 		)
 	)
 end
+
+-- ─────────────── Équité des stalles, toutes distances ───────────────
+
+sortie("")
+sortie("## Équité des stalles")
+sortie("")
+sortie(
+	`Rang moyen de chaque numéro de stalle sur les {#Courses.liste * N} courses ci-dessus. `
+		.. `Une course équitable donne {string.format("%.1f", (TAILLE + 1) / 2)} partout, au hasard près.`
+)
+sortie("")
+sortie("| Stalle | " .. table.concat(
+	(function()
+		local t = {}
+		for i = 1, TAILLE do
+			table.insert(t, tostring(i))
+		end
+		return t
+	end)(),
+	" | "
+) .. " |")
+sortie("|---|" .. string.rep("---:|", TAILLE))
+local ligneStalles, khi2 = {}, 0
+-- Écart-type du rang d'une partante tirée au hasard parmi TAILLE : √((n²−1)/12)
+local erreur = math.sqrt((TAILLE ^ 2 - 1) / 12) / math.sqrt(#Courses.liste * N)
+for i = 1, TAILLE do
+	local moyenne = rangStallesTotal[i] / (#Courses.liste * N)
+	khi2 += ((moyenne - (TAILLE + 1) / 2) / erreur) ^ 2
+	table.insert(ligneStalles, string.format("%.2f", moyenne))
+end
+sortie("| Rang moyen | " .. table.concat(ligneStalles, " | ") .. " |")
+-- Seuil du khi² à 1 % pour TAILLE − 1 degrés de liberté (approximation de
+-- Wilson–Hilferty, précise à mieux que 1 % ici)
+local k = TAILLE - 1
+local seuil = k * (1 - 2 / (9 * k) + 2.326 * math.sqrt(2 / (9 * k))) ^ 3
+sortie("")
+sortie(
+	string.format(
+		"Test du khi² sur les %d stalles : %.1f, pour un seuil de %.1f (risque 1 %%). %s",
+		TAILLE,
+		khi2,
+		seuil,
+		if khi2 <= seuil
+			then "**Aucune stalle n'est avantagée** : les écarts restants sont ceux du hasard."
+			else "**Une stalle reste avantagée : à corriger.**"
+	)
+)
 
 -- ─────────────── 2. Profils joueurs, joués par l'IA ───────────────
 -- Une coureuse au profil fixe, pilotée par l'IA, dans un peloton de bots.
@@ -208,7 +261,7 @@ sortie("")
 sortie("## Joueuse passive")
 sortie("")
 sortie(
-	"Profil Équilibrée, aucune commande : rythme normal, la coureuse regagne seule la corde, "
+	"Profil Équilibrée, aucune commande : rythme normal, la coureuse se dégage seule quand elle est enfermée, "
 		.. "et sprinte d'elle-même 4 s après que le sprint est devenu tenable."
 )
 sortie("")

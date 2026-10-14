@@ -21,7 +21,7 @@ local place = roblox.deserializePlace(fs.readFile(chemin))
 -- Le terrain se remplit au lancement du serveur : ici on se contente de
 -- compter les appels pour vérifier qu'ils ont bien lieu.
 local remplissages = 0
-for _, methode in { "FillBlock", "FillCylinder", "FillBall" } do
+for _, methode in { "FillBlock", "FillCylinder", "FillBall", "SetMaterialColor" } do
 	roblox.implementMethod("Terrain", methode, function()
 		remplissages += 1
 	end)

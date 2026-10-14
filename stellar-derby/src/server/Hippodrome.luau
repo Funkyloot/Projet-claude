@@ -108,19 +108,65 @@ end
 
 local function construireTerrain()
 	local terrain = Workspace.Terrain
-	local marge = 260
-	local taille = Vector3.new(Monde.demiLargeur * 2 + marge * 2, 8, Monde.demiProfondeur * 2 + marge * 2)
-	terrain:FillBlock(CFrame.new(0, -4, 0), taille, Enum.Material.Grass)
+	local rng = Aleatoire.nouveau(1789)
+	terrain:SetMaterialColor(Enum.Material.Grass, Color3.fromRGB(104, 158, 70))
+	terrain:SetMaterialColor(Enum.Material.LeafyGrass, Color3.fromRGB(86, 140, 58))
+	terrain:SetMaterialColor(Enum.Material.Sand, Color3.fromRGB(226, 208, 160))
 
-	-- Un étang au milieu de l'herbe intérieure, comme sur les grands hippodromes
+	local marge = 300
+	local A, B = Monde.demiLargeur, Monde.demiProfondeur
+	terrain:FillBlock(CFrame.new(0, -4, 0), Vector3.new(A * 2 + marge * 2, 8, B * 2 + marge * 2), Enum.Material.Grass)
+
+	-- Des collines tout autour, qui ferment l'horizon : des boules à moitié
+	-- enterrées, assez loin de la piste et de la tribune.
+	for _ = 1, 46 do
+		local angle = rng:entre(0, 2 * math.pi)
+		local recul = rng:entre(110, marge - 30)
+		local rayon = rng:entre(35, 85)
+		local position = Vector3.new(math.cos(angle) * (A + recul), -rayon * 0.6, math.sin(angle) * (B + recul))
+		terrain:FillBall(position, rayon, Enum.Material.Grass)
+	end
+	-- Quelques rochers dans les collines
+	for _ = 1, 14 do
+		local angle = rng:entre(0, 2 * math.pi)
+		local recul = rng:entre(90, marge - 40)
+		local rayon = rng:entre(4, 10)
+		local position = Vector3.new(math.cos(angle) * (A + recul), -rayon * 0.35, math.sin(angle) * (B + recul))
+		terrain:FillBall(position, rayon, Enum.Material.Rock)
+	end
+
+	-- Un étang au milieu de l'herbe intérieure, bordé d'une plage
 	local centre = Monde.versMonde(Config.LIGNE_DROITE / 2, Config.RAYON_VIRAGE, 0)
+	local bassins = {}
 	for i, decalage in { -60, 0, 60 } do
 		local position = centre + Vector3.new(decalage, 0, (i - 2) * 8)
-		local rayon = if decalage == 0 then 70 else 48
-		local cylindre = CFrame.new(position + Vector3.new(0, -3, 0))
-		terrain:FillCylinder(cylindre, 8, rayon, Enum.Material.Air)
-		terrain:FillCylinder(cylindre * CFrame.new(0, -1.5, 0), 5, rayon, Enum.Material.Water)
-		terrain:FillCylinder(cylindre * CFrame.new(0, -4.5, 0), 2, rayon + 2, Enum.Material.Sand)
+		table.insert(bassins, { position = position, rayon = if decalage == 0 then 70 else 48 })
+	end
+	for _, bassin in bassins do
+		terrain:FillCylinder(
+			CFrame.new(bassin.position + Vector3.new(0, -1.5, 0)),
+			3,
+			bassin.rayon + 7,
+			Enum.Material.Sand
+		)
+	end
+	for _, bassin in bassins do
+		local cylindre = CFrame.new(bassin.position + Vector3.new(0, -3, 0))
+		terrain:FillCylinder(cylindre, 8, bassin.rayon, Enum.Material.Air)
+		terrain:FillCylinder(cylindre * CFrame.new(0, -1.5, 0), 5, bassin.rayon, Enum.Material.Water)
+		terrain:FillCylinder(cylindre * CFrame.new(0, -4.5, 0), 2, bassin.rayon + 2, Enum.Material.Sand)
+	end
+
+	-- Des taches d'herbe plus dense dans l'herbe intérieure et autour
+	for _ = 1, 30 do
+		local s = rng:entre(0, piste.longueur)
+		local couloir = if rng:reel() < 0.5 then -rng:entre(10, 30) else LARGEUR + rng:entre(12, 40)
+		local position = Monde.point(s, couloir, -1.9)
+		terrain:FillBlock(
+			CFrame.new(position) * CFrame.Angles(0, rng:entre(0, math.pi), 0),
+			Vector3.new(rng:entre(12, 30), 4, rng:entre(12, 30)),
+			Enum.Material.LeafyGrass
+		)
 	end
 end
 
@@ -465,12 +511,13 @@ function Hippodrome.construireStalles(distance: number, partantes: number): Mode
 	local modele = Instance.new("Model")
 	modele.Name = "Stalles"
 	local s = -distance
-	local ecart = math.min(1.1, (LARGEUR - 2 * Formules.COULOIR_MIN) / math.max(1, partantes - 1))
+	local ecart = Formules.ecartStalles(partantes, LARGEUR)
+	local premier = Formules.couloirDepart(1, partantes, LARGEUR)
 	local hauteur = 5.5
 	local profondeur = 3.2
 	-- Cloisons entre les stalles, et de part et d'autre
 	for i = 0, partantes do
-		local couloir = Formules.COULOIR_MIN + (i - 0.5) * ecart
+		local couloir = premier + (i - 0.5) * ecart
 		piece(
 			modele,
 			"Cloison",
@@ -479,8 +526,8 @@ function Hippodrome.construireStalles(distance: number, partantes: number): Mode
 			Color3.fromRGB(70, 140, 90)
 		)
 	end
-	local gauche = Formules.COULOIR_MIN - ecart / 2
-	local droite = Formules.COULOIR_MIN + (partantes - 0.5) * ecart
+	local gauche = premier - ecart / 2
+	local droite = premier + (partantes - 0.5) * ecart
 	local largeur = (droite - gauche) * ECHELLE + 0.5
 	local milieu = (gauche + droite) / 2
 	piece(
@@ -492,7 +539,7 @@ function Hippodrome.construireStalles(distance: number, partantes: number): Mode
 	)
 	-- Les portes, devant chaque stalle, avec le numéro
 	for numero = 1, partantes do
-		local couloir = Formules.COULOIR_MIN + (numero - 1) * ecart
+		local couloir = Formules.couloirDepart(numero, partantes, LARGEUR)
 		local porte = piece(
 			modele,
 			"Porte",

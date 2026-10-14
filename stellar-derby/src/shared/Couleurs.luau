@@ -67,16 +67,4 @@ Couleurs.PEAUX = {
 	Color3.fromRGB(141, 85, 56),
 }
 
-Couleurs.CHEVEUX = {
-	Color3.fromRGB(110, 70, 45), -- châtain
-	Color3.fromRGB(40, 30, 30), -- noir
-	Color3.fromRGB(150, 90, 50), -- alezan
-	Color3.fromRGB(235, 210, 140), -- blond
-	Color3.fromRGB(225, 225, 235), -- argent
-	Color3.fromRGB(240, 150, 190), -- rose
-	Color3.fromRGB(70, 80, 150), -- bleu nuit
-	Color3.fromRGB(180, 60, 50), -- roux
-	Color3.fromRGB(95, 55, 35), -- bai brun
-}
-
 return Couleurs

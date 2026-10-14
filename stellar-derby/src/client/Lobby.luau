@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Partage = ReplicatedStorage:WaitForChild("Partage")
 local Couleurs = require(Partage:WaitForChild("Couleurs"))
 local Reseau = require(Partage:WaitForChild("Reseau"))
+local Robes = require(Partage:WaitForChild("Robes"))
 local Course = Partage:WaitForChild("Course")
 local Peloton = require(Course:WaitForChild("Peloton"))
 local Strategies = require(Course:WaitForChild("Strategies"))
@@ -35,6 +36,8 @@ local compteur: TextLabel
 local cartesStrategie: { [string]: TextButton } = {}
 local pastillesProfil: { [string]: TextButton } = {}
 local resumeProfil: TextLabel
+local pastillesRobe: { [string]: TextButton } = {}
+local nomRobe: TextLabel
 local boutonParticiper: TextButton
 local boutonPret: TextButton
 
@@ -65,6 +68,16 @@ local function rafraichir()
 		pastille.BackgroundColor3 = if choisi then Couleurs.ROSE else Couleurs.ROSE_PALE
 		pastille.TextColor3 = if choisi then Couleurs.BLANC else Couleurs.TEXTE
 	end
+	local robe = Robes.obtenir(joueur:GetAttribute("Robe"))
+	for id, pastille in pastillesRobe do
+		local choisie = id == robe.id
+		local contour = pastille:FindFirstChildOfClass("UIStroke") :: UIStroke?
+		if contour then
+			contour.Thickness = if choisie then 4 else 1
+			contour.Color = if choisie then Couleurs.ROSE else Couleurs.TEXTE_DOUX
+		end
+	end
+	nomRobe.Text = `Ta robe : {robe.nom} — oreilles et queue assorties`
 	local p = Peloton.profil(profil)
 	local s = p.stats
 	resumeProfil.Text =
@@ -86,7 +99,7 @@ local function rafraichirCourse()
 end
 
 function Lobby.creer(parent: ScreenGui)
-	panneau = Ui.cadre(parent, "Lobby", UDim2.fromOffset(600, 620), UDim2.new(0, 24, 0.5, 0), Couleurs.FOND, 0.04)
+	panneau = Ui.cadre(parent, "Lobby", UDim2.fromOffset(600, 680), UDim2.new(0, 24, 0.5, 0), Couleurs.FOND, 0.04)
 	panneau.AnchorPoint = Vector2.new(0, 0.5)
 	panneau.Visible = false
 	Ui.coins(panneau, 22)
@@ -158,8 +171,32 @@ function Lobby.creer(parent: ScreenGui)
 	resumeProfil.Size = UDim2.new(1, 0, 0, 34)
 	resumeProfil.TextXAlignment = Enum.TextXAlignment.Left
 
+	-- La robe : la couleur des oreilles et de la queue
+	local rangeeRobes = Ui.cadre(panneau, "Robes", UDim2.new(1, 0, 0, 40), UDim2.new(), Couleurs.FOND, 1)
+	rangeeRobes.LayoutOrder = 10
+	Ui.liste(rangeeRobes, Enum.FillDirection.Horizontal, 8)
+	for ordre, robe in Robes.liste do
+		local pastille = Instance.new("TextButton")
+		pastille.Name = robe.id
+		pastille.LayoutOrder = ordre
+		pastille.Size = UDim2.fromOffset(40, 40)
+		pastille.Text = ""
+		pastille.BackgroundColor3 = robe.couleur
+		pastille.AutoButtonColor = true
+		pastille.Parent = rangeeRobes
+		Ui.coins(pastille, 20)
+		Ui.contour(pastille, Couleurs.TEXTE_DOUX, 1)
+		pastille.Activated:Connect(function()
+			demander({ robe = robe.id })
+		end)
+		pastillesRobe[robe.id] = pastille
+	end
+	nomRobe = Ui.texte(panneau, "NomRobe", "", 13, Couleurs.TEXTE_DOUX, Ui.POLICE_TEXTE)
+	nomRobe.LayoutOrder = 11
+	nomRobe.TextXAlignment = Enum.TextXAlignment.Left
+
 	local actions = Ui.cadre(panneau, "Actions", UDim2.new(1, 0, 0, 56), UDim2.new(), Couleurs.FOND, 1)
-	actions.LayoutOrder = 10
+	actions.LayoutOrder = 12
 	Ui.liste(actions, Enum.FillDirection.Horizontal, 10)
 	boutonParticiper = Ui.bouton(actions, "Participer", "", UDim2.new(0.5, -5, 1, 0), Couleurs.CIEL)
 	boutonParticiper.Activated:Connect(function()
@@ -179,10 +216,10 @@ function Lobby.creer(parent: ScreenGui)
 		Couleurs.TEXTE_DOUX,
 		Ui.POLICE_TEXTE
 	)
-	aide.LayoutOrder = 11
+	aide.LayoutOrder = 13
 	aide.Size = UDim2.new(1, 0, 0, 34)
 
-	for _, attribut in { "Strategie", "Profil", "Participer", "Pret" } do
+	for _, attribut in { "Strategie", "Profil", "Robe", "Participer", "Pret" } do
 		joueur:GetAttributeChangedSignal(attribut):Connect(rafraichir)
 	end
 	Etat.ecouter("course", rafraichirCourse)

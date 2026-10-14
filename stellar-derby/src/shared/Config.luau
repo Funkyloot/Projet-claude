@@ -49,6 +49,17 @@ local Config = {
 	},
 	-- Vitesse (studs/s) à laquelle l'animation de course a l'air naturelle
 	VITESSE_REFERENCE_ANIMATION = 18,
+
+	-- Sons : bibliothèque sous licence de Roblox (APM, ProSoundEffects),
+	-- utilisable gratuitement par tous les jeux. Pour en changer, chercher
+	-- dans la Toolbox de Studio, onglet Audio, et copier l'identifiant.
+	-- Une chaîne vide coupe le son correspondant.
+	SONS = {
+		musiqueCourse = "rbxassetid://1845636153", -- « Here Comes The Winner 2 » (APM)
+		foule = "rbxassetid://9112766176", -- « Crowd Cheer And Applause 1 » (ProSoundEffects)
+		fanfare = "rbxassetid://1836490503", -- « Victory Fanfare » (APM)
+	},
+	VOLUME_MUSIQUE = 0.35,
 }
 
 return Config

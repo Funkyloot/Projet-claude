@@ -2,8 +2,13 @@
 -- Coureuses — fabrique les modèles 3D des partantes.
 --
 -- Une joueuse court avec son propre avatar Roblox ; un bot reçoit un corps
--- généré (peau, cheveux) d'après sa graine d'apparence. Toutes portent le
--- kit oreilles + queue et un dossard aux couleurs de leur cadre.
+-- généré d'après sa graine d'apparence (peau, coiffure, maillot aux
+-- couleurs de son cadre). Toutes portent les oreilles et la queue de leur
+-- robe (voir Robes), tirées du catalogue Roblox, et un dossard.
+--
+-- Si le catalogue ne répond pas, ou qu'un accessoire a disparu, on retombe
+-- sur des oreilles et une queue fabriquées par le code : une course ne doit
+-- jamais attendre un accessoire.
 --
 -- Les modèles sont créés par le serveur (donc répliqués à tout le monde) puis
 -- laissés immobiles : ce sont les clients qui les déplacent localement à
@@ -16,6 +21,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Partage = ReplicatedStorage:WaitForChild("Partage")
 local Couleurs = require(Partage:WaitForChild("Couleurs"))
 local Monde = require(Partage:WaitForChild("Monde"))
+local Robes = require(Partage:WaitForChild("Robes"))
 local Aleatoire = require(Partage:WaitForChild("Course"):WaitForChild("Aleatoire"))
 
 local Coureuses = {}
@@ -27,6 +33,7 @@ export type Fiche = {
 	cadre: number,
 	userId: number?,
 	apparence: number?,
+	robe: string?, -- choisie par la joueuse ; tirée au hasard pour un bot
 }
 
 local descriptionsJoueurs: { [number]: HumanoidDescription } = {}
@@ -47,17 +54,55 @@ local function descriptionJoueur(userId: number): HumanoidDescription?
 	return nil
 end
 
-local function descriptionBot(rng: Aleatoire.Aleatoire): HumanoidDescription
+local COLLANTS = Color3.fromRGB(32, 40, 78)
+
+local function descriptionBot(rng: Aleatoire.Aleatoire, cadre: number): HumanoidDescription
 	local d = Instance.new("HumanoidDescription")
 	local peau = rng:choisir(Couleurs.PEAUX)
 	d.HeadColor = peau
 	d.LeftArmColor = peau
 	d.RightArmColor = peau
-	d.LeftLegColor = peau
-	d.RightLegColor = peau
-	-- Tenue de course : haut blanc
-	d.TorsoColor = Color3.fromRGB(245, 245, 250)
+	-- Tenue de course : maillot aux couleurs du cadre, collants bleu marine
+	d.TorsoColor = Couleurs.CADRES[cadre]
+	d.LeftLegColor = COLLANTS
+	d.RightLegColor = COLLANTS
 	return d
+end
+
+local function ajouterA(liste: string, id: number): string
+	return if liste == "" then tostring(id) else `{liste},{id}`
+end
+
+-- Une copie de la description, avec les accessoires de la robe en plus.
+local function habiller(base: HumanoidDescription, robe: Robes.Robe, cheveux: number?): HumanoidDescription
+	local d = base:Clone() :: HumanoidDescription
+	d.HatAccessory = ajouterA(d.HatAccessory, robe.oreilles)
+	d.WaistAccessory = ajouterA(d.WaistAccessory, robe.queue)
+	if cheveux then
+		d.FaceAccessory = ajouterA(d.FaceAccessory, cheveux)
+	end
+	return d
+end
+
+local function fabriquer(d: HumanoidDescription): Model?
+	local ok, modele = pcall(function()
+		return Players:CreateHumanoidModelFromDescriptionAsync(d, Enum.HumanoidRigType.R15)
+	end)
+	if ok and modele then
+		return modele
+	end
+	warn(`[Coureuses] modèle impossible à créer : {modele}`)
+	return nil
+end
+
+-- `genre` : nom d'un Enum.AccessoryType (« Hat », « Waist », « Face »…)
+local function accessoire(modele: Model, genre: string): Accessory?
+	for _, enfant in modele:GetChildren() do
+		if enfant:IsA("Accessory") and (enfant :: Accessory).AccessoryType.Name == genre then
+			return enfant :: Accessory
+		end
+	end
+	return nil
 end
 
 local function souder(piece: BasePart, a: BasePart)
@@ -89,6 +134,26 @@ local function ajouterOreilles(tete: BasePart, couleur: Color3)
 	end
 end
 
+-- Une traînée entre deux points de la queue : en mouvement, elle dessine
+-- une mèche qui flotte derrière la coureuse.
+local function ajouterTrainee(queue: BasePart, haut: Vector3, bas: Vector3, couleur: Color3)
+	local a0 = Instance.new("Attachment")
+	a0.Position = haut
+	a0.Parent = queue
+	local a1 = Instance.new("Attachment")
+	a1.Position = bas
+	a1.Parent = queue
+	local trainee = Instance.new("Trail")
+	trainee.Attachment0 = a0
+	trainee.Attachment1 = a1
+	trainee.Color = ColorSequence.new(couleur)
+	trainee.Transparency = NumberSequence.new(0.1, 1)
+	trainee.Lifetime = 0.16
+	trainee.MinLength = 0.05
+	trainee.LightEmission = 0
+	trainee.Parent = queue
+end
+
 local function ajouterQueue(bassin: BasePart, couleur: Color3)
 	local b = bassin.Size
 	local queue = Instance.new("Part")
@@ -100,24 +165,7 @@ local function ajouterQueue(bassin: BasePart, couleur: Color3)
 	queue.Material = Enum.Material.SmoothPlastic
 	souder(queue, bassin)
 	queue.Parent = bassin
-
-	-- Une traînée entre deux points de la queue : en mouvement, elle dessine
-	-- une mèche qui flotte derrière la coureuse.
-	local a0 = Instance.new("Attachment")
-	a0.Position = Vector3.new(0, 0.25, 0.6)
-	a0.Parent = queue
-	local a1 = Instance.new("Attachment")
-	a1.Position = Vector3.new(0, -0.25, 0.7)
-	a1.Parent = queue
-	local trainee = Instance.new("Trail")
-	trainee.Attachment0 = a0
-	trainee.Attachment1 = a1
-	trainee.Color = ColorSequence.new(couleur)
-	trainee.Transparency = NumberSequence.new(0.1, 1)
-	trainee.Lifetime = 0.16
-	trainee.MinLength = 0.05
-	trainee.LightEmission = 0
-	trainee.Parent = queue
+	ajouterTrainee(queue, Vector3.new(0, 0.25, 0.6), Vector3.new(0, -0.25, 0.7), couleur)
 end
 
 local function ajouterCheveux(tete: BasePart, couleur: Color3)
@@ -169,18 +217,23 @@ end
 
 function Coureuses.creer(fiche: Fiche, cadreDepart: CFrame, parent: Instance): Model?
 	local rng = Aleatoire.nouveau(fiche.apparence or fiche.userId or fiche.id)
-	local description: HumanoidDescription? = nil
 	local estJoueuse = fiche.userId ~= nil
+	local robe = if fiche.robe then Robes.obtenir(fiche.robe) else rng:choisir(Robes.liste)
+	local description: HumanoidDescription? = nil
 	if fiche.userId then
 		description = descriptionJoueur(fiche.userId)
 	end
-	local d = description or descriptionBot(rng)
+	local base = description or descriptionBot(rng, fiche.cadre)
+	local cheveux = if estJoueuse then nil else rng:choisir(robe.cheveux)
 
-	local ok, modele = pcall(function()
-		return Players:CreateHumanoidModelFromDescriptionAsync(d, Enum.HumanoidRigType.R15)
-	end)
-	if not ok or not modele then
-		warn(`[Coureuses] modèle de {fiche.nom} impossible à créer : {modele}`)
+	-- D'abord avec les accessoires du catalogue ; sans eux si ça échoue
+	local habillee = true
+	local modele = fabriquer(habiller(base, robe, cheveux))
+	if not modele then
+		habillee = false
+		modele = fabriquer(base)
+	end
+	if not modele then
 		return nil
 	end
 
@@ -219,12 +272,25 @@ function Coureuses.creer(fiche: Fiche, cadreDepart: CFrame, parent: Instance): M
 	-- On pose le modèle dans les stalles avant d'y souder quoi que ce soit
 	modele:PivotTo(cadreDepart + Vector3.new(0, Monde.hauteurRacine(modele), 0))
 
-	local couleurCheveux = rng:choisir(Couleurs.CHEVEUX)
-	if not estJoueuse then
-		ajouterCheveux(tete, couleurCheveux)
+	-- Ce que le catalogue n'a pas fourni, le code le fabrique
+	local queue = if habillee then accessoire(modele, "Waist") else nil
+	local poignee = queue and queue:FindFirstChild("Handle") :: BasePart?
+	if poignee then
+		local h = poignee.Size.Y
+		ajouterTrainee(poignee, Vector3.new(0, h * 0.3, 0), Vector3.new(0, -h * 0.3, 0), robe.couleur)
+	else
+		ajouterQueue(bassin, robe.couleur)
 	end
-	ajouterOreilles(tete, couleurCheveux)
-	ajouterQueue(bassin, couleurCheveux)
+	if not estJoueuse then
+		if not (habillee and accessoire(modele, "Hat")) then
+			ajouterOreilles(tete, robe.couleur)
+		end
+		if not (habillee and accessoire(modele, "Face")) then
+			ajouterCheveux(tete, robe.couleur)
+		end
+	elseif not habillee then
+		ajouterOreilles(tete, robe.couleur)
+	end
 	ajouterDossard(torse, fiche.numero, fiche.cadre)
 
 	modele.Parent = parent
