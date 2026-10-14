@@ -217,3 +217,28 @@ Signaux à la clôture (Bet365, Bwin, William Hill, 1xBet ; écart ≥ 4 %, hors
 Conclusion : Pinnacle seul reste le meilleur prix juste ; la puissance de calcul n'y change rien (ces tests
 prennent quelques secondes), c'est l'information qui manque, et Pinnacle l'a déjà. La règle actuelle de
 l'app (Pinnacle seul, écart ≥ 4 %) est confirmée sur 2 132 paris et deux périodes.
+
+## 11. Matchs à éviter : mouvement anormal de Pinnacle (octobre 2026)
+
+But : repérer les matchs où la cote de Pinnacle change brutalement avant le coup d'envoi (nouvelle de
+dernière minute, ou argent suspect dans un match arrangé) pour **les éviter**, jamais pour parier dessus.
+Mesure sur 90 500 matchs (19 championnats, 2013-2027) : plus grand changement de probabilité 1X2 de Pinnacle
+entre son prix d'avant-match et sa clôture.
+
+Médiane 2,2 points ; 99 % des matchs bougent de moins de 9,8 points ; 0,9 % bougent de 10 points ou plus.
+
+Signaux à la clôture (écart ≥ 4 %, hors 5 grands, cote 1,25-4,5) selon ce mouvement :
+
+| Seuil | 2020-27 au-dessus | 2020-27 en dessous | 2013-20 au-dessus |
+|---|---|---|---|
+| 8 points | 308 paris, +0,6 % | 1 837 paris, +15,9 % | 51 paris, +28,7 % |
+| **10 points** | **123 paris, +7,8 %** | **2 022 paris, +14,1 %** | 19 paris, +42,7 % |
+| 12 points | 44 paris, +0,6 % | 2 101 paris, +14,0 % | 9 paris, +15,1 % |
+
+La clôture de Pinnacle reste juste même dans ces matchs (favori annoncé 51,9 %, gagne 54,4 % au-delà de
+12 points) : Pinnacle a intégré l'information. Les signaux y gagnent moins sur la période récente, sans être
+négatifs au seuil de 10 points ; les écarter coûte environ 6 % des signaux et 3 % du gain total. Ce que les
+données ne montrent pas, c'est le risque propre à ces matchs : paris annulés, comptes surveillés.
+
+**Règle de l'app (0.6.6)** : mouvement ≥ 10 points (réglable) entre le premier et le dernier prix connu de
+Pinnacle → match listé « à éviter » (tableau de bord et rapport), aucun signal recommandé ni simulé.

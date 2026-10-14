@@ -30,7 +30,7 @@ from .donnees.cotes import MAXIMUM, MOYENNE, CoteBrute, cotes_depuis_ligne, plus
 from .donnees.equipes import Correspondance
 from .donnees.football_data import LIGUES
 from .donnees.odds_api import EvenementCotes
-from .marches import cote_juste, cote_minimale, gain_perte, proba_effective, selections_fiche
+from .marches import Selection, cote_juste, cote_minimale, gain_perte, proba_effective, selections_fiche
 from .modeles.dixon_coles import ModeleDC
 from .modeles.grille import melanger
 from .modeles.ligue import ParamsLigue, ajuster_ligue
@@ -58,6 +58,7 @@ class ResultatAnalyse:
     alertes: list[str]
     modeles: dict[str, ModeleDC]
     apercus: list = field(default_factory=list)
+    a_eviter: list = field(default_factory=list)  # matchs où Pinnacle a bougé de façon anormale
 
 
 def charger_parametres(dossier: Path) -> dict:
@@ -152,7 +153,7 @@ def analyser(
         alertes.append(f"{ligue} : pas assez d'historique pour le modèle (télécharger l'historique).")
     candidats: list[Candidat] = []
     surebets: list[Surebet] = []
-    apercus = []
+    apercus, a_eviter = [], []
     for m in matchs:
         params, familles = params_ligue(parametres, m.ligue, r)
         f = Filtre(
@@ -172,8 +173,18 @@ def analyser(
         noter_mouvement(sharp, m.cotes)
         couverts = {c.selection for c in sharp}
         # un même pari n'est signalé qu'une fois : le signal « sharp » prime sur celui du modèle
-        candidats += sharp + [c for c in chasseur_value(ctx, f) if c.selection not in couverts]
-        candidats += chasseur_incoherences(ctx, f)
+        du_match = sharp + [c for c in chasseur_value(ctx, f) if c.selection not in couverts]
+        du_match += chasseur_incoherences(ctx, f)
+        anormal = mouvement_anormal(m.cotes, r.mouvement_anormal)
+        if anormal is not None:
+            sel, p0, p1 = anormal
+            texte = (f"Pinnacle a bougé de {abs(p1 - p0) * 100:.0f} points avant le match "
+                     f"({sel.libelle(m.dom, m.ext)} : {p0:.0%} → {p1:.0%}) : match à éviter.")
+            a_eviter.append({"ligue": m.ligue, "match": f"{m.dom} – {m.ext}", "debut": m.debut.isoformat(),
+                             "texte": texte})
+            for c in du_match:  # mis de côté : ni recommandé, ni simulé
+                c.suspect, c.note = True, f"{c.note} {texte}".strip()
+        candidats += du_match
         apercu = meilleure_option(ctx, f)
         if apercu is not None:
             apercus.append(apercu)
@@ -181,7 +192,7 @@ def analyser(
     candidats.sort(key=lambda c: (not c.valide, -c.ev))
     apercus.sort(key=lambda a: a.debut)
     return ResultatAnalyse(candidats, surebets, len(matchs), sorted({m.ligue for m in matchs}), alertes, modeles,
-                           apercus)
+                           apercus, a_eviter)
 
 
 def noter_mouvement(candidats: list[Candidat], cotes: list[CoteBrute]) -> None:
@@ -204,6 +215,26 @@ def noter_mouvement(candidats: list[Candidat], cotes: list[CoteBrute]) -> None:
                        "suivi : 22bet est souvent en retard aussi.")
         elif ecart <= -0.005:
             c.note += f" Ses chances ont un peu baissé depuis le premier relevé ({p0:.0%} → {apres:.0%})."
+
+
+def mouvement_anormal(cotes: list[CoteBrute], seuil: float) -> tuple[Selection, float, float] | None:
+    """Plus grand changement de probabilité 1X2 chez Pinnacle (sinon Betfair) entre son premier et son
+    dernier prix connus, s'il atteint `seuil`. Signe d'une nouvelle de dernière minute ou d'argent
+    suspect : la recherche (RECHERCHE.md §11) n'y trouve plus de gain, mieux vaut éviter le match."""
+    anciennes: dict = {}
+    for c in sorted(cotes, key=lambda c: c.maj):
+        anciennes.setdefault((c.bookmaker, c.selection), c)
+    depart = ContexteMatch("", "", "", datetime.min, None, anciennes)
+    fin = ContexteMatch("", "", "", datetime.min, None, plus_recentes(cotes))
+    pire = None
+    for issue in ("1", "X", "2"):
+        sel = Selection("1x2", issue)
+        avant, apres = proba_sharp(depart, sel, age_max=None), proba_sharp(fin, sel, age_max=None)
+        if avant is None or apres is None or avant[1] != apres[1]:
+            continue
+        if abs(apres[0] - avant[0]) >= seuil and (pire is None or abs(apres[0] - avant[0]) > abs(pire[2] - pire[1])):
+            pire = (sel, avant[0], apres[0])
+    return pire
 
 
 @dataclass

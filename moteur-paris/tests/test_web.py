@@ -70,7 +70,8 @@ def test_fiche_web(connecte, service):
 def test_reglages_depuis_l_interface(connecte, sessions):
     r = connecte.post("/reglages/mises", data={
         "capital_initial": "150", "seuil_arret": "90", "mise_max_pct": "2,5", "fraction_kelly": "25",
-        "exposition_jour_pct": "15", "exposition_match_pct": "5", "ecart_min_sharp": "6", "valeur_min": "4", "seuil_suspect": "10",
+        "exposition_jour_pct": "15", "exposition_match_pct": "5", "ecart_min_sharp": "6", "mouvement_anormal": "10",
+        "valeur_min": "4", "seuil_suspect": "10",
         "seuil_desaccord": "10", "jours_simulation_min": "14"})
     assert "Réglages enregistrés" in r.text
     with sessions() as s:
@@ -79,7 +80,8 @@ def test_reglages_depuis_l_interface(connecte, sessions):
     # une valeur incohérente est refusée et rien n'est enregistré
     r = connecte.post("/reglages/mises", data={
         "capital_initial": "50", "seuil_arret": "90", "mise_max_pct": "2", "fraction_kelly": "25",
-        "exposition_jour_pct": "15", "exposition_match_pct": "5", "ecart_min_sharp": "6", "valeur_min": "3", "seuil_suspect": "10",
+        "exposition_jour_pct": "15", "exposition_match_pct": "5", "ecart_min_sharp": "6", "mouvement_anormal": "10",
+        "valeur_min": "3", "seuil_suspect": "10",
         "seuil_desaccord": "10", "jours_simulation_min": "14"})
     assert "seuil_arret" in r.text
     with sessions() as s:
@@ -296,3 +298,14 @@ def test_journal_des_releves_sur_la_page_donnees(connecte, sessions, service):
     page = connecte.get("/donnees").text
     assert "Relevés de cotes avant les matchs" in page and "5 / 6" in page and "A – B · Victoire A" in page
     assert "aucun match avec Pinnacle et 1xBet" in page
+
+
+def test_tableau_liste_les_matchs_a_eviter(connecte, service):
+    from datetime import timedelta
+
+    debut = (service.horloge() + timedelta(hours=3)).isoformat()
+    service.derniere_analyse = dict(service.derniere_analyse, a_eviter=[
+        {"ligue": "E1", "match": "Leeds – Hull", "debut": debut, "texte": "Pinnacle a bougé de 14 points avant le match."},
+        {"ligue": "E1", "match": "Ancien – Match", "debut": "2020-01-01T15:00:00+00:00", "texte": "passé"}])
+    page = connecte.get("/").text
+    assert "Matchs à éviter (1)" in page and "Leeds – Hull" in page and "Ancien – Match" not in page

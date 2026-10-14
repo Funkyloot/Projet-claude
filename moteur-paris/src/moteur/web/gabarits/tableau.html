@@ -88,8 +88,16 @@ Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé
 </tbody></table></div>
 {% endif %}
 
+{% if a_eviter %}
+<div class="carte"><h2>Matchs à éviter ({{ a_eviter|length }})</h2>
+<p class="doux petit">La cote de Pinnacle y a bougé de façon anormale avant le match : nouvelle de dernière minute
+(blessure, composition) ou argent suspect. L'app n'y donne aucun signal ; mieux vaut ne pas y parier du tout.</p>
+{% for a in a_eviter %}<div class="petit"><strong>{{ a.match }}</strong> · {{ a.ligue|ligue }} · {{ a.debut|local }}<div class="doux">{{ a.texte }}</div></div>{% endfor %}
+</div>
+{% endif %}
+
 {% if suspects %}
-<div class="carte"><h2>Cotes trop belles (risque d'annulation)</h2>
+<div class="carte"><h2>Signaux mis de côté (cote trop belle ou mouvement anormal)</h2>
 {% for x, libelle in suspects %}<div class="petit">#{{ x.id }} {{ x.match.libelle }} · {{ libelle }} @ {{ x.cote_retenue|cote }} (juste {{ x.cote_juste|cote }})</div>{% endfor %}
 </div>
 {% endif %}

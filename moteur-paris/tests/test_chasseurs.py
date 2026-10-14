@@ -221,3 +221,33 @@ def test_ecart_minimum_contre_pinnacle():
     (c,) = chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet", ecart_min_sharp=0.025))
     assert 0.025 <= c.ev < 0.04
     assert chasseur_sharp(ctx, Filtre(bookmaker_cible="onexbet", ecart_min_sharp=0.06)) == []
+
+
+def test_mouvement_anormal_de_pinnacle(scenario, reglages_test):
+    from datetime import timedelta
+
+    from moteur.analyse import MatchAVenir, mouvement_anormal
+
+    def pinnacle(valeurs, maj):
+        return [CoteBrute("pinnacle", Selection("1x2", i), c, maj) for i, c in zip(("1", "X", "2"), valeurs)]
+
+    t0 = DEBUT - timedelta(days=2)
+    t1 = DEBUT - timedelta(hours=1)
+    assert mouvement_anormal(pinnacle((2.0, 3.6, 4.0), t0) + pinnacle((1.95, 3.6, 4.1), t1), 0.10) is None
+    sel, p0, p1 = mouvement_anormal(pinnacle((2.0, 3.6, 4.0), t0) + pinnacle((1.55, 4.2, 6.5), t1), 0.10)
+    assert sel == Selection("1x2", "1") and p1 - p0 > 0.10
+    assert mouvement_anormal(pinnacle((1.55, 4.2, 6.5), t1), 0.10) is None  # un seul prix : rien à comparer
+
+    # dans l'analyse : le signal 1xBet existe mais il est mis de côté, et le match est listé « à éviter »
+    m0 = scenario["fixtures"].iloc[0]
+    maintenant = scenario["maintenant"]
+    cotes = (pinnacle((3.4, 3.6, 2.15), maintenant - timedelta(days=2)) + pinnacle((2.0, 3.6, 4.0), maintenant)
+             + [CoteBrute("onexbet", Selection("1x2", i), c, maintenant) for i, c in zip(("1", "X", "2"), (2.2, 3.3, 3.7))])
+    match = MatchAVenir("E1", m0["dom"], m0["ext"], maintenant + timedelta(hours=2), cotes)
+    res = analyser([match], scenario["hist"], reglages_test, maintenant)
+    (s,) = [c for c in res.candidats if c.chasseur == "S"]
+    assert s.suspect and "match à éviter" in s.note
+    assert len(res.a_eviter) == 1 and "Pinnacle a bougé de" in res.a_eviter[0]["texte"]
+    normal = MatchAVenir("E1", m0["dom"], m0["ext"], maintenant + timedelta(hours=2), cotes[3:])
+    res = analyser([normal], scenario["hist"], reglages_test, maintenant)
+    assert not res.a_eviter and not [c for c in res.candidats if c.chasseur == "S"][0].suspect
