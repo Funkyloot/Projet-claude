@@ -125,6 +125,10 @@ class Service:
         "0.6.5-pinnacle": {"poids_modele": 0.0},
         # matchs plan : 8 points en repère 3 fois plus, sans perte pour nos signaux (RECHERCHE.md §11)
         "0.6.9-matchs-plan": {"mouvement_anormal": 0.08},
+        # championnats hors Europe où les bookmakers suivent Pinnacle avec retard (RECHERCHE.md §12) :
+        # ajoutés à la liste choisie, sans rien retirer
+        "0.7.0-ligues-monde": lambda r: {"ligues": ",".join(
+            r.liste_ligues + sorted(c for c in football_data.LIGUES_MONDE if c not in r.liste_ligues))},
     }
 
     def appliquer_migrations(self) -> list[str]:
@@ -133,7 +137,8 @@ class Service:
             with self.sessions() as s:
                 if lire_etat(s, f"migration:{nom}"):
                     continue
-                enregistrer_reglages(s, valeurs, self.base)
+                valeurs = valeurs(self.r) if callable(valeurs) else valeurs
+                self.r = enregistrer_reglages(s, valeurs, self.base)
                 ecrire_etat(s, f"migration:{nom}", True)
             faites.append(nom)
             log.info("Réglages mis à jour (%s) : %s", nom, valeurs)

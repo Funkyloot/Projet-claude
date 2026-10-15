@@ -31,6 +31,9 @@ SPORTS: dict[str, str] = {
     "N1": "soccer_netherlands_eredivisie", "B1": "soccer_belgium_first_div",
     "P1": "soccer_portugal_primeira_liga", "T1": "soccer_turkey_super_league",
     "G1": "soccer_greece_super_league",
+    "JPN": "soccer_japan_j_league", "BRA": "soccer_brazil_campeonato", "SWE": "soccer_sweden_allsvenskan",
+    "ARG": "soccer_argentina_primera_division", "MEX": "soccer_mexico_ligamx",
+    "FIN": "soccer_finland_veikkausliiga", "DNK": "soccer_denmark_superliga",
 }
 
 # Championnats dont The Odds API ne publie pas les scores (page « sports-apis » du fournisseur).

@@ -59,6 +59,8 @@ ALIAS_BRUTS: dict[str, str] = {
     "Union Saint-Gilloise": "St. Gilloise", "Union St. Gilloise": "St. Gilloise", "Cercle Brugge KSV": "Cercle Brugge",
     "Amed SK": "Amedspor", "Basaksehir": "Buyuksehyr", "Istanbul Basaksehir": "Buyuksehyr",
     "Erzurum BB": "Erzurumspor", "Vitoria SC": "Guimaraes", "Stade Lavallois": "Laval",
+    "Urawa Red Diamonds": "Urawa Reds", "Tokyo Verdy": "Verdy", "Athletico Paranaense": "Athletico-PR",
+    "Atletico Mineiro": "Atletico-MG", "Deportivo Riestra": "Dep. Riestra", "AGF": "Aarhus", "AGF Aarhus": "Aarhus",
 }
 
 

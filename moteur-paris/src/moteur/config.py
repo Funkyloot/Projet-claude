@@ -15,7 +15,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Football en priorité (cahier des charges, section 3) : deuxièmes divisions et championnats
 # moyens, où les bookmakers soignent moins leurs prix que sur les grands championnats.
-LIGUES_PAR_DEFAUT = "E1,E2,E3,SC0,SC1,D2,I2,SP2,F2,N1,B1,P1,T1,G1"
+LIGUES_PAR_DEFAUT = "E1,E2,E3,SC0,SC1,D2,I2,SP2,F2,N1,B1,P1,T1,G1,JPN,BRA,SWE,ARG,MEX,FIN,DNK"
 
 
 class Reglages(BaseSettings):

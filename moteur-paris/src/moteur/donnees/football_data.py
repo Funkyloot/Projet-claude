@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 URL_SAISON = "https://football-data.co.uk/mmz4281/{saison}/{code}.csv"
 URL_FIXTURES = "https://football-data.co.uk/fixtures.csv"
+URL_MONDE = "https://football-data.co.uk/new/{code}.csv"
 AGENT = "moteur-paris/0.2 (usage personnel)"
 VERSION_CACHE = 3  # à augmenter quand la lecture des CSV change
 
@@ -45,7 +46,18 @@ LIGUES: dict[str, tuple[str, str | None]] = {
     "P1": ("Liga Portugal", None),
     "T1": ("Süper Lig", None),
     "G1": ("Super League grecque", None),
+    "JPN": ("J1 League (Japon)", None),
+    "BRA": ("Série A brésilienne", None),
+    "SWE": ("Allsvenskan (Suède)", None),
+    "ARG": ("Primera División argentine", None),
+    "MEX": ("Liga MX (Mexique)", None),
+    "FIN": ("Veikkausliiga (Finlande)", None),
+    "DNK": ("Superliga danoise", None),
 }
+# Championnats publiés en un seul fichier pour toutes les saisons : cotes de clôture seulement (Pinnacle,
+# Bet365, moyenne, meilleure cote), pas de tirs. Retenus pour la stratégie « contre Pinnacle » (RECHERCHE.md §12).
+LIGUES_MONDE = frozenset({"JPN", "BRA", "SWE", "ARG", "MEX", "FIN", "DNK"})
+FICHIER_MONDE = "toutes-saisons.csv"
 # Divisions présentes dans fixtures.csv mais sans historique suivi ici (pour l'affichage seulement).
 AUTRES_DIVISIONS = {"EC": "National League anglaise", "SC2": "League One écossaise", "SC3": "League Two écossaise"}
 
@@ -131,6 +143,8 @@ def _decoder(contenu: bytes) -> str:
 
 def normaliser(brut: pd.DataFrame, ligue: str | None = None, saison: int | None = None) -> pd.DataFrame:
     """Transforme un CSV football-data en tableau aux colonnes stables."""
+    if "Home" in brut.columns and "HomeTeam" not in brut.columns:  # format « toutes saisons » (LIGUES_MONDE)
+        brut = brut.rename(columns={"Home": "HomeTeam", "Away": "AwayTeam", "HG": "FTHG", "AG": "FTAG"})
     brut = brut.dropna(subset=[c for c in ("HomeTeam", "AwayTeam") if c in brut.columns], how="any")
     if "HomeTeam" not in brut.columns or brut.empty:
         return pd.DataFrame()
@@ -151,6 +165,8 @@ def normaliser(brut: pd.DataFrame, ligue: str | None = None, saison: int | None 
     )
     if ligue is not None:
         df["ligue"] = ligue
+    if saison is None and "Season" in brut.columns:  # « 2026 » ou « 2026/2027 » : année de début
+        df["saison"] = pd.to_numeric(brut["Season"].astype(str).str[:4], errors="coerce")
     for cible, source in (("bd", "FTHG"), ("be", "FTAG"), ("bd_mt", "HTHG"), ("be_mt", "HTAG")):
         df[cible] = pd.to_numeric(brut[source], errors="coerce") if source in brut.columns else float("nan")
     df["arbitre"] = brut["Referee"].astype(str).str.strip() if "Referee" in brut.columns else None
@@ -201,6 +217,9 @@ def telecharger(
     courante = saison_courante(maintenant)
     a_faire = []
     for code in ligues:
+        if code in LIGUES_MONDE:  # un seul fichier, toutes saisons : relu à chaque fois
+            a_faire.append((code, None, base / code / FICHIER_MONDE))
+            continue
         for annee in range(depuis, courante + 1):
             chemin = base / code / f"{code_saison(annee)}.csv"
             if annee == courante or not chemin.exists() or chemin.stat().st_size == 0:
@@ -212,7 +231,8 @@ def telecharger(
         for fait, (code, annee, chemin) in enumerate(a_faire, start=1):
             for essai in range(3):  # le site coupe parfois une connexion : on réessaie
                 try:
-                    r = client.get(URL_SAISON.format(saison=code_saison(annee), code=code))
+                    url = URL_MONDE.format(code=code) if annee is None else URL_SAISON.format(saison=code_saison(annee), code=code)
+                    r = client.get(url)
                     if r.status_code != 404:  # 404 : championnat pas encore couvert cette saison-là
                         r.raise_for_status()
                         chemin.parent.mkdir(parents=True, exist_ok=True)
@@ -220,7 +240,7 @@ def telecharger(
                     break
                 except httpx.HTTPError as e:
                     if essai == 2:
-                        erreurs.append(f"{code} {code_saison(annee)} : {e}")
+                        erreurs.append(f"{code} {code_saison(annee) if annee is not None else ''} : {e}")
                     else:
                         time.sleep(2 * (essai + 1))
             if progression:
@@ -240,12 +260,20 @@ def etat_historique(dossier: str | Path) -> dict[str, dict]:
     if base.exists():
         for rep in sorted(p for p in base.iterdir() if p.is_dir()):
             fichiers = sorted(rep.glob("*.csv"))
-            if fichiers:
-                etat[rep.name] = {
-                    "saisons": len(fichiers),
-                    "premiere": fichiers[0].stem, "derniere": fichiers[-1].stem,
-                    "maj": datetime.fromtimestamp(max(f.stat().st_mtime for f in fichiers), timezone.utc),
-                }
+            if not fichiers:
+                continue
+            maj = datetime.fromtimestamp(max(f.stat().st_mtime for f in fichiers), timezone.utc)
+            if fichiers[0].name == FICHIER_MONDE:  # un seul fichier : les saisons sont dans la colonne Season
+                try:
+                    saisons = sorted(set(pd.read_csv(fichiers[0], usecols=["Season"], encoding="utf-8-sig")["Season"].astype(str)))
+                except (ValueError, OSError, UnicodeDecodeError):
+                    saisons = []
+                if saisons:
+                    etat[rep.name] = {"saisons": len(saisons), "periode": f"{saisons[0]} → {saisons[-1]}", "maj": maj}
+                continue
+            p, d = fichiers[0].stem, fichiers[-1].stem
+            etat[rep.name] = {"saisons": len(fichiers), "premiere": p, "derniere": d,
+                              "periode": f"{p[:2]}/{p[2:]} → {d[:2]}/{d[2:]}", "maj": maj}
     return etat
 
 

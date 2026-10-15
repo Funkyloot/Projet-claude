@@ -258,3 +258,31 @@ qui n'a pas pu être vérifié (un seul prix de Pinnacle) le dit dans sa note.
 
 **Règle de l'app** : mouvement ≥ 8 points (réglable) entre le premier et le dernier prix connu de
 Pinnacle → « match plan » listé sur le tableau de bord et dans le rapport, aucun signal recommandé ni simulé.
+
+## 12. Championnats hors Europe de l'Ouest (octobre 2026)
+
+Source : football-data.co.uk, fichiers « toutes saisons » (Japon, Brésil, Suède, Argentine, Mexique,
+Finlande, Danemark, Russie, MLS, Chine, Norvège, Pologne, Suisse, Autriche, Irlande : 59 000 matchs,
+2012-2026), cotes de clôture seulement. Pas de colonne 1xBet : la stratégie est testée avec la **meilleure
+cote du marché** (plus optimiste que 1xBet seul ; dans nos championnats actuels, même test : +7,2 % puis +4,9 %).
+Règle : meilleure cote ≥ prix juste Pinnacle + 4 %, cote 1,25-4,5.
+
+| Championnat | 2012-20 | 2020-26 | Décision |
+|---|---|---|---|
+| Japon (J1) | 706 paris, +20,7 % | 407, +13,2 % | **ajouté** |
+| Brésil (Série A) | 773, +15,1 % | 409, +14,7 % | **ajouté** |
+| Suède (Allsvenskan) | 523, +8,5 % | 198, +24,6 % | **ajouté** |
+| Argentine | 749, +3,4 % | 685, +8,4 % | **ajouté** |
+| Mexique (Liga MX) | 724, +5,7 % | 301, +7,2 % | **ajouté** |
+| Finlande | 339, +1,7 % | 110, +14,4 % | **ajouté** |
+| Danemark | 485, +13,4 % | 193, +4,3 % | **ajouté** |
+| Russie | 632, +4,9 % | 353, −0,3 % | non (s'efface) |
+| MLS | 879, +10,5 % | 535, −0,2 % | non |
+| Norvège, Autriche, Irlande, Suisse | positifs puis négatifs | | non |
+| Pologne | 685, −4,2 % | 285, +4,9 % | non |
+| Chine | 469, +0,7 % | 365, +1,4 % | non (trop faible) |
+
+Ajout (0.7.0) des 7 championnats positifs sur les deux périodes : The Odds API les couvre (Pinnacle et 1xBet
+dans la région « eu »), ils jouent à d'autres heures que l'Europe (soir et nuit au Québec) et souvent en semaine.
+Limites : aucun historique de la cote 1xBet dans ces championnats ; pas de programme football-data, donc un
+seul relevé avant la plupart des matchs et la vérification « match plan » souvent impossible (le signal le dit).

@@ -67,6 +67,36 @@ def test_telechargement_et_chargement(tmp_path):
     assert fd.etat_historique(tmp_path)["E1"]["saisons"] == 2
 
 
+CSV_MONDE = (
+    "\ufeffCountry,League,Season,Date,Time,Home,Away,HG,AG,Res,PSCH,PSCD,PSCA,MaxCH,MaxCD,MaxCA,AvgCH,AvgCD,AvgCA,"
+    "BFECH,BFECD,BFECA,B365CH,B365CD,B365CA\n"
+    "Japan,J1 League,2025,15/03/2025,05:00,Urawa Reds,Verdy,2,1,H,1.90,3.60,4.40,2.00,3.80,4.60,1.88,3.50,4.20,,,,1.91,3.50,4.20\n"
+    "Japan,J1 League,2026/2027,08/08/2026,11:00,Verdy,Vissel Kobe,0,0,D,3.10,3.30,2.40,3.30,3.40,2.50,3.00,3.20,2.35,,,,3.00,3.25,2.37\n"
+)
+
+
+def test_championnats_monde_toutes_saisons(tmp_path):
+    appels = []
+
+    def repondre(requete: httpx.Request) -> httpx.Response:
+        appels.append(str(requete.url))
+        return httpx.Response(200, content=CSV_MONDE.encode("utf-8"))
+
+    client = httpx.Client(transport=httpx.MockTransport(repondre))
+    assert fd.telecharger(["JPN"], 2024, tmp_path, client, datetime(2026, 9, 1, tzinfo=timezone.utc), pause_s=0) == []
+    assert appels == ["https://football-data.co.uk/new/JPN.csv"]  # un seul fichier, toutes saisons
+    df = fd.charger(tmp_path, ["JPN"])
+    assert len(df) == 2 and set(df["ligue"]) == {"JPN"} and list(df["saison"]) == [2025, 2026]
+    assert list(df["dom"]) == ["Urawa Reds", "Verdy"] and list(df["bd"]) == [2, 0]
+    assert df.loc[0, "refc_1"] == 1.90 and df.loc[0, "date"].hour == 5  # clôture Pinnacle ; heure anglaise → UTC
+    h = fd.etat_historique(tmp_path)["JPN"]
+    assert h["saisons"] == 2 and h["periode"] == "2025 → 2026/2027"
+    c = Correspondance()
+    assert c.trouver("Urawa Red Diamonds", {"Urawa Reds", "Verdy"}) == "Urawa Reds"
+    assert c.trouver("Atletico Mineiro", {"Atletico-MG", "Athletico-PR"}) == "Atletico-MG"
+    assert c.trouver("Athletico Paranaense", {"Atletico-MG", "Athletico-PR"}) == "Athletico-PR"
+
+
 def test_cotes_depuis_ligne():
     ligne = fd.lire_csv(CSV_RECENT, "E1", 2024).iloc[0]
     cotes = cotes_depuis_ligne(ligne, datetime(2024, 8, 1, tzinfo=timezone.utc))

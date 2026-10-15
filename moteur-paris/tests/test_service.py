@@ -425,8 +425,9 @@ def test_migration_des_reglages_une_seule_fois(service, sessions):
         enregistrer_reglages(s, {"fraction_kelly": 0.25, "mise_max_pct": 0.03, "odds_api_credits_jour": 15,
                                  "poids_modele": 0.3}, service.base)  # réglages enregistrés avant la mise à jour
     assert set(service.appliquer_migrations()) == {"0.5.3-mises", "0.5.2-credits-auto", "0.6.2-couverture",
-                                                   "0.6.5-pinnacle", "0.6.9-matchs-plan"}
+                                                   "0.6.5-pinnacle", "0.6.9-matchs-plan", "0.7.0-ligues-monde"}
     assert service.r.mouvement_anormal == 0.08
+    assert service.r.liste_ligues == ["E1", "ARG", "BRA", "DNK", "FIN", "JPN", "MEX", "SWE"]  # ajoutés, rien retiré
     assert service.r.ecart_min_sharp == 0.04 and service.r.odds_api_marches == "h2h"
     assert service.r.poids_modele == 0.0  # Pinnacle d'abord
     assert service.r.fraction_kelly == 0.5 and service.r.mise_max_pct == 0.05 and service.r.odds_api_credits_jour == 0

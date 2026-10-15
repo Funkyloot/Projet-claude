@@ -27,7 +27,7 @@
 <tr><td>{{ nom }} <span class="doux petit">{{ code }}</span></td>
 <td>{{ 'oui' if code in suivies else '' }}</td>
 <td>{{ h.saisons if h else '—' }}</td>
-<td>{% if h %}{{ h.premiere[:2] }}/{{ h.premiere[2:] }} → {{ h.derniere[:2] }}/{{ h.derniere[2:] }}{% else %}—{% endif %}</td>
+<td>{{ h.periode if h else '—' }}</td>
 <td>{{ h.maj|local if h else '—' }}</td>
 <td>{% set p = parametres.get(code) %}{% if p %}{{ p.get('marches_valides')|join(', ') or 'aucun' }}{% else %}—{% endif %}</td></tr>
 {% endfor %}</tbody></table></div>
