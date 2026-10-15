@@ -108,7 +108,7 @@ SECTIONS: dict[str, tuple[str, list[Champ]]] = {
               "Signaux « contre Pinnacle » : 4 % conseillé (environ 3 par semaine). "
               "3 % donne 2 fois plus de paris, avec un gain moyen plus petit."),
         Champ("mouvement_anormal", "Mouvement anormal de Pinnacle", "pct",
-              "Si la cote de Pinnacle change autant avant le match (10 % conseillé, 1 match sur 100), le match "
+              "Si la cote de Pinnacle change autant avant le match (8 % conseillé, environ 3 matchs sur 100), le match "
               "est classé « match plan » et aucun signal n'est donné : nouvelle de dernière minute ou argent suspect."),
         Champ("seuil_suspect", "Seuil « trop belle »", "pct", "Au-delà : risque d'annulation, pas recommandé."),
         Champ("seuil_desaccord", "Désaccord max modèle / référence", "pct"),

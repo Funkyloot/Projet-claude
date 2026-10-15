@@ -188,6 +188,10 @@ def analyser(
                              "texte": texte})
             for c in du_match:  # mis de côté : ni recommandé, ni simulé
                 c.suspect, c.note = True, f"{c.note} {texte}".strip()
+        elif mouvement is None:
+            for c in du_match:  # l'utilisateur doit savoir que ce match n'a pas pu être contrôlé
+                c.note = (f"{c.note} Match plan : vérification impossible (un seul prix de Pinnacle connu), "
+                          "prudence.").strip()
         candidats += du_match
         apercu = meilleure_option(ctx, f)
         if apercu is not None:

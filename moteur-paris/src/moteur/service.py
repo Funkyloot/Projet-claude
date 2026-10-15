@@ -123,6 +123,8 @@ class Service:
         "0.6.2-couverture": {"ecart_min_sharp": 0.04, "odds_api_marches": "h2h"},
         # Pinnacle d'abord : y mélanger le modèle rend les prédictions moins précises (RECHERCHE.md §9)
         "0.6.5-pinnacle": {"poids_modele": 0.0},
+        # matchs plan : 8 points en repère 3 fois plus, sans perte pour nos signaux (RECHERCHE.md §11)
+        "0.6.9-matchs-plan": {"mouvement_anormal": 0.08},
     }
 
     def appliquer_migrations(self) -> list[str]:

@@ -92,7 +92,8 @@ Il faut au moins +{{ '%.0f'|format(r.valeur_min*100) }} % (et un marché validé
 <div class="carte"><h2>Matchs plan ({{ a_eviter|length }})</h2>
 {% if not a_eviter %}<p class="doux petit">Aucun match plan pour l'instant{% if analyse.get('plan_verifies') %}
 ({{ analyse.plan_verifies }} match(s) vérifié(s) à la dernière analyse){% endif %}. Un match devient « plan » quand la cote de
-Pinnacle bouge d'au moins {{ '%.0f'|format(r.mouvement_anormal*100) }} points avant le coup d'envoi : environ 1 match sur 100.
+Pinnacle bouge d'au moins {{ '%.0f'|format(r.mouvement_anormal*100) }} points avant le coup d'envoi (à 8 points : environ 3 matchs sur 100).
+Un signal sur un match qui n'a pas pu être vérifié le dit dans sa note.
 Il faut deux prix de Pinnacle à comparer : celui du programme de football-data et celui du relevé des 2 h avant le match.</p>
 {% else %}
 <p class="doux petit">La cote de Pinnacle y a bougé de façon anormale avant le match : nouvelle de dernière minute

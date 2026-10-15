@@ -251,4 +251,5 @@ def test_mouvement_anormal_de_pinnacle(scenario, reglages_test):
     normal = MatchAVenir("E1", m0["dom"], m0["ext"], maintenant + timedelta(hours=2), cotes[3:])
     res = analyser([normal], scenario["hist"], reglages_test, maintenant)
     assert not res.a_eviter and not [c for c in res.candidats if c.chasseur == "S"][0].suspect
-    assert res.plan_verifies == 0  # un seul prix de Pinnacle : rien à comparer
+    assert res.plan_verifies == 0  # un seul prix de Pinnacle : rien à comparer…
+    assert "vérification impossible" in [c for c in res.candidats if c.chasseur == "S"][0].note  # … et le signal le dit

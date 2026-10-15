@@ -240,5 +240,21 @@ La clôture de Pinnacle reste juste même dans ces matchs (favori annoncé 51,9 
 négatifs au seuil de 10 points ; les écarter coûte environ 6 % des signaux et 3 % du gain total. Ce que les
 données ne montrent pas, c'est le risque propre à ces matchs : paris annulés, comptes surveillés.
 
-**Règle de l'app (0.6.6)** : mouvement ≥ 10 points (réglable) entre le premier et le dernier prix connu de
+**Autres critères testés** (fixés à l'avance ; on garde un critère si exclure ses matchs améliore nos signaux) :
+
+| Critère | Matchs repérés | 2020-27 exclus | 2020-27 gardés |
+|---|---|---|---|
+| mouvement ≥ 10 points | 0,9 % | 123 paris, +7,8 % | 2 022 paris, +14,1 % |
+| **mouvement ≥ 8 points** | **2,7 %** | **308 paris, +0,6 %** | **1 837 paris, +15,9 %** |
+| mouvement ≥ 6 points | 8,0 % | 671 paris, +9,7 % | 1 474 paris, +15,5 % |
+| mouvement relatif ≥ 35 % | 1,4 % | 76 paris, +11,7 % | 2 069 paris, +13,8 % |
+| inhabituel pour le championnat | 1,5 % | 137 paris, +6,4 % | 2 008 paris, +14,2 % |
+| désaccord Pinnacle / moyenne ≥ 4 points | 0,2 % | 182 paris, +7,0 % | 1 963 paris, +14,3 % |
+
+La période 2013-20 compte trop peu de signaux (cotes de clôture des bookmakers rares) pour départager.
+**Choix (0.6.9) : 8 points.** Trois fois plus de matchs plan repérés ; leurs signaux ne rapportaient presque
+rien, donc les écarter ne coûte presque rien et relève la marge moyenne des autres. Un signal sur un match
+qui n'a pas pu être vérifié (un seul prix de Pinnacle) le dit dans sa note.
+
+**Règle de l'app** : mouvement ≥ 8 points (réglable) entre le premier et le dernier prix connu de
 Pinnacle → « match plan » listé sur le tableau de bord et dans le rapport, aucun signal recommandé ni simulé.

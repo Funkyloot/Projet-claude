@@ -34,8 +34,8 @@ class Reglages(BaseSettings):
     # Chasseur S (contre Pinnacle) : 6 % → moins de paris mais +7,7 % en moyenne chacun (RECHERCHE.md)
     ecart_min_sharp: float = Field(0.04, ge=0.01, le=0.5)  # 1xBet : 4 % ≈ 3 occasions/semaine (RECHERCHE.md §8)
     age_max_cote_s: int = Field(60, gt=0)
-    # Pinnacle bouge d'au moins 10 points avant le match (1 % des matchs) : « match plan » (RECHERCHE.md §11)
-    mouvement_anormal: float = Field(0.10, ge=0.02, le=1)
+    # Pinnacle bouge d'au moins 8 points avant le match (3 % des matchs) : « match plan » (RECHERCHE.md §11)
+    mouvement_anormal: float = Field(0.08, ge=0.02, le=1)
     # Au-delà, une value ou un surebet est marqué « risque d'annulation » (section 8)
     seuil_suspect: float = Field(0.10, gt=0)
     # Écart maximal de probabilité entre le modèle et la référence avant de refuser un signal
