@@ -247,7 +247,8 @@ def test_mouvement_anormal_de_pinnacle(scenario, reglages_test):
     res = analyser([match], scenario["hist"], reglages_test, maintenant)
     (s,) = [c for c in res.candidats if c.chasseur == "S"]
     assert s.suspect and "match plan" in s.note
-    assert len(res.a_eviter) == 1 and "Pinnacle a bougé de" in res.a_eviter[0]["texte"]
+    assert len(res.a_eviter) == 1 and "Pinnacle a bougé de" in res.a_eviter[0]["texte"] and res.plan_verifies == 1
     normal = MatchAVenir("E1", m0["dom"], m0["ext"], maintenant + timedelta(hours=2), cotes[3:])
     res = analyser([normal], scenario["hist"], reglages_test, maintenant)
     assert not res.a_eviter and not [c for c in res.candidats if c.chasseur == "S"][0].suspect
+    assert res.plan_verifies == 0  # un seul prix de Pinnacle : rien à comparer

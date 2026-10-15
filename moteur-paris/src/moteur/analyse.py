@@ -16,6 +16,7 @@ from .chasseurs import (
     Candidat,
     ContexteMatch,
     Filtre,
+    REFERENCES_SHARP,
     Surebet,
     chasseur_incoherences,
     chasseur_sharp,
@@ -59,6 +60,7 @@ class ResultatAnalyse:
     modeles: dict[str, ModeleDC]
     apercus: list = field(default_factory=list)
     a_eviter: list = field(default_factory=list)  # matchs où Pinnacle a bougé de façon anormale
+    plan_verifies: int = 0  # matchs dont deux prix de Pinnacle ont pu être comparés
 
 
 def charger_parametres(dossier: Path) -> dict:
@@ -153,7 +155,7 @@ def analyser(
         alertes.append(f"{ligue} : pas assez d'historique pour le modèle (télécharger l'historique).")
     candidats: list[Candidat] = []
     surebets: list[Surebet] = []
-    apercus, a_eviter = [], []
+    apercus, a_eviter, plan_verifies = [], [], 0
     for m in matchs:
         params, familles = params_ligue(parametres, m.ligue, r)
         f = Filtre(
@@ -175,7 +177,9 @@ def analyser(
         # un même pari n'est signalé qu'une fois : le signal « sharp » prime sur celui du modèle
         du_match = sharp + [c for c in chasseur_value(ctx, f) if c.selection not in couverts]
         du_match += chasseur_incoherences(ctx, f)
-        anormal = mouvement_anormal(m.cotes, r.mouvement_anormal)
+        mouvement = mouvement_pinnacle(m.cotes)
+        plan_verifies += mouvement is not None
+        anormal = mouvement if mouvement is not None and abs(mouvement[2] - mouvement[1]) >= r.mouvement_anormal else None
         if anormal is not None:
             sel, p0, p1 = anormal
             texte = (f"Pinnacle a bougé de {abs(p1 - p0) * 100:.0f} points avant le match "
@@ -192,7 +196,7 @@ def analyser(
     candidats.sort(key=lambda c: (not c.valide, -c.ev))
     apercus.sort(key=lambda a: a.debut)
     return ResultatAnalyse(candidats, surebets, len(matchs), sorted({m.ligue for m in matchs}), alertes, modeles,
-                           apercus, a_eviter)
+                           apercus, a_eviter, plan_verifies)
 
 
 def noter_mouvement(candidats: list[Candidat], cotes: list[CoteBrute]) -> None:
@@ -218,9 +222,17 @@ def noter_mouvement(candidats: list[Candidat], cotes: list[CoteBrute]) -> None:
 
 
 def mouvement_anormal(cotes: list[CoteBrute], seuil: float) -> tuple[Selection, float, float] | None:
+    """Le mouvement de Pinnacle s'il atteint `seuil` : nouvelle de dernière minute ou argent suspect,
+    « match plan » (RECHERCHE.md §11)."""
+    mouvement = mouvement_pinnacle(cotes)
+    return mouvement if mouvement is not None and abs(mouvement[2] - mouvement[1]) >= seuil else None
+
+
+def mouvement_pinnacle(cotes: list[CoteBrute]) -> tuple[Selection, float, float] | None:
     """Plus grand changement de probabilité 1X2 chez Pinnacle (sinon Betfair) entre son premier et son
-    dernier prix connus, s'il atteint `seuil`. Signe d'une nouvelle de dernière minute ou d'argent
-    suspect : la recherche (RECHERCHE.md §11) n'y trouve plus de gain, mieux vaut éviter le match."""
+    dernier prix connus. None tant qu'il n'y a qu'un seul prix : rien à comparer."""
+    if len({c.maj for c in cotes if c.bookmaker in REFERENCES_SHARP and c.selection.marche == "1x2"}) < 2:
+        return None
     anciennes: dict = {}
     for c in sorted(cotes, key=lambda c: c.maj):
         anciennes.setdefault((c.bookmaker, c.selection), c)
@@ -232,7 +244,7 @@ def mouvement_anormal(cotes: list[CoteBrute], seuil: float) -> tuple[Selection, 
         avant, apres = proba_sharp(depart, sel, age_max=None), proba_sharp(fin, sel, age_max=None)
         if avant is None or apres is None or avant[1] != apres[1]:
             continue
-        if abs(apres[0] - avant[0]) >= seuil and (pire is None or abs(apres[0] - avant[0]) > abs(pire[2] - pire[1])):
+        if pire is None or abs(apres[0] - avant[0]) > abs(pire[2] - pire[1]):
             pire = (sel, avant[0], apres[0])
     return pire
 

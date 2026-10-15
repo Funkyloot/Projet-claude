@@ -309,3 +309,6 @@ def test_tableau_liste_les_matchs_a_eviter(connecte, service):
         {"ligue": "E1", "match": "Ancien – Match", "debut": "2020-01-01T15:00:00+00:00", "texte": "passé"}])
     page = connecte.get("/").text
     assert "Matchs plan (1)" in page and "Leeds – Hull" in page and "Ancien – Match" not in page
+    service.derniere_analyse = dict(service.derniere_analyse, a_eviter=[], plan_verifies=7)
+    page = connecte.get("/").text  # la rubrique reste visible quand il n'y en a aucun
+    assert "Matchs plan (0)" in page and "Aucun match plan pour l'instant" in page and "7 match(s) vérifié(s)" in page

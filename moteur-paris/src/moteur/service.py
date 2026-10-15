@@ -527,7 +527,7 @@ class Service:
                 + ", ".join(f"{sel.libelle(sb.dom, sb.ext)} @ {cote(c)} chez {bk}" for sel, bk, c, _ in sb.jambes) + ")"
                 for sb in res.surebets
             ],
-            "a_eviter": res.a_eviter,
+            "a_eviter": res.a_eviter, "plan_verifies": res.plan_verifies,
             "apercus": [
                 {"ligue": a.ligue, "match": f"{a.dom} – {a.ext}", "debut": a.debut.isoformat(), "option": a.libelle,
                  "cote": a.cote, "source": a.source, "cote_juste": a.cote_juste, "cote_min": a.cote_min, "ev": a.ev,
