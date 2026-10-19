@@ -448,3 +448,13 @@ def test_simulation_refaite_quand_les_matchs_arrivent(service, scenario):
     m = matchs[0]
     assert apres.enjeu(m.dom, m.ext) is not None
     assert service.simulation_saison("E1", n=400) is apres  # sinon : en cache
+
+
+def test_scores_dans_leur_part_du_budget(service, scenario):
+    service.analyser(scenario["maintenant"])
+    service.odds, service.reseau = FauxOdds([]), True
+    service.r.odds_api_credits_jour, service.r.odds_api_credits_scores = 15, 2
+    apres = scenario["maintenant"] + timedelta(days=2, hours=6)
+    service.resultats_api(apres)
+    service.resultats_api(apres + timedelta(hours=4))  # 3 h passées, mais la part des scores (2 crédits) est prise
+    assert service.odds.appels == ["E1"] and service._budget_api(apres)["credits"] == 2

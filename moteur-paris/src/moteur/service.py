@@ -25,6 +25,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import pandas as pd
+from sqlalchemy import select
 
 from . import commandes
 from .analyse import (
@@ -38,7 +39,7 @@ from .analyse import (
     reference_pour,
 )
 from .config import Reglages
-from .db import Recommandation
+from .db import Pari, Recommandation
 from .donnees import football_data
 from .donnees.equipes import Correspondance
 from .donnees.odds_api import SANS_SCORES, SPORTS, ClientOdds
@@ -454,16 +455,25 @@ class Service:
         with self.sessions() as s:
             attente = matchs_a_regler(s, quand)
             derniers = lire_etat(s, "scores:dernier", {})
-        ligues = sorted({m.competition for m in attente if m.competition in SPORTS
-                         and m.competition not in SANS_SCORES and quand - m.debut < timedelta(days=3)})
-        ligues = [c for c in ligues
+            avec_pari = set(s.scalars(select(Pari.match_id).where(Pari.statut == "en_cours")))
+        # priorité : championnats où un pari attend son résultat, puis le match le plus proche de la limite
+        # de 3 jours de l'API ; les simples prédictions passent après (football-data les complète ensuite)
+        rang: dict[str, tuple] = {}
+        for m in attente:
+            if m.competition not in SPORTS or m.competition in SANS_SCORES or quand - m.debut >= timedelta(days=3):
+                continue
+            cle = (m.id not in avec_pari, m.debut)
+            rang[m.competition] = min(rang.get(m.competition, cle), cle)
+        ligues = [c for c in sorted(rang, key=rang.get)
                   if c not in derniers or quand - datetime.fromisoformat(derniers[c]) >= timedelta(hours=3)]
         if not ligues:
             return 0
         budget = self._budget_api(quand)
         scores = []
         for ligue in ligues:
-            if budget["credits"] + 2 > self.limite_jour(quand):
+            # les scores ont leur propre part du budget : ils ne prennent jamais les crédits des cotes
+            part = min(self.r.odds_api_credits_scores, self.limite_jour(quand) // 2)
+            if budget.get("scores", 0) + 2 > part or budget["credits"] + 2 > self.limite_jour(quand):
                 break
             try:
                 scores += self.odds.scores(ligue)
@@ -473,6 +483,7 @@ class Service:
                 derniers[ligue] = (quand - timedelta(hours=2)).isoformat()
                 break
             budget["credits"] += 2
+            budget["scores"] = budget.get("scores", 0) + 2
             derniers[ligue] = quand.isoformat()
         self._noter_budget_api(budget)
         with self.sessions() as s:
