@@ -83,6 +83,7 @@ export type Donnees = {
 	tutoriel: { fini: boolean, etape: number },
 	saison: { id: string, points: number },
 	reglages: { musique: number, sons: number, cinematiques: boolean },
+	achats: { string }, -- derniers achats en Robux déjà crédités (PurchaseId)
 	creeLe: number,
 	derniereVisite: number,
 }
@@ -128,6 +129,7 @@ function Schema.nouveau(): Donnees
 		tutoriel = { fini = false, etape = 0 },
 		saison = { id = "", points = 0 },
 		reglages = { musique = 0.35, sons = 1, cinematiques = true },
+		achats = {},
 		creeLe = 0,
 		derniereVisite = 0,
 	}
@@ -136,6 +138,7 @@ end
 Schema.MAX_RIVALES = 12
 Schema.MAX_LEGENDES = 30
 Schema.MAX_ETOILES = 10 ^ 9
+Schema.MAX_ACHATS = 50
 
 -- ───────────────────────────── Nettoyage ─────────────────────────────
 
@@ -327,6 +330,16 @@ function Schema.nettoyer(brut: unknown): Donnees
 	d.reglages.musique = nombre(reglages.musique, d.reglages.musique, 0, 1)
 	d.reglages.sons = nombre(reglages.sons, d.reglages.sons, 0, 1)
 	d.reglages.cinematiques = booleen(reglages.cinematiques, true)
+
+	-- Les achats en Robux : la trace qui empêche de créditer deux fois le même
+	-- reçu. On ne garde que les plus récents.
+	local achats = liste(b.achats)
+	for i = math.max(1, #achats - Schema.MAX_ACHATS + 1), #achats do
+		local id = achats[i]
+		if type(id) == "string" and #id <= 100 then
+			table.insert(d.achats, id)
+		end
+	end
 
 	d.creeLe = nombre(b.creeLe, 0, 0)
 	d.derniereVisite = nombre(b.derniereVisite, 0, 0)

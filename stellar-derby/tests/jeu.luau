@@ -92,6 +92,18 @@ H.test("les listes sont bornées", function()
 	assert(#d.rivales == Schema.MAX_RIVALES)
 end)
 
+H.test("la trace des achats en Robux survit à la sauvegarde, bornée", function()
+	local d = Schema.nouveau()
+	for i = 1, 80 do
+		table.insert(d.achats, `achat{i}`)
+	end
+	table.insert(d.achats, 42)
+	local copie = Schema.migrer(Schema.copier(d))
+	assert(#copie.achats <= Schema.MAX_ACHATS, `{#copie.achats} achats gardés`)
+	assert(copie.achats[#copie.achats] == "achat80", "le plus récent est perdu")
+	assert(#Schema.migrer({}).achats == 0)
+end)
+
 print("Économie")
 
 H.test("gagner rapporte plus que finir deuxième, et ainsi de suite", function()

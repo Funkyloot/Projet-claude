@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Partage = ReplicatedStorage:WaitForChild("Partage")
 local Couleurs = require(Partage:WaitForChild("Couleurs"))
+local Titres = require(Partage:WaitForChild("Jeu"):WaitForChild("Titres"))
 
 local Etat = require(script.Parent:WaitForChild("Etat"))
 local Profil = require(script.Parent:WaitForChild("Profil"))
@@ -100,7 +101,8 @@ local function rafraichirProfil()
 	local n, dans, besoin = Profil.niveau()
 	niveau.Text = `Niv. {n}`
 	jaugeXp.Size = UDim2.fromScale(if besoin > 0 then math.clamp(dans / besoin, 0, 1) else 1, 1)
-	titre.Text = if d.equipement.titre ~= "" then `« {d.equipement.titre} »` else ""
+	local titreAffiche = Titres.parId(d.equipement.titre)
+	titre.Text = if titreAffiche then `« {titreAffiche.nom} »` else ""
 end
 
 local function creerReglages()

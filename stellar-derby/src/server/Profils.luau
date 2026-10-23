@@ -9,6 +9,7 @@
 --   Profils.surChargement(fonction)    appelée quand les données d'un joueur arrivent
 --   Profils.avantDepart(fonction)      appelée quand un joueur part, juste avant
 --                                      la dernière sauvegarde (on peut encore modifier)
+--   Profils.sauverMaintenant(joueur)   sauvegarde tout de suite (achat en Robux…)
 --   Profils.surRequete(nom, fonction)  branche une requête du client (voir plus bas)
 --   Profils.notifier(joueur, texte)    un message éphémère à l'écran
 --   Profils.signal(joueur, nom, data)  un message propre à une fonctionnalité
@@ -185,6 +186,23 @@ local function sauver(joueur: Player, liberer: boolean)
 	if not Donnees.sauver(joueur.UserId, f.donnees, liberer) then
 		f.sale = true
 	end
+end
+
+-- Sauvegarde tout de suite, en attendant le DataStore. Vrai si c'est écrit
+-- (faux en lecture seule : la sauvegarde est ouverte ailleurs).
+function Profils.sauverMaintenant(joueur: Player): boolean
+	local f = fiches[joueur]
+	if not f or f.lectureSeule then
+		return false
+	end
+	f.donnees.derniereVisite = os.time()
+	-- Marquée propre avant d'écrire : une modification pendant l'écriture la resalit
+	f.sale = false
+	local ok = Donnees.sauver(joueur.UserId, f.donnees, false)
+	if not ok then
+		f.sale = true
+	end
+	return ok
 end
 
 local function arrivee(joueur: Player)
