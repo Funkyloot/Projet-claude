@@ -182,7 +182,7 @@ function Simulation.nouvelle(
 
 	local coureuses: { Coureuse } = {}
 	for id, def in definitions do
-		local strategie = Strategies.obtenir(def.strategie)
+		local strategie = Strategies.pour(def.strategie, course.categorie)
 		local numero = numeros[id]
 		local couloir = F.couloirDepart(numero, n, piste.largeur)
 		local enduranceMax = F.enduranceMax(strategie, def.stats.souffle, distance)

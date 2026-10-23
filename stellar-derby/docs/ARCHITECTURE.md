@@ -126,6 +126,8 @@ Profils.modifier(joueur, function(d) ... end): boolean   -- toute écriture pass
 Profils.crediter(joueur, etoiles, xp, raison?): boolean  -- + notification, vrai si niveau franchi
 Profils.attendre(joueur, delai?): Schema.Donnees?
 Profils.surChargement(function(joueur, d) end)
+Profils.avantDepart(function(joueur) end)                -- au départ, avant la dernière sauvegarde (sans attendre)
+Profils.sauverMaintenant(joueur): boolean               -- sauvegarde tout de suite (achat en Robux)
 Profils.surRequete("nom.action", function(joueur, args) return { ok = true } end)
 Profils.notifier(joueur, texte, genre?)                  -- genre : info, gain, niveau, alerte, titre
 Profils.notifierTous(texte, genre?)
@@ -242,8 +244,8 @@ pour filmer un moment (cinématique, mini-jeu).
 | `Menu.masquer()` | cache le menu (mini-jeu plein écran) ; renvoie la fonction pour le rendre |
 | `Menu.ecran()` | la ScreenGui commune |
 
-Ordres déjà pris : Courir 10. Conseillés : Carrière 20, Entraînement 30,
-Boutique 40, Classements 50, Profil 60, Duo 70.
+Ordres pris : Courir 10, Carrière 20, Entraînement 30, Boutique 40,
+Classements 50, Profil 60, Duo 70, Live 80 (la streameuse seulement).
 
 **Ui** :
 - `Ui.panneau(parent, nom, titre, taille, surFermeture?)` renvoie
@@ -319,6 +321,7 @@ Les champs sont décrits dans `shared/Jeu/Schema.luau`.
 | `tutoriel` | tutoriel |
 | `saison` | classements, et Recompenses pour les points |
 | `reglages` | socle |
+| `achats` | boutique (reçus Robux déjà crédités, écrits avec les étoiles) |
 
 **Si une fonctionnalité a besoin d'un champ nouveau** :
 1. l'ajouter à `Schema.nouveau()` et à `Schema.nettoyer()` ;
@@ -340,3 +343,62 @@ lune run tools/essai-habillage build/StellarDerby.rbxl
 **Vérification de types** : `luau-lsp analyze` (ou l'outil de la session
 de développement) en mode strict, avec les définitions Roblox et le
 sourcemap Rojo.
+
+## 10. Les fonctionnalités
+
+Chaque fonctionnalité a sa logique pure dans `shared/Jeu/<Module>`, testée
+par `tests/<fonctionnalite>.luau`, un service serveur et un écran client.
+
+| Fonctionnalité | Logique pure | Serveur | Client |
+|---|---|---|---|
+| Entraînement (5 mini-jeux) | `Jeu/Entrainement` | `ServiceEntrainement` | `EcranEntrainement`, `EntrainementJeux` |
+| Carrière, événements, Légendes | `Jeu/Carriere`, `Jeu/Evenements` | `ServiceCarriere` | `EcranCarriere`, `CarriereCreation` |
+| Concert de la victoire | `Jeu/Concert` | `ServiceConcert` | `EcranConcert` |
+| Boutique, garde-robe, profil | `Jeu/Boutique` | `ServiceBoutique`, `Tenues` | `EcranBoutique`, `EcranProfil` |
+| Classements et saison | `Jeu/Classement` | `Classements` | `EcranClassements` |
+| Rivales, titres, cinématiques | `Jeu/Rivales`, `Jeu/Titres` | `ServiceRivales` | `Cinematique`, `RivalesMarques` |
+| Duo entraîneuse–coureuse | `Jeu/Duo` | `ServiceDuo` | `EcranDuo` |
+| Mode Live | `Jeu/Live` | `ModeLive` | `PanneauLive` (voir `MODE-LIVE.md`) |
+| Tutoriel | `Jeu/Tutoriel` | `ServiceTutoriel` | `Tutoriel` |
+| Sons et ambiances | — | — | `Sons` (`Sons.jouer(nom)`) |
+
+### Requêtes, commandes et signaux
+
+| Fonctionnalité | Requêtes (client → serveur) | Commandes de course | Signaux (serveur → client) |
+|---|---|---|---|
+| Entraînement | `entrainement.commencer { jeu, mode }`, `.terminer { jeton, note }`, `.abandonner`, `.etat` | — | — |
+| Carrière | `carriere.etat`, `.creer {…}`, `.action { action }`, `.choix { choix }`, `.courir`, `.abandonner` | — | `carriere.retour`, `carriere.fin` |
+| Concert | — | `concert.note`, `concert.ovation` | `concert.bilan` |
+| Boutique | `boutique.acheter`, `boutique.equiper { categorie, id }`, `boutique.pack { id }`, `profil.titre { id }` | — | — |
+| Duo | `duo.entrainer { coureuseId }`, `duo.regarder { userId }`, `duo.arreter` | `duo.ordre` | `duo.debut`, `duo.ordre`, `duo.verdict` |
+| Live | `live.etat`, `.ajouter`, `.retirer`, `.vote`, `.lancer`, `.message` (streameuse), `live.rejoindre` | — | `live.classement` |
+| Tutoriel | `tutoriel.commencer`, `.etape`, `.passer`, `.finir` | — | `tutoriel.proposer`, `tutoriel.academie` |
+
+### Attributs publiés
+
+| Où | Attribut | Contenu |
+|---|---|---|
+| dossier de session | `Concert` | JSON : chanson, graine, début, durée, artistes, noms |
+| dossier de session | `ConcertAmbiance` | l'ambiance de la salle, 0 à 1 |
+| dossier de session | `Duo` | JSON : qui entraîne qui |
+| `Reseau.monde()` | `Classements`, `Saison`, `NomSaison`, `Weekend` | les tops 10 (JSON) et la saison |
+| `Reseau.monde()` | `Live` | JSON : invitées, vote, pronostics, classement (mode Live) |
+| joueur | `Streameuse` | vrai pour la streameuse du mode Live |
+
+### Équilibrage des stratégies
+
+Le coefficient de finale de chaque stratégie dépend de la catégorie de la
+course (`finale` dans `Course/Strategies`). Le moteur et le HUD prennent la
+stratégie par `Strategies.pour(id, categorie)`. Les valeurs sortent de
+`lune run tests/reglage` ; le rapport est dans `EQUILIBRAGE.md`.
+
+### Les crochets ajoutés au socle
+
+- `Profils.avantDepart` : la carrière y fait finir par l'IA une course
+  quittée en route (le résultat compte), les classements y écrivent les
+  dernières valeurs.
+- `Profils.sauverMaintenant` : un achat en Robux n'est accordé qu'une fois
+  la sauvegarde écrite.
+- `Sessions` : l'option `dureeLobby`, et un lobby qui part même sans
+  inscrite quand des partantes sont imposées (les invitées du mode Live).
+

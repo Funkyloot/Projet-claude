@@ -4,7 +4,7 @@
 > des coureuses aux oreilles et à la queue de cheval, qui s'entraînent, courent
 > et finissent sur scène. Univers, personnages et musiques originaux.
 
-*Nom de travail. Version du document : prototype de phase 1.*
+*Nom de travail. Version du document : le jeu complet (phases 1 à 4 écrites, à valider dans Studio).*
 
 ---
 
@@ -46,7 +46,7 @@ Uma Musume appartient à Cygames, et ses personnages portent, sous licence, les 
 |---|---|---|
 | **Course** | ~2 min | Lobby (choix stratégie + profil) → présentation des partantes → stalles → course → podium. |
 | **Session** | 10–15 min | Plusieurs courses d'affilée sur des distances variées ; progression des récompenses. |
-| **Carrière** (phase 3) | 30–45 min | Trois « années » condensées : entraînement, événements à choix, courses-objectifs, puis la coureuse devient une Légende. |
+| **Carrière** | 30–45 min | Trois « années » condensées : entraînement, événements à choix, courses-objectifs, puis la coureuse devient une Légende. |
 | **Méta** | semaines | Collection de Légendes, héritage, saisons, Grand Prix du week-end, cosmétiques. |
 
 ## 5. La course, en détail
@@ -145,14 +145,15 @@ Chaque coureuse a la signature de sa stratégie, plus une compétence générale
 - **Écarts à la japonaise** : Nez, Tête, Encolure, ½, ¾, 1 longueur, 1 ¼… jusqu'à « Large ».
 - **Cadres de couleur** : blanc, noir, rouge, bleu, jaune, vert, orange, rose, selon la règle japonaise (au-delà de 8 partantes, les derniers cadres prennent deux numéros).
 
-### 5.9 Le calendrier du prototype
+### 5.9 Le calendrier
 
-| Course | Distance | Catégorie | Terrain | Météo |
-|---|---:|---|---|---|
-| Coupe des Alizés | 1 400 m | Sprint | bon | soleil |
-| Prix de l'Aube | 1 800 m | Mile | bon | petit matin |
-| Grand Prix de l'Archipel | 2 000 m | Moyenne | bon | couchant |
-| Trophée des Marées | 2 600 m | Longue | lourd | pluie |
+Trois hippodromes, chacun sur son île, quatre courses chacun (une par catégorie) :
+
+| Hippodrome | Sprint | Mile | Moyenne | Longue |
+|---|---|---|---|---|
+| **Archipel** (prairie, cerisiers) | Coupe des Alizés, 1 400 m | Prix de l'Aube, 1 900 m (matin) | Grand Prix de l'Archipel, 2 000 m (couchant) | Trophée des Marées, 2 600 m (lourd, pluie) |
+| **Baie** (plage, lanternes) | Coupe des Embruns, 1 400 m | Prix des Coquillages, 1 500 m | Grand Prix de la Baie, 2 100 m | Trophée du Phare, 2 800 m (nuit) |
+| **Falaises** (rochers, sapins) | Sprint des Goélands, 1 200 m | Prix du Vent, 1 700 m | Coupe des Cimes, 2 200 m | Marathon des Falaises, 3 200 m (lourd, pluie) |
 
 Les courtes distances se jouent surtout au placement : tout le monde peut sprinter toute la finale. Les longues se jouent à la gestion : il faut économiser, et choisir son moment. Sur le Trophée des Marées, la moitié du peloton finit à bout de souffle, presque toujours dans les trente derniers mètres.
 
@@ -185,27 +186,29 @@ HUD : mini-carte, nom de la course, phase lisible (« Dernier virage »), distan
 
 ## 7. Les touches personnelles
 
-Classées par ordre de mise en œuvre. ✅ = déjà dans le prototype.
+Classées par ordre de mise en œuvre. ✅ = dans le jeu.
 
 1. ✅ **Les robes.** Au lobby, chaque joueuse choisit la couleur de son pelage parmi dix (Noir, Bai brun, Alezan, Alezan cuivré, Isabelle, Gris perle, Rose poudré, Framboise, Prune, Bleu nuit). Ses oreilles et sa queue, tirées du catalogue Roblox, prennent cette couleur.
 2. ✅ **Le commentateur.** Une phrase par événement (départ, tête, dernier virage, duel, à bout, compétence, photo-finish, victoire), avec priorités pour ne pas saturer l'écran.
 3. ✅ **Le photo-finish au ralenti**, partagé par tout le serveur, avec la marge exacte à la japonaise.
 4. ✅ **Ton avatar, avec oreilles et queue.** On garde l'avatar Roblox du joueur et on y ajoute celles de sa robe ; la queue laisse une traînée qui flotte en course.
 5. ✅ **L'écran géant, le podium et les sons** (musique de course, foule, fanfare).
-6. **Le Winning Live jouable.** La gagnante joue un mini-jeu de rythme au centre de la scène, avec la 2e et la 3e à ses côtés. Les autres joueurs sont dans la fosse : ils choisissent la couleur de leur bâton lumineux et remplissent une jauge d'ambiance qui augmente les récompenses de tous. *Aucun jeu de fan ne le fait.*
-7. **Les compétences signature en cinématique.** 1,5 s de mise en scène (zoom, fond stylisé, phrase signature) au déclenchement, comme les *unique skills* d'Uma Musume.
-8. **Les rivales du destin.** Le jeu mémorise qui t'a battue d'une encolure ; elle réapparaît marquée « RIVALE », et la battre rapporte un titre.
-9. **Le duo entraîneuse–coureuse.** Un joueur court, l'autre entraîne : une roue d'ordres (« Garde ton souffle ! », « Dans son sillage ! », « MAINTENANT ! ») donne de petits bonus s'ils tombent au bon moment. C'est la relation centrale de l'anime, transformée en coopération.
-10. **La carrière roguelite et l'héritage.** Trois années en 30–45 min ; la coureuse devient une Légende qui peut transmettre des bonus aux prochaines carrières, les tiennes ou celles de tes amies.
+6. ✅ **Le concert de la victoire jouable.** La gagnante joue un mini-jeu de rythme au centre de la scène, avec la 2e et la 3e à ses côtés. Les autres joueurs sont dans la fosse : ils agitent leur bâton lumineux (couleur achetée à la boutique) et remplissent une jauge d'ambiance qui augmente les récompenses de tous. *Aucun jeu de fan ne le fait.*
+7. ✅ **Les compétences signature en cinématique.** 1,5 s de mise en scène (zoom, fond stylisé, phrase signature) au déclenchement, comme les *unique skills* d'Uma Musume.
+8. ✅ **Les rivales du destin.** Le jeu mémorise qui t'a battue d'une encolure ; elle réapparaît marquée « RIVALE », et la battre rapporte un titre.
+9. ✅ **Le duo entraîneuse–coureuse.** Un joueur court, l'autre entraîne : une roue d'ordres (« Garde ton souffle ! », « Dans son sillage ! », « MAINTENANT ! ») donne de petits bonus s'ils tombent au bon moment — en carrière seulement ; en course libre, ce ne sont que des conseils. C'est la relation centrale de l'anime, transformée en coopération.
+10. ✅ **La carrière roguelite et l'héritage.** Trois années en 30–45 min ; la coureuse devient une Légende qui peut transmettre des bonus aux prochaines carrières, les tiennes ou celles de tes amies.
 11. **Des pistes vivantes.** *Coupe des Marées* : le raccourci côté mer se ferme quand la marée monte ; courses de nuit aux lanternes ; une mécanique propre à chaque île.
 
 ## 8. Le mode Live (TikTok)
 
 C'est le format des vidéos de référence, en mieux.
 
-- Le spectateur tape `!join pseudo` : sa coureuse apparaît avec son vrai avatar Roblox (le moteur tient 80 coureuses, et l'instantané réseau de 80 coureuses tient sous la limite de 900 octets).
-- Le chat **vote** pour la météo ou pour une compétence surprise.
-- **Pronostics sans mise** : deviner la gagnante pour des points de prestige. Rien qui ressemble à un pari.
+✅ Dans le jeu (guide : [`MODE-LIVE.md`](MODE-LIVE.md)).
+
+- Le spectateur tape `!join pseudo` : sa coureuse apparaît avec son vrai avatar Roblox, pilotée par l'IA, avec 3 000 points comme tout le monde. Jusqu'à 30 partantes, joueurs présents compris.
+- Le chat **vote** pour la prochaine course (`!vote 1|2|3`).
+- **Pronostics sans mise** (`!prono <numéro>`) : deviner la gagnante pour des points de prestige. Rien qui ressemble à un pari.
 
 **Technique.** Roblox ne peut pas *recevoir* de requêtes extérieures. Il faut donc un petit relais (TikTok → serveur relais) que le serveur Roblox interroge régulièrement par `HttpService`. Le mode s'active sur des serveurs privés de streamers.
 
@@ -243,9 +246,10 @@ tools/                 décor enregistré dans la place, rediffusions, aperçu w
 
 Uniquement du cosmétique et du confort :
 
-- tenues de course, effets visuels de compétence, couleurs de bâton lumineux ;
-- décoration du dortoir et des écuries ;
-- serveurs privés.
+- tenues de course, effets visuels de compétence, couleurs de bâton lumineux (tout s'achète déjà en étoiles gagnées en jouant) ;
+- des packs d'étoiles en Robux, prêts dans le code mais éteints tant que le créateur n'a pas créé les produits ;
+- plus tard : décoration du dortoir et des écuries ;
+- serveurs privés (c'est là que vit le mode Live).
 
 **Jamais de stats à acheter.** Ce serait la meilleure façon de tuer le classé.
 
@@ -255,10 +259,12 @@ Uniquement du cosmétique et du confort :
 |---|---|---|---|
 | **0 — Préproduction** ✅ | 1–2 sem | Identité, document de conception, calendrier | L'identité tient sans aucun élément d'Uma Musume. |
 | **1 — Prototype de course** ✅ | 3–4 sem | Moteur, bots, stratégies, rythme, couloirs, sillage, sprint, compétences, photo-finish, HUD, mini-carte, commentateur, podium, course équitable, robes du catalogue, sons, décor habillable | Une course de 60–120 s est intéressante **sans** décor final. *À valider en jeu avec 5 testeurs (voir [`CE-SOIR.md`](CE-SOIR.md)).* |
-| **2 — Tranche verticale** | 4–6 sem | Sauvegarde (ProfileStore), entraînement (5 mini-jeux), une île finale, sons et musique, cinématiques de compétences | Les testeurs relancent d'eux-mêmes une deuxième session. |
-| **3 — Alpha fermée** | 4 sem | Winning Live, carrière courte, rivales, 3 pistes, matchmaking | Rétention J1 ≥ 25 % sur les testeurs Discord. |
-| **4 — Lancement** | 4 sem | Tutoriel, mode Live streamer, statistiques, boutique cosmétique | Rétention J1 ≥ 20 %, J7 ≥ 6 % en public. |
+| **2 — Tranche verticale** ✍️ | 4–6 sem | Sauvegarde (DataStore avec verrou de session), entraînement (5 mini-jeux), l'archipel et l'Académie, sons et musique, cinématiques de compétences | Les testeurs relancent d'eux-mêmes une deuxième session. |
+| **3 — Alpha fermée** ✍️ | 4 sem | Concert de la victoire, carrière, rivales, 3 hippodromes, sessions de course multiples, duo | Rétention J1 ≥ 25 % sur les testeurs Discord. |
+| **4 — Lancement** ✍️ | 4 sem | Tutoriel, mode Live streamer, statistiques, boutique cosmétique, classements et saisons | Rétention J1 ≥ 20 %, J7 ≥ 6 % en public. |
 | **5 — Suivi** | continu | Saisons mensuelles, Grand Prix du week-end, nouvelles îles et coureuses | — |
+
+✍️ = écrit et testé hors de Roblox (types stricts, tests Lune, place construite), à valider en jouant dans Studio.
 
 ## 12. Risques et parades
 
@@ -283,5 +289,5 @@ Uniquement du cosmétique et du confort :
 
 - Le nom définitif (*Stellar Derby*, *Galop Étoile*, *Derby Starlight*…).
 - Le style visuel des coureuses : avatar du joueur + kit (actuel), ou modèles originaux stylisés ?
-- La musique du Winning Live : commande à un compositeur, ou bibliothèque libre de droits ?
+- La musique du concert : pour l'instant la bibliothèque APM de Roblox ; plus tard, une chanson originale commandée à un compositeur ?
 - Le classé : saisonnier avec ligues, ou simple classement Elo ?

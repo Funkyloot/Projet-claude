@@ -88,8 +88,19 @@ for indiceCourse, course in Courses.liste do
 		-- Un peloton différent pour chaque course : sinon la même coureuse
 		-- reprendrait la même stalle d'une course à l'autre, et les rangs par
 		-- stalle ne seraient plus indépendants entre les courses.
+		-- La graine de la simulation dépend aussi de la course : avec la même
+		-- graine, le tirage des stalles et les premiers tirages de la course
+		-- se répéteraient d'une course à l'autre, et les 12 courses mises en
+		-- commun ne seraient plus indépendantes. Dans le jeu, chaque course
+		-- tire sa propre graine.
 		local defs = Peloton.completer({}, TAILLE, Aleatoire.nouveau(graine * 7919 + indiceCourse * 1000003))
-		local sim = Simulation.nouvelle(Pistes.geometrie(course.piste), course, defs, graine, 0)
+		local sim = Simulation.nouvelle(
+			Pistes.geometrie(course.piste),
+			course,
+			defs,
+			graine * 104729 + indiceCourse * 15485863,
+			0
+		)
 		local debutSprint = {}
 		while not sim.termine do
 			for _, e in sim:pas(PAS) do

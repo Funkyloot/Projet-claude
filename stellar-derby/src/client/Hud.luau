@@ -184,7 +184,8 @@ local function mettreAJourSprint(e: Rendu.Affiche, distance: number, etat: strin
 	if not moi then
 		return
 	end
-	local strategie = Strategies.obtenir(moi.strategie)
+	local course = Etat.course()
+	local strategie = Strategies.pour(moi.strategie, course and course.categorie)
 	local stats = moi.stats
 	local phase = F.phase(e.d, distance)
 	local restant = math.max(0, distance - e.d)

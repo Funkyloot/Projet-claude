@@ -1,18 +1,23 @@
 --!nocheck
 -- Réglage — ajuste automatiquement le coefficient de finale de chaque
--- stratégie pour qu'aucune ne soit avantagée, toutes distances confondues.
+-- stratégie, catégorie de course par catégorie (Sprint, Mile, Moyenne,
+-- Longue), pour qu'aucune ne soit avantagée.
 --
---     lune run tests/reglage [itérations] [courses par distance]
+--     lune run tests/reglage [itérations] [courses par course du calendrier]
 --
 -- À chaque itération, on simule les mêmes courses (mêmes graines : le bruit
--- d'une itération à l'autre ne vient que des coefficients) et on mesure le
--- rang moyen de chaque stratégie. Le rang moyen est une mesure continue,
--- bien moins bruitée que le nombre de victoires. On corrige ensuite :
---     c3 ← c3 + gain × (rang moyen − rang neutre) − gain' × ln(indice de victoires)
--- puis on recentre les corrections pour que leur somme soit nulle : les
--- stratégies bougent les unes par rapport aux autres, sans que toute la
--- course accélère ou ralentisse. Les coefficients obtenus sont à reporter
--- dans Course/Strategies.
+-- d'une itération à l'autre ne vient que des coefficients) et on mesure, dans
+-- chaque catégorie, le rang moyen et l'indice de victoires de chaque
+-- stratégie. L'écart à la neutralité est
+--     e = (rang moyen − rang neutre) − 1,2 × ln(indice de victoires)
+-- (le rang moyen est la mesure la moins bruitée ; un peu de victoires évite
+-- qu'une stratégie « tout ou rien » gagne bien plus à rang égal). On pousse
+-- le coefficient dans le sens de e, d'un pas qui s'adapte : il grandit tant
+-- que le signe de e ne change pas, et il se divise par deux quand il change
+-- (on a dépassé le bon réglage). Les corrections d'une catégorie sont
+-- recentrées : les stratégies bougent les unes par rapport aux autres, sans
+-- que la course accélère ou ralentisse. Le tableau `finale` obtenu est à
+-- reporter dans Course/Strategies.
 
 local process = require("@lune/process")
 local H = require("./harnais")
@@ -27,23 +32,34 @@ local Config = H.require(P.Config)
 
 local ITERATIONS = tonumber(process.args[1]) or 6
 local K = tonumber(process.args[2]) or 30
-local GAIN = 0.0025
-local GAIN_VICTOIRES = 0.0015
+local PAS_DEPART = 0.0008
+local PAS_MIN, PAS_MAX = 0.0002, 0.006
+local POIDS_VICTOIRES = 1.2
 local TAILLE = Config.TAILLE_PELOTON
+local NEUTRE = (TAILLE + 1) / 2
 
-local function evaluer()
-	local sommeRangs, partants, victoires = {}, {}, {}
-	local parCourse = {}
-	for _, id in Strategies.ordre do
-		sommeRangs[id], partants[id], victoires[id] = 0, 0, 0
+-- Chaque stratégie part de son tableau actuel (ou de son coefficient unique)
+local pas, signes = {}, {}
+for _, id in Strategies.ordre do
+	local s = Strategies.parId[id]
+	s.finale = s.finale or {}
+	pas[id], signes[id] = {}, {}
+	for _, categorie in Courses.CATEGORIES do
+		s.finale[categorie] = s.finale[categorie] or s.vitesse[3]
+		pas[id][categorie] = PAS_DEPART
+		signes[id][categorie] = 0
 	end
-	for _, course in Courses.liste do
-		local r, p, v = {}, {}, {}
-		for _, id in Strategies.ordre do
-			r[id], p[id], v[id] = 0, 0, 0
-		end
+end
+
+-- Rang moyen et indice de victoires de chaque stratégie dans une catégorie.
+local function evaluer(categorie: string)
+	local r, p, v = {}, {}, {}
+	for _, id in Strategies.ordre do
+		r[id], p[id], v[id] = 0, 0, 0
+	end
+	for _, course in Courses.deCategorie(categorie) do
 		for graine = 1, K do
-			local defs = Peloton.completer({}, TAILLE, Aleatoire.nouveau(graine * 7919))
+			local defs = Peloton.completer({}, TAILLE, Aleatoire.nouveau(graine * 7919 + course.distance))
 			local sim = Simulation.nouvelle(Pistes.geometrie(course.piste), course, defs, graine, 0)
 			while not sim.termine do
 				sim:pas(1 / 30)
@@ -56,49 +72,67 @@ local function evaluer()
 				end
 			end
 		end
-		local ligne = {}
-		for _, id in Strategies.ordre do
-			sommeRangs[id] += r[id]
-			partants[id] += p[id]
-			victoires[id] += v[id]
-			table.insert(ligne, string.format("%s %.1f", id, r[id] / math.max(1, p[id])))
-		end
-		table.insert(parCourse, `{course.distance} m : {table.concat(ligne, ", ")}`)
 	end
 	local rangs, indices = {}, {}
 	for _, id in Strategies.ordre do
-		rangs[id] = sommeRangs[id] / math.max(1, partants[id])
-		indices[id] = victoires[id] / math.max(1, partants[id] / TAILLE)
+		rangs[id] = r[id] / math.max(1, p[id])
+		indices[id] = v[id] / math.max(1, p[id] / TAILLE)
 	end
-	return rangs, indices, parCourse
+	return rangs, indices
 end
 
-local NEUTRE = (TAILLE + 1) / 2
 for iteration = 1, ITERATIONS do
-	local rangs, indices, parCourse = evaluer()
-	local ligne = {}
-	for _, id in Strategies.ordre do
-		local s = Strategies.parId[id]
-		table.insert(
-			ligne,
-			string.format("%s c3=%.4f rang=%.2f victoires=%.2f", id, s.vitesse[3], rangs[id], indices[id])
+	print(`[{iteration}]`)
+	for _, categorie in Courses.CATEGORIES do
+		local rangs, indices = evaluer(categorie)
+		local ligne = {}
+		for _, id in Strategies.ordre do
+			table.insert(
+				ligne,
+				string.format(
+					"%s c=%.4f rang=%.2f vict=%.2f",
+					id,
+					Strategies.parId[id].finale[categorie],
+					rangs[id],
+					indices[id]
+				)
+			)
+		end
+		print(string.format("  %-8s %s", categorie, table.concat(ligne, " | ")))
+		if iteration < ITERATIONS then
+			local corrections, moyenne = {}, 0
+			for _, id in Strategies.ordre do
+				local e = (rangs[id] - NEUTRE) - POIDS_VICTOIRES * math.log(math.max(indices[id], 0.25))
+				local signe = if e > 0 then 1 elseif e < 0 then -1 else 0
+				local p = pas[id][categorie]
+				if signe ~= 0 and signes[id][categorie] ~= 0 then
+					p = if signe == signes[id][categorie] then p * 1.4 else p * 0.5
+				end
+				p = math.clamp(p, PAS_MIN, PAS_MAX)
+				pas[id][categorie], signes[id][categorie] = p, signe
+				-- Mal classée (e > 0) : un peu plus vite en finale
+				corrections[id] = signe * p
+				moyenne += corrections[id] / #Strategies.ordre
+			end
+			for _, id in Strategies.ordre do
+				local f = Strategies.parId[id].finale
+				f[categorie] += corrections[id] - moyenne
+			end
+		end
+	end
+end
+
+print("\nÀ reporter dans Course/Strategies :")
+for _, id in Strategies.ordre do
+	local f = Strategies.parId[id].finale
+	print(
+		string.format(
+			"  %s : finale = { Sprint = %.4f, Mile = %.4f, Moyenne = %.4f, Longue = %.4f },",
+			id,
+			f.Sprint,
+			f.Mile,
+			f.Moyenne,
+			f.Longue
 		)
-	end
-	print(`[{iteration}] {table.concat(ligne, " | ")}`)
-	for _, l in parCourse do
-		print(`      {l}`)
-	end
-	if iteration < ITERATIONS then
-		local corrections, moyenne = {}, 0
-		for _, id in Strategies.ordre do
-			-- Rang moyen, et un peu de victoires : une stratégie « tout ou rien »
-			-- peut avoir le même rang moyen qu'une autre et gagner bien plus.
-			corrections[id] = GAIN * (rangs[id] - NEUTRE) - GAIN_VICTOIRES * math.log(math.max(indices[id], 0.25))
-			moyenne += corrections[id] / #Strategies.ordre
-		end
-		for _, id in Strategies.ordre do
-			local s = Strategies.parId[id]
-			s.vitesse[3] += corrections[id] - moyenne
-		end
-	end
+	)
 end

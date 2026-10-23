@@ -240,7 +240,8 @@ local function courir(joueur: Player): Reseau.Reponse
 end
 
 local function abandonner(joueur: Player): Reseau.Reponse
-	if enCourse[joueur] then
+	local course = enCourse[joueur]
+	if course and not course.session.finie then
 		return { ok = false, erreur = "Termine d'abord ta course." }
 	end
 	if not carriereDe(joueur) then

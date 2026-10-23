@@ -148,7 +148,7 @@ Carriere.OBJECTIFS = {
 	{ tour = 16, course = "baie", place = 3, totalBots = 1800 },
 	{ tour = 20, course = "cimes", place = 3, totalBots = 2200 },
 	{ tour = 24, course = "phare", place = 3, totalBots = 2100 },
-	{ tour = 25, course = "archipel", place = 1, totalBots = 2800 },
+	{ tour = 25, course = "archipel", place = 1, totalBots = 2900 },
 } :: { Objectif }
 Carriere.BONUS_RIVALE = 150 -- la rivale a un peu plus que le peloton
 
