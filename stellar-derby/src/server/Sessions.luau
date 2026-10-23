@@ -80,6 +80,7 @@ export type Options = {
 	piste: string,
 	course: Courses.Course,
 	lobby: boolean?, -- courses libres : les spectateurs s'inscrivent au lobby
+	dureeLobby: number?, -- durée fixe du lobby (mode Live : le temps que le chat s'inscrive)
 	participants: { Participant }?, -- partantes imposées
 	bots: { Peloton.Definition }?, -- bots imposés (une rivale qui revient…)
 	marques: { [string]: string }?, -- nom → étiquette (« RIVALE »…)
@@ -516,20 +517,25 @@ end
 -- choix. Le compte à rebours repart si plus personne n'est inscrit.
 local function lobby(session: Session)
 	Sessions.changerPhase(session, "lobby", nil)
+	-- Avec des partantes imposées (les invités du mode Live), la course part
+	-- même si personne ne s'inscrit dans le serveur
+	local imposees = session.options.participants
+	local sansAttendre = imposees ~= nil and #imposees > 0
 	while not session.finie do
-		while inscrits(session) == 0 and not session.finie do
+		while inscrits(session) == 0 and not session.finie and not sansAttendre do
 			if session.dossier:GetAttribute("FinPhase") ~= 0 then
 				session.dossier:SetAttribute("FinPhase", 0)
 			end
 			task.wait(0.25)
 		end
-		local duree = if inscrits(session) <= 1 then Config.DUREE_LOBBY_SEUL else Config.DUREE_LOBBY
+		local duree = session.options.dureeLobby
+			or (if inscrits(session) <= 1 then Config.DUREE_LOBBY_SEUL else Config.DUREE_LOBBY)
 		Sessions.changerPhase(session, "lobby", duree)
 		local fin = maintenant() + duree
 		local minimum = maintenant() + 2
 		local abandon = false
 		while maintenant() < fin and not session.finie do
-			if inscrits(session) == 0 then
+			if inscrits(session) == 0 and not sansAttendre then
 				abandon = true
 				break
 			end
