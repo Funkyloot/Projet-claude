@@ -68,9 +68,23 @@ local Config = {
 	-- dans la Toolbox de Studio, onglet Audio, et copier l'identifiant.
 	-- Une chaîne vide coupe le son correspondant.
 	SONS = {
+		-- Musiques (une seule à la fois, en fondu)
 		musiqueCourse = "rbxassetid://1845636153", -- « Here Comes The Winner 2 » (APM)
-		foule = "rbxassetid://9112766176", -- « Crowd Cheer And Applause 1 » (ProSoundEffects)
+		musiqueAcademie = "rbxassetid://1839580585", -- « Peaceful Day Ukulele » (APM)
 		fanfare = "rbxassetid://1836490503", -- « Victory Fanfare » (APM)
+		-- Ambiances des hippodromes, très bas pendant les courses
+		ambianceArchipel = "rbxassetid://9113444532", -- « Birds Peaceful 2 » (ProSoundEffects)
+		ambianceBaie = "rbxassetid://9126201834", -- « Waves Long Rolling In Constantly Heavy Surf » (ProSoundEffects)
+		ambianceFalaises = "rbxassetid://9114057128", -- « Desert Wind Whistley Light Gusts 2 » (ProSoundEffects)
+		-- Sons de course
+		foule = "rbxassetid://9112766176", -- « Crowd Cheer And Applause 1 » (ProSoundEffects)
+		partez = "rbxassetid://9118114334", -- « Referee Whistle Interior Gymnasium 1 » (ProSoundEffects)
+		sprint = "rbxassetid://9125805579", -- « Rising Whoosh Hissing Build Up Ascending » (ProSoundEffects)
+		-- Interface
+		clic = "rbxassetid://15675032796", -- « Roblox_UI_Small_Click » (Roblox)
+		gain = "rbxassetid://127645268874265", -- « CoinTransfer_01 » (Roblox)
+		niveau = "rbxassetid://1846266827", -- « Short Fanfare » (APM)
+		titre = "rbxassetid://9126073001", -- « Synth Sparkle Tone High Pitch Bell Tone Ding » (ProSoundEffects)
 	},
 	VOLUME_MUSIQUE = 0.35,
 }

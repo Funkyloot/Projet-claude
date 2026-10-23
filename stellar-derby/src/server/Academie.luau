@@ -129,6 +129,7 @@ local POSITIONS = {
 	boutique = Vector3.new(70, 0, 145),
 	classements = Vector3.new(-70, 0, 145),
 	guide = Vector3.new(0, 0, 40),
+	kiosque = Vector3.new(-150, 0, 112), -- le kiosque à musique (décor seulement)
 }
 
 -- Tous les lieux de l'île (les allées y mènent).
@@ -411,7 +412,7 @@ local function construireDecor(parent: Instance)
 	local rng = Aleatoire.nouveau(4096)
 	local lieux = Academie.lieux()
 	local function loinDesLieux(p: Vector3): boolean
-		if (p - CENTRE).Magnitude < 60 then
+		if (p - CENTRE).Magnitude < 60 or (p - (CENTRE + POSITIONS.kiosque)).Magnitude < 30 then
 			return false
 		end
 		for _, lieu in lieux do
@@ -485,6 +486,325 @@ local function construireDecor(parent: Instance)
 	end
 end
 
+-- ─────────────────────────────── Ornements ───────────────────────────────
+-- Ce qui rend l'île vivante, sans rien changer aux lieux : l'arche d'entrée,
+-- des bancs, des parterres de fleurs, des panneaux indicateurs, des
+-- banderoles entre les lampadaires et un kiosque à musique.
+
+local BOIS = Color3.fromRGB(150, 105, 70)
+local COULEURS_FLEURS = {
+	Color3.fromRGB(255, 120, 170),
+	Color3.fromRGB(255, 255, 255),
+	Color3.fromRGB(255, 210, 80),
+	Color3.fromRGB(190, 140, 255),
+	Color3.fromRGB(255, 160, 120),
+}
+
+-- Les directions des allées (en radians, dans le plan x/z) : on n'y pose rien.
+local function anglesDesAllees(): { number }
+	local angles: { number } = { math.atan2(1, 0) } -- l'apparition et la guide, vers +z
+	for _, lieu in Academie.lieux() do
+		local v = lieu - CENTRE
+		table.insert(angles, math.atan2(v.Z, v.X))
+	end
+	return angles
+end
+
+local function loinDesAllees(angle: number, allees: { number }, marge: number): boolean
+	for _, a in allees do
+		local d = math.abs((angle - a + math.pi) % (2 * math.pi) - math.pi)
+		if d < marge then
+			return false
+		end
+	end
+	return true
+end
+
+local function auSol(angle: number, rayon: number, hauteur: number): Vector3
+	return CENTRE + Vector3.new(math.cos(angle) * rayon, hauteur, math.sin(angle) * rayon)
+end
+
+local function arche(parent: Instance)
+	local modele = Instance.new("Model")
+	modele.Name = "Arche"
+	modele.Parent = parent
+	-- Entre l'apparition et la fontaine : on arrive face à elle
+	local base = CFrame.lookAt(CENTRE + Vector3.new(0, 0, 19), CENTRE + Vector3.new(0, 0, 40))
+	for _, cote in { -1, 1 } do
+		piece(
+			modele,
+			"Pilier",
+			Vector3.new(1.6, 13, 1.6),
+			base * CFrame.new(cote * 10, 6.5, 0),
+			BLANC,
+			Enum.Material.Marble
+		)
+		piece(
+			modele,
+			"Socle",
+			Vector3.new(2.6, 1, 2.6),
+			base * CFrame.new(cote * 10, 0.5, 0),
+			PIERRE,
+			Enum.Material.Marble
+		)
+	end
+	local fronton = piece(
+		modele,
+		"Fronton",
+		Vector3.new(23, 3, 1),
+		base * CFrame.new(0, 14, 0),
+		Couleurs.ROSE,
+		Enum.Material.SmoothPlastic
+	)
+	etiquette(fronton, Enum.NormalId.Front, "ACADÉMIE DES VENTS", Couleurs.BLANC, nil, 30)
+	etiquette(fronton, Enum.NormalId.Back, "★ BONNE COURSE ★", Couleurs.BLANC, nil, 30)
+	local etoile = piece(
+		modele,
+		"Etoile",
+		Vector3.new(2.4, 2.4, 0.6),
+		base * CFrame.new(0, 16.6, 0) * CFrame.Angles(0, 0, math.rad(45)),
+		Couleurs.OR,
+		Enum.Material.Neon
+	)
+	etoile.CanCollide = false
+	-- Deux fanions de chaque côté
+	for _, cote in { -1, 1 } do
+		local fanion = Instance.new("WedgePart")
+		fanion.Name = "Fanion"
+		fanion.Anchored = true
+		fanion.CanCollide = false
+		fanion.Size = Vector3.new(0.2, 2.4, 1.6)
+		fanion.CFrame = base * CFrame.new(cote * 10, 11.5, -1.4) * CFrame.Angles(math.pi, 0, 0)
+		fanion.Color = if cote < 0 then Couleurs.ROSE_PALE else BLANC
+		fanion.Material = Enum.Material.Fabric
+		fanion.Parent = modele
+	end
+end
+
+local function banc(parent: Instance, angle: number)
+	local position = auSol(angle, 40, 0)
+	local cadre = CFrame.lookAt(position, CENTRE)
+	local modele = Instance.new("Model")
+	modele.Name = "Banc"
+	modele.Parent = parent
+	piece(modele, "Assise", Vector3.new(6, 0.4, 1.8), cadre * CFrame.new(0, 1.6, 0), BOIS, Enum.Material.Wood)
+	piece(modele, "Dossier", Vector3.new(6, 1.6, 0.3), cadre * CFrame.new(0, 2.8, 0.85), BOIS, Enum.Material.Wood)
+	for _, cote in { -1, 1 } do
+		piece(
+			modele,
+			"Pied",
+			Vector3.new(0.4, 1.6, 1.6),
+			cadre * CFrame.new(cote * 2.6, 0.8, 0),
+			Color3.fromRGB(60, 60, 70),
+			Enum.Material.Metal
+		)
+	end
+end
+
+local function parterre(parent: Instance, angle: number, rng: Aleatoire.Aleatoire)
+	local position = auSol(angle, 58, 0)
+	local cadre = CFrame.lookAt(position, CENTRE)
+	local modele = Instance.new("Model")
+	modele.Name = "Parterre"
+	modele.Parent = parent
+	piece(modele, "Bordure", Vector3.new(11, 0.8, 5), cadre * CFrame.new(0, 0.4, 0), PIERRE, Enum.Material.Cobblestone)
+	piece(
+		modele,
+		"Terre",
+		Vector3.new(10, 0.3, 4),
+		cadre * CFrame.new(0, 0.85, 0),
+		Color3.fromRGB(95, 70, 50),
+		Enum.Material.Ground
+	)
+	for _ = 1, 12 do
+		local x, z = rng:entre(-4.4, 4.4), rng:entre(-1.6, 1.6)
+		local hauteur = rng:entre(0.6, 1.3)
+		local tige = piece(
+			modele,
+			"Tige",
+			Vector3.new(0.15, hauteur, 0.15),
+			cadre * CFrame.new(x, 1 + hauteur / 2, z),
+			Color3.fromRGB(70, 150, 70),
+			Enum.Material.Grass
+		)
+		tige.CanCollide = false
+		local fleur = piece(
+			modele,
+			"Fleur",
+			Vector3.new(0.7, 0.7, 0.7),
+			cadre * CFrame.new(x, 1 + hauteur + 0.2, z),
+			rng:choisir(COULEURS_FLEURS),
+			Enum.Material.SmoothPlastic
+		)
+		fleur.Shape = Enum.PartType.Ball
+		fleur.CanCollide = false
+	end
+end
+
+-- Un panneau en bois : une planche par destination, tournée vers elle.
+local function panneau(parent: Instance, position: Vector3)
+	local modele = Instance.new("Model")
+	modele.Name = "Panneau"
+	modele.Parent = parent
+	piece(
+		modele,
+		"Poteau",
+		Vector3.new(0.8, 10, 0.8),
+		CFrame.new(position + Vector3.new(0, 5, 0)),
+		BOIS,
+		Enum.Material.Wood
+	)
+	local destinations: { { texte: string, cible: Vector3 } } = {}
+	for _, def in Pistes.liste do
+		table.insert(destinations, { texte = `🏇 {def.nom}`, cible = positionPortail(def.id) })
+	end
+	table.insert(destinations, { texte = "🏋️ Entraînement", cible = CENTRE + POSITIONS.entrainement })
+	table.insert(destinations, { texte = "🎓 Carrières", cible = CENTRE + POSITIONS.carriere })
+	table.insert(destinations, { texte = "🛍️ Boutique", cible = CENTRE + POSITIONS.boutique })
+	table.insert(destinations, { texte = "🏆 Classements", cible = CENTRE + POSITIONS.classements })
+	for i, d in destinations do
+		local hauteur = 9.4 - (i - 1) * 1.15
+		local vers = sol(d.cible) - sol(position)
+		local direction = if vers.Magnitude > 0.1 then vers.Unit else Vector3.new(1, 0, 0)
+		-- La planche dépasse du poteau du côté de sa destination
+		local centre = position + Vector3.new(0, hauteur, 0) + direction * 3
+		local planche = piece(
+			modele,
+			"Planche",
+			Vector3.new(0.25, 0.95, 5.6),
+			CFrame.lookAt(centre, centre + direction),
+			Color3.fromRGB(205, 160, 110),
+			Enum.Material.Wood
+		)
+		etiquette(planche, Enum.NormalId.Right, d.texte, Color3.fromRGB(70, 45, 30), nil, 40)
+		etiquette(planche, Enum.NormalId.Left, d.texte, Color3.fromRGB(70, 45, 30), nil, 40)
+	end
+end
+
+-- Des fanions roses et blancs, d'un lampadaire à l'autre.
+local function banderoles(parent: Instance)
+	local modele = Instance.new("Model")
+	modele.Name = "Banderoles"
+	modele.Parent = parent
+	for i = 1, 8 do
+		local a = auSol(i / 8 * 2 * math.pi, 50, 9.6)
+		local b = auSol((i % 8 + 1) / 8 * 2 * math.pi, 50, 9.6)
+		local milieu = (a + b) / 2 - Vector3.new(0, 0.8, 0)
+		local corde = piece(
+			modele,
+			"Corde",
+			Vector3.new(0.12, 0.12, (b - a).Magnitude),
+			CFrame.lookAt(milieu, milieu + (b - a)),
+			Color3.fromRGB(240, 240, 245)
+		)
+		corde.CanCollide = false
+		for k = 1, 6 do
+			local t = k / 7
+			-- La corde pend un peu au milieu
+			local p = a:Lerp(b, t) - Vector3.new(0, 0.8 + math.sin(t * math.pi) * 0.9, 0)
+			local fanion = Instance.new("WedgePart")
+			fanion.Name = "Fanion"
+			fanion.Anchored = true
+			fanion.CanCollide = false
+			fanion.CanQuery = false
+			fanion.Size = Vector3.new(0.1, 1.4, 1)
+			fanion.CFrame = CFrame.lookAt(p, p + (b - a)) * CFrame.new(0, -0.7, 0) * CFrame.Angles(math.pi, 0, 0)
+			fanion.Color = if k % 2 == 0 then BLANC else Couleurs.ROSE
+			fanion.Material = Enum.Material.Fabric
+			fanion.Parent = modele
+		end
+	end
+end
+
+local function kiosque(parent: Instance)
+	local modele = Instance.new("Model")
+	modele.Name = "Kiosque"
+	modele.Parent = parent
+	local centre = CENTRE + POSITIONS.kiosque
+	local plancher = piece(
+		modele,
+		"Plancher",
+		Vector3.new(2, 18, 18),
+		CFrame.new(centre + Vector3.new(0, 1, 0)) * CFrame.Angles(0, 0, math.pi / 2),
+		BLANC,
+		Enum.Material.WoodPlanks
+	)
+	plancher.Shape = Enum.PartType.Cylinder
+	for i = 1, 8 do
+		local angle = i / 8 * 2 * math.pi
+		local p = centre + Vector3.new(math.cos(angle) * 8, 0, math.sin(angle) * 8)
+		piece(
+			modele,
+			"Colonne",
+			Vector3.new(0.6, 8, 0.6),
+			CFrame.new(p + Vector3.new(0, 6, 0)),
+			BLANC,
+			Enum.Material.Marble
+		)
+		-- Un toit en huit pans
+		local pan = Instance.new("WedgePart")
+		pan.Name = "Toit"
+		pan.Anchored = true
+		pan.Size = Vector3.new(7, 3, 5)
+		local milieu = centre + Vector3.new(math.cos(angle) * 5.5, 11.5, math.sin(angle) * 5.5)
+		pan.CFrame = CFrame.lookAt(milieu, Vector3.new(centre.X, milieu.Y, centre.Z))
+		pan.Color = if i % 2 == 0 then Couleurs.ROSE else BLANC
+		pan.Material = Enum.Material.SmoothPlastic
+		pan.Parent = modele
+	end
+	local pointe = piece(
+		modele,
+		"Pointe",
+		Vector3.new(1.4, 1.4, 1.4),
+		CFrame.new(centre + Vector3.new(0, 13.8, 0)),
+		Couleurs.OR,
+		Enum.Material.Neon
+	)
+	pointe.Shape = Enum.PartType.Ball
+	-- Des notes de musique qui flottent au-dessus
+	local note = piece(modele, "Notes", Vector3.new(4, 3, 0.2), CFrame.new(centre + Vector3.new(0, 17, 0)), BLANC)
+	note.Transparency = 1
+	note.CanCollide = false
+	local affiche = Instance.new("BillboardGui")
+	affiche.Size = UDim2.fromOffset(140, 60)
+	affiche.LightInfluence = 0
+	affiche.MaxDistance = 160
+	affiche.Parent = note
+	local texte = Instance.new("TextLabel")
+	texte.Size = UDim2.fromScale(1, 1)
+	texte.BackgroundTransparency = 1
+	texte.Text = "♪ ♫ ♪"
+	texte.TextScaled = true
+	texte.TextColor3 = Couleurs.ROSE
+	texte.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
+	texte.Parent = affiche
+end
+
+local function construireOrnements(parent: Instance)
+	local dossier = Instance.new("Folder")
+	dossier.Name = "Ornements"
+	dossier.Parent = parent
+	local rng = Aleatoire.nouveau(2718)
+	local allees = anglesDesAllees()
+	arche(dossier)
+	-- Bancs et parterres en alternance, loin des allées
+	local n = 0
+	for i = 0, 23 do
+		local angle = i / 24 * 2 * math.pi
+		if loinDesAllees(angle, allees, 0.3) then
+			n += 1
+			if n % 2 == 1 then
+				banc(dossier, angle)
+			else
+				parterre(dossier, angle, rng)
+			end
+		end
+	end
+	panneau(dossier, CENTRE + Vector3.new(-13, 0, 31))
+	banderoles(dossier)
+	kiosque(dossier)
+end
+
 local function reperesDe(racine: Instance): Reperes
 	local place = racine:WaitForChild("Place")
 	return {
@@ -514,6 +834,7 @@ function Academie.construire(): Reperes
 	construireBoutique(racine)
 	construireClassements(racine)
 	construireDecor(racine)
+	construireOrnements(racine)
 	racine.Parent = Workspace
 	cache = reperesDe(racine)
 	return cache :: Reperes

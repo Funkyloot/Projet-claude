@@ -14,7 +14,9 @@ gratuitement, et comment l'ajouter au jeu.
 | **Ton avatar** | tu cours avec ton propre avatar Roblox, plus les oreilles et la queue de la robe choisie au lobby | — |
 | **Terrain** | herbe, collines tout autour, rochers, étang avec plage, taches d'herbe dense | `src/server/Hippodrome.luau` |
 | **Hippodrome** | piste, lices, arche, tribune, écran géant, podium, arbres | `src/server/Hippodrome.luau` |
-| **Sons** | musique de course, foule à l'arrivée, fanfare au podium | `Config.SONS` dans `src/shared/Config.luau` |
+| **Sons** | musiques (Académie, course, podium), ambiance de chaque hippodrome, sifflet du départ, sprint, foule, sons d'interface | `Config.SONS` dans `src/shared/Config.luau` |
+| **Chansons du concert** | quatre musiques APM | `Concert.CHANSONS` dans `src/shared/Jeu/Concert.luau` |
+| **Décor de l'Académie** | fontaine, arche « Académie des Vents », bancs, parterres de fleurs, panneaux indicateurs, banderoles, kiosque à musique | `src/server/Academie.luau` |
 
 **Pourquoi le catalogue est gratuit ici.** Dans un jeu, on peut habiller
 n'importe quel personnage avec un objet public du catalogue (accessoire,
@@ -91,16 +93,43 @@ Conseils :
 Rock 5314247866. Le cerisier 12800074855 n'est pas dans la liste non plus : il
 contient deux scripts.
 
-Les sons déjà choisis (bibliothèque Roblox, gratuits pour tous) :
+Les sons déjà choisis : bibliothèque sous licence de Roblox (APM Music,
+ProSoundEffects) et sons de Roblox lui-même, gratuits pour tous les jeux.
+Chaque numéro a été vérifié le 23 octobre 2026 avec l'API de la Toolbox
+(éditeur et durée).
 
-| Moment | Titre | Numéro |
-|---|---|---|
-| Pendant la course | Here Comes The Winner 2 (APM) | 1845636153 |
-| Arrivée de la gagnante | Crowd Cheer And Applause 1 (ProSoundEffects) | 9112766176 |
-| Podium | Victory Fanfare (APM) | 1836490503 |
+| Moment | Clé dans `Config.SONS` | Titre | Éditeur | Numéro |
+|---|---|---|---|---|
+| À l'Académie (en boucle) | `musiqueAcademie` | Peaceful Day Ukulele | APM | 1839580585 |
+| Pendant la course | `musiqueCourse` | Here Comes The Winner 2 | APM | 1845636153 |
+| Podium | `fanfare` | Victory Fanfare | APM | 1836490503 |
+| Ambiance de l'Archipel | `ambianceArchipel` | Birds Peaceful 2 | ProSoundEffects | 9113444532 |
+| Ambiance de la Baie | `ambianceBaie` | Waves Long Rolling In Constantly Heavy Surf | ProSoundEffects | 9126201834 |
+| Ambiance des Falaises | `ambianceFalaises` | Desert Wind Whistley Light Gusts 2 | ProSoundEffects | 9114057128 |
+| Ouverture des stalles | `partez` | Referee Whistle Interior Gymnasium 1 | ProSoundEffects | 9118114334 |
+| Ton sprint | `sprint` | Rising Whoosh Hissing Build Up Ascending | ProSoundEffects | 9125805579 |
+| Arrivée de la gagnante | `foule` | Crowd Cheer And Applause 1 | ProSoundEffects | 9112766176 |
+| Clic d'un bouton | `clic` | Roblox_UI_Small_Click | Roblox | 15675032796 |
+| Gain d'étoiles | `gain` | CoinTransfer_01 | Roblox | 127645268874265 |
+| Niveau atteint | `niveau` | Short Fanfare | APM | 1846266827 |
+| Nouveau titre | `titre` | Synth Sparkle Tone High Pitch Bell Tone Ding | ProSoundEffects | 9126073001 |
 
-Je ne les ai pas écoutés : écoute-les dans la Toolbox ce soir et remplace
-ceux qui ne te plaisent pas.
+Les chansons du concert de la victoire (dans `src/shared/Jeu/Concert.luau`) :
+
+| Chanson du jeu | Morceau | Éditeur | Numéro |
+|---|---|---|---|
+| Étoiles de la piste | Upbeat Pop (Kosinus) | APM | 1839763308 |
+| Cœur au galop | Cheerful Pop (Kosinus) | APM | 1839766271 |
+| Lumière d'arrivée | Tonight All Right E (Hermann Langschwert) | APM | 1847760598 |
+| Rêve d'archipel | Dream Within A Dream C (Hideyuki Asada) | APM | 1845976243 |
+
+Je ne les ai pas écoutés (pas de son ici) : écoute-les dans la Toolbox et
+remplace ceux qui ne te plaisent pas. **Pour remplacer un son** : dans
+Studio, Toolbox → onglet Audio, cherche, clic droit sur le son → « Copy
+Asset ID », puis colle le numéro dans `Config.SONS` à la place de l'ancien
+(garde la forme `"rbxassetid://123456"`). Une chaîne vide coupe ce son.
+Pour une chanson du concert, change aussi son `tempo` (battements par
+minute) si tu le connais : la partition du jeu de rythme le suit.
 
 ### Sur le site Roblox : le catalogue d'avatar
 
