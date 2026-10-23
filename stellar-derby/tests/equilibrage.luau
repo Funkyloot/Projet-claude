@@ -52,10 +52,19 @@ local debut = os.clock()
 sortie("# Rapport d'équilibrage")
 sortie("")
 sortie(`{N} courses par distance, {TAILLE} partantes, bots uniquement sauf mention contraire.`)
-sortie("Généré par `lune run tests/equilibrage {N} --ecrire`.")
+sortie(`Généré par \`lune run tests/equilibrage {N} --ecrire\`.`)
 sortie("")
 sortie("**Indice** = victoires observées ÷ victoires attendues si tout le monde se valait.")
 sortie("1,00 = juste part ; au-dessus, la stratégie est avantagée.")
+sortie("")
+sortie(
+	"Les coefficients de finale sont réglés course par course par `tests/reglage`, sur d'autres courses "
+		.. "simulées que celles-ci : ce rapport mesure le réglage sur des courses qu'il n'a jamais vues. "
+		.. "Avec 150 courses, le hasard seul fait varier un indice d'environ ± 0,3 et un rang moyen d'environ "
+		.. "± 0,3. Le réglage égalise surtout le rang moyen ; selon la course, une stratégie peut rester plus "
+		.. "régulière (bon rang, moins de victoires) ou plus « tout ou rien » (rang moyen plus loin, plus de "
+		.. "victoires)."
+)
 
 -- ─────────────── 1. Stratégies et stalles, par distance ───────────────
 

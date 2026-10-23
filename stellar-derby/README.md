@@ -27,8 +27,8 @@ endurance, quatre stratégies (Fusée, Ombre, Vague, Tempête), couloirs,
 sillage, blocages, duels, compétences, sprint final, photo-finish au
 ralenti, écarts à la japonaise. **Une course libre est égale pour toutes** :
 même total de stats, même distance quel que soit le couloir, un numéro de
-stalle qui ne pèse rien (mesuré), et des stratégies équilibrées catégorie
-par catégorie.
+stalle qui ne pèse rien (mesuré), et des stratégies équilibrées course par
+course.
 
 **Les activités.**
 
@@ -116,7 +116,7 @@ lune run tests/jeu            # sauvegarde, économie, saisons, catalogue, titre
 lune run tests/entrainement   # et de même : carriere, concert, boutique, classements,
                               # rivales, duo, live, tutoriel
 lune run tests/equilibrage 150 --ecrire   # rapport → docs/EQUILIBRAGE.md
-lune run tests/reglage 8 30               # auto-réglage des stratégies, par catégorie
+lune run tests/reglage 8 90               # auto-réglage des stratégies, course par course (long)
 ```
 
 `tests/carriere` fait courir des carrières entières pour vérifier la

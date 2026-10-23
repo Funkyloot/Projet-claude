@@ -14,10 +14,14 @@
 -- `zone` est la place visée dans le peloton, en fraction (0 = tête,
 -- 1 = queue). Elle guide l'IA ; un joueur en fait ce qu'il veut.
 --
--- `finale` affine le coefficient de finale par catégorie de course (Sprint,
--- Mile, Moyenne, Longue) : sans lui, une Fusée qui brille sur 1 200 m
--- s'effondre sur 3 200 m. Strategies.pour(id, categorie) rend la stratégie
--- avec le bon coefficient ; le moteur et le HUD passent par là.
+-- Le coefficient de finale dépend aussi de la course : sans ça, une Fusée
+-- qui brille sur 1 200 m s'effondre sur 3 200 m, et le terrain lourd ou le
+-- tracé d'un hippodrome favorisent une stratégie plutôt qu'une autre.
+-- `Strategies.FINALES` donne le coefficient de chaque stratégie, course par
+-- course ; `finale` donne celui d'une catégorie (Sprint, Mile, Moyenne,
+-- Longue), pour une course qui n'aurait pas encore le sien.
+-- Strategies.pour(id, course) rend la stratégie avec le bon coefficient ; le
+-- moteur et le HUD passent par là.
 
 export type Strategie = {
 	id: string,
@@ -91,25 +95,48 @@ function Strategies.obtenir(id: string): Strategie
 	return Strategies.parId[id] or Strategies.parId.ombre
 end
 
-local parCategorie: { [string]: Strategie } = {}
+-- Coefficient de finale de chaque stratégie, course par course. Réglé par
+-- `lune run tests/reglage` : ne pas retoucher à la main.
+Strategies.FINALES = {
+	alizes = { fusee = 0.9779, ombre = 0.9785, vague = 0.9864, tempete = 0.9932 },
+	aube = { fusee = 0.9791, ombre = 0.9776, vague = 0.9879, tempete = 0.9917 },
+	archipel = { fusee = 0.9800, ombre = 0.9763, vague = 0.9870, tempete = 0.9929 },
+	marees = { fusee = 1.0209, ombre = 0.9946, vague = 0.9742, tempete = 0.9475 },
+	embruns = { fusee = 0.9775, ombre = 0.9778, vague = 0.9881, tempete = 0.9926 },
+	coquillages = { fusee = 0.9775, ombre = 0.9784, vague = 0.9870, tempete = 0.9933 },
+	baie = { fusee = 0.9814, ombre = 0.9768, vague = 0.9863, tempete = 0.9917 },
+	phare = { fusee = 1.0456, ombre = 0.9570, vague = 0.9692, tempete = 0.9654 },
+	goelands = { fusee = 0.9777, ombre = 0.9774, vague = 0.9869, tempete = 0.9940 },
+	vent = { fusee = 0.9777, ombre = 0.9773, vague = 0.9877, tempete = 0.9935 },
+	cimes = { fusee = 0.9830, ombre = 0.9769, vague = 0.9847, tempete = 0.9915 },
+	falaises = { fusee = 1.0027, ombre = 0.9720, vague = 0.9899, tempete = 0.9725 },
+} :: { [string]: { [string]: number } }
 
--- La stratégie `id` telle qu'elle court dans une course de cette catégorie :
--- son coefficient de finale est celui de la catégorie, s'il y en a un.
-function Strategies.pour(id: string, categorie: string?): Strategie
+local parCourse: { [string]: Strategie } = {}
+
+-- La stratégie `id` telle qu'elle court dans cette course : son coefficient
+-- de finale est celui de la course, sinon celui de sa catégorie.
+function Strategies.pour(id: string, course: { id: string, categorie: string }?): Strategie
 	local base = Strategies.obtenir(id)
-	local finale = base.finale
-	local coefficient = finale and categorie and finale[categorie]
+	if not course then
+		return base
+	end
+	local parStrategie = Strategies.FINALES[course.id]
+	local coefficient = parStrategie and parStrategie[base.id]
+	if not coefficient and base.finale then
+		coefficient = base.finale[course.categorie]
+	end
 	if not coefficient then
 		return base
 	end
-	local cle = `{base.id}/{categorie}`
-	local existante = parCategorie[cle]
+	local cle = `{base.id}/{course.id}`
+	local existante = parCourse[cle]
 	if existante and existante.vitesse[3] == coefficient then
 		return existante
 	end
 	local copie = table.clone(base)
 	copie.vitesse = { base.vitesse[1], base.vitesse[2], coefficient }
-	parCategorie[cle] = copie
+	parCourse[cle] = copie
 	return copie
 end
 

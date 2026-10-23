@@ -168,6 +168,8 @@ Personne n'est avantagée au départ :
 - **Des stalles centrées** : les stalles laissent un couloir libre contre chaque lice.
 - **Des duels au coude-à-coude** : le duel se déclenche entre deux coureuses à la même hauteur, quel que soit leur couloir. Quand il fallait être côte à côte, les coureuses du milieu de la piste, qui ont une voisine de chaque côté, en profitaient plus que celles des bords : sur 800 courses, les stalles du milieu gagnaient environ une demi-place.
 
+- **Des stratégies équilibrées course par course** : le coefficient de finale de chaque stratégie est réglé automatiquement pour chacune des douze courses (tracé, distance, terrain), et mesuré ensuite sur d'autres courses simulées.
+
 Le couloir garde tout son intérêt tactique : se mettre dans le sillage d'une concurrente fait économiser 15 % d'endurance, et il faut trouver une ouverture pour doubler.
 
 ## 6. Interface et contrôles
@@ -198,6 +200,7 @@ Classées par ordre de mise en œuvre. ✅ = dans le jeu.
 8. ✅ **Les rivales du destin.** Le jeu mémorise qui t'a battue d'une encolure ; elle réapparaît marquée « RIVALE », et la battre rapporte un titre.
 9. ✅ **Le duo entraîneuse–coureuse.** Un joueur court, l'autre entraîne : une roue d'ordres (« Garde ton souffle ! », « Dans son sillage ! », « MAINTENANT ! ») donne de petits bonus s'ils tombent au bon moment — en carrière seulement ; en course libre, ce ne sont que des conseils. C'est la relation centrale de l'anime, transformée en coopération.
 10. ✅ **La carrière roguelite et l'héritage.** Trois années en 30–45 min ; la coureuse devient une Légende qui peut transmettre des bonus aux prochaines carrières, les tiennes ou celles de tes amies.
+    *Difficulté mesurée* par `tests/carriere` (carrières entières jouées par l'IA) : bien menée, une carrière atteint la finale environ sept fois sur dix et la gagne une fois sur deux ; bâclée (sans repos, entraînements ratés), elle va souvent jusqu'à la finale mais ne la gagne pas. Une coureuse nettement plus forte que le peloton gagne plus souvent en Fusée ou en Ombre (devant, elle évite les bouchons) qu'en Vague ou en Tempête : à surveiller en jouant.
 11. **Des pistes vivantes.** *Coupe des Marées* : le raccourci côté mer se ferme quand la marée monte ; courses de nuit aux lanternes ; une mécanique propre à chaque île.
 
 ## 8. Le mode Live (TikTok)

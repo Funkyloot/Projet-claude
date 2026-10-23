@@ -387,10 +387,12 @@ par `tests/<fonctionnalite>.luau`, un service serveur et un écran client.
 
 ### Équilibrage des stratégies
 
-Le coefficient de finale de chaque stratégie dépend de la catégorie de la
-course (`finale` dans `Course/Strategies`). Le moteur et le HUD prennent la
-stratégie par `Strategies.pour(id, categorie)`. Les valeurs sortent de
-`lune run tests/reglage` ; le rapport est dans `EQUILIBRAGE.md`.
+Le coefficient de finale de chaque stratégie dépend de la course
+(`Strategies.FINALES` dans `Course/Strategies`, avec un repli par catégorie
+dans `finale`). Le moteur et le HUD prennent la stratégie par
+`Strategies.pour(id, course)`. Les valeurs sortent de
+`lune run tests/reglage` (graines distinctes de celles du rapport) ; le
+rapport est dans `EQUILIBRAGE.md`.
 
 ### Les crochets ajoutés au socle
 
