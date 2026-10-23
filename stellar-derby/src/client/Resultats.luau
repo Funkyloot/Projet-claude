@@ -112,7 +112,9 @@ end
 function Resultats.mettreAJour()
 	if panneau and panneau.Visible then
 		local reste = math.max(0, math.ceil(Etat.finPhase - Etat.maintenant()))
-		pied.Text = `Prochaine course dans {reste} s`
+		pied.Text = if Etat.genre == "publique"
+			then `Concert puis prochaine course · {reste} s`
+			else `Suite dans {reste} s`
 	end
 end
 

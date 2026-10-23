@@ -1,13 +1,14 @@
 --!nocheck
--- Décor — exécute le constructeur d'hippodrome hors de Studio et l'enregistre
--- dans la place, pour qu'il soit visible dès l'ouverture dans Studio.
+-- Décor — exécute les constructeurs du monde (l'Académie et les trois
+-- hippodromes) hors de Studio et les enregistre dans la place, pour qu'ils
+-- soient visibles dès l'ouverture dans Studio.
 --
 --     rojo build -o build/StellarDerby.rbxl
 --     lune run tools/decor build/StellarDerby.rbxl
 --
--- Le code exécuté est exactement celui du jeu (src/server/Hippodrome.luau),
--- lu depuis la place construite par Rojo : si ce script passe, le
--- constructeur ne plante pas. Seul le terrain (voxels) n'est pas
+-- Le code exécuté est exactement celui du jeu (src/server/Academie.luau et
+-- Hippodrome.luau), lu depuis la place construite par Rojo : si ce script
+-- passe, les constructeurs ne plantent pas. Seul le terrain (voxels) n'est pas
 -- enregistrable ici ; le serveur le remplit au lancement de toute façon.
 
 local fs = require("@lune/fs")
@@ -66,30 +67,62 @@ local function exiger(module)
 end
 
 local workspace = place:GetService("Workspace")
-local ancien = workspace:FindFirstChild("Hippodrome")
-if ancien then
-	ancien:Destroy()
-end
-
-local Hippodrome = exiger(place:GetService("ServerScriptService").Serveur.Hippodrome)
-local reperes = Hippodrome.construire()
-assert(reperes.ecran and reperes.apparition and #reperes.podium == 3, "repères incomplets")
-
--- Les stalles d'une course : construites puis retirées, pour vérifier
--- qu'elles se montent sans erreur pour chaque taille de peloton.
-for _, partantes in { 8, 12, 16 } do
-	Hippodrome.construireStalles(2000, partantes):Destroy()
-end
-
-local pieces, guis = 0, 0
-for _, i in workspace.Hippodrome:GetDescendants() do
-	if i:IsA("BasePart") then
-		pieces += 1
-	elseif i:IsA("SurfaceGui") then
-		guis += 1
+for _, nom in { "Hippodrome", "Hippodromes", "Academie" } do
+	local ancien = workspace:FindFirstChild(nom)
+	if ancien then
+		ancien:Destroy()
 	end
 end
-print(`Hippodrome : {pieces} pièces, {guis} panneaux, {remplissages} remplissages de terrain`)
+
+local serveur = place:GetService("ServerScriptService").Serveur
+local partage = place:GetService("ReplicatedStorage").Partage
+local Academie = exiger(serveur.Academie)
+local Hippodrome = exiger(serveur.Hippodrome)
+local Stalles = exiger(partage.Stalles)
+local Monde = exiger(partage.Monde)
+local Pistes = exiger(partage.Course.Pistes)
+
+local academie = Academie.construire()
+assert(academie.apparition, "l'Académie n'a pas de point d'apparition")
+
+local function compter(racine)
+	local pieces, guis, invites = 0, 0, 0
+	for _, i in racine:GetDescendants() do
+		if i:IsA("BasePart") then
+			pieces += 1
+		elseif i:IsA("SurfaceGui") then
+			guis += 1
+		elseif i:IsA("ProximityPrompt") then
+			invites += 1
+		end
+	end
+	return pieces, guis, invites
+end
+
+local total = 0
+local p, g, inv = compter(workspace.Academie)
+total += p
+print(`Académie : {p} pièces, {g} panneaux, {inv} invites`)
+
+for _, def in Pistes.liste do
+	local reperes = Hippodrome.construire(def.id)
+	assert(
+		reperes.ecran and reperes.tribune and reperes.scene and #reperes.podium == 3,
+		`{def.id} : repères incomplets`
+	)
+	for _, nom in { "Place1", "Place2", "Place3", "Fosse", "VueCamera" } do
+		assert(reperes.scene:FindFirstChild(nom), `{def.id} : la scène n'a pas de {nom}`)
+	end
+	-- Les stalles d'une course : construites puis retirées, pour vérifier
+	-- qu'elles se montent sans erreur pour chaque taille de peloton.
+	for _, partantes in { 8, 12, 16, 30 } do
+		Stalles.construire(Monde.pour(def.id), 2000, partantes, workspace):Destroy()
+	end
+	local pieces, guis, invites = compter(reperes.racine)
+	total += pieces
+	print(`{def.nom} : {pieces} pièces, {guis} panneaux, {invites} invites`)
+end
+print(`Monde : {total} pièces en tout, {remplissages} remplissages de terrain`)
 
 fs.writeFile(chemin, roblox.serializePlace(place))
 print(`→ {chemin}`)

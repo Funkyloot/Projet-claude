@@ -19,13 +19,19 @@ local Config = {
 	-- Peloton
 	TAILLE_PELOTON = 12,
 	TAILLE_PELOTON_MAX = 16,
+	TAILLE_PELOTON_LIVE = 30, -- mode Live : les invités du chat remplissent les stalles
 
-	-- Hippodrome (mètres). Ces dimensions placent les stalles de départ des
-	-- distances du catalogue sur des lignes droites (voir Course/Courses).
+	-- Géométrie de l'hippodrome de l'Archipel (mètres), la piste de
+	-- référence des tests. Les trois hippodromes sont décrits dans
+	-- Course/Pistes.
 	LIGNE_DROITE = 300,
 	RAYON_VIRAGE = 95,
 	LARGEUR_PISTE = 14,
 	POSITION_ARRIVEE = 0.8, -- fraction de la ligne droite des tribunes
+
+	-- La mer autour des îles (terrain d'eau). La couper allège les vieux
+	-- téléphones.
+	MER = true,
 
 	-- Déroulé d'une partie (secondes)
 	DUREE_LOBBY = 20,
@@ -34,8 +40,15 @@ local Config = {
 	DUREE_STALLES = 3,
 	DUREE_RESULTATS = 14,
 
+	DUREE_ATTENTE_SEUL = 3, -- carrière, tutoriel : pas de lobby, un court temps de mise en place
+
 	-- Photo-finish : la course entière passe au ralenti pour tout le monde
 	RALENTI_PHOTO_FINISH = 0.3,
+
+	-- Sauvegarde
+	SAUVEGARDE_AUTO = 60, -- s entre deux sauvegardes automatiques
+	VERROU_PERIME = 30 * 60, -- s : au-delà, le verrou d'un serveur disparu est repris
+	REQUETES_PAR_SECONDE = 8, -- requêtes (boutique, carrière…) acceptées par joueur et par seconde
 
 	-- Anti-abus : nombre de commandes acceptées par joueur et par seconde
 	COMMANDES_PAR_SECONDE = 20,

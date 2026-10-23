@@ -60,7 +60,7 @@ function Sons.demarrer()
 			if f then
 				f:Play()
 			end
-		elseif phase == "lobby" and m and m.IsPlaying then
+		elseif (phase == "lobby" or phase == "aucune" or phase == "fin") and m and m.IsPlaying then
 			fondu(m, 0, 1, true)
 		end
 	end)

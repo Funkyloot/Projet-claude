@@ -97,6 +97,7 @@ export type Evenement = {
 	temps: number?,
 	resultat: string?,
 	auto: boolean?,
+	source: string?, -- d'où vient un bonus (« entraineuse »…)
 }
 
 export type Resultat = {
@@ -414,6 +415,28 @@ function Simulation._reagir(self: Simulation, c: Coureuse, resultat: "parfait" |
 		table.insert(c.effets, { genre = "acceleration", valeur = -0.3, reste = 2 })
 	end
 	table.insert(evenements, { genre = "reaction", id = c.id, resultat = resultat :: string })
+end
+
+-- Un effet venu d'ailleurs que des compétences (les ordres de
+-- l'entraîneuse en carrière, par exemple). Mêmes effets, même aura ; la
+-- course ne fait rien de plus que ce que l'effet décrit.
+function Simulation.appliquerEffet(self: Simulation, id: number, effet: Competences.Effet, source: string)
+	local c = self.coureuses[id]
+	if not c or not c.partie or c.arrivee or self.termine then
+		return
+	end
+	if effet.genre == "endurance" then
+		c.endurance = math.min(c.enduranceMax, c.endurance + effet.valeur * c.enduranceMax)
+		if c.endurance > 0 then
+			c.epuisee = false
+		end
+		c.auraReste = 1.2
+	else
+		table.insert(c.effets, { genre = effet.genre, valeur = effet.valeur, reste = effet.duree })
+		c.auraReste = effet.duree
+	end
+	c.aura = AURA_PAR_GENRE[effet.genre]
+	table.insert(self.enAttente, { genre = "bonus", id = c.id, source = source })
 end
 
 -- Commande d'un joueur. Tout est validé ici : le client n'est jamais cru

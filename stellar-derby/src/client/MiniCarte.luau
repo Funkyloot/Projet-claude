@@ -1,11 +1,15 @@
 --!strict
 -- MiniCarte — la piste vue d'en haut, avec un point par coureuse.
+--
+-- Le tracé est redessiné quand on change d'hippodrome : chaque piste a sa
+-- forme.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Partage = ReplicatedStorage:WaitForChild("Partage")
 local Couleurs = require(Partage:WaitForChild("Couleurs"))
-local Monde = require(Partage:WaitForChild("Monde"))
+local Pistes = require(Partage:WaitForChild("Course"):WaitForChild("Pistes"))
+local Piste = require(Partage:WaitForChild("Course"):WaitForChild("Piste"))
 
 local Etat = require(script.Parent:WaitForChild("Etat"))
 local Rendu = require(script.Parent:WaitForChild("Rendu"))
@@ -17,11 +21,12 @@ local MARGE = 8
 local MiniCarte = {}
 
 local cadre: Frame
+local trace: Frame
 local points: { [number]: Frame } = {}
-local minX, maxX, minZ, maxZ = Monde.piste:boite()
-local echelle = math.min((LARGEUR - 2 * MARGE) / (maxX - minX), (HAUTEUR - 2 * MARGE) / (maxZ - minZ))
-local decalageX = (LARGEUR - (maxX - minX) * echelle) / 2
-local decalageY = (HAUTEUR - (maxZ - minZ) * echelle) / 2
+local pisteDessinee = ""
+local piste: Piste.Piste = Pistes.geometrie("archipel")
+local minX, maxX, minZ, maxZ = 0, 1, 0, 1
+local echelle, decalageX, decalageY = 1, 0, 0
 
 -- Le plan x/z de la piste vu du ciel : x vers la droite, z vers le bas,
 -- comme la vue de dessus dans Studio.
@@ -30,8 +35,35 @@ local function versCarte(x: number, z: number): UDim2
 end
 
 local function pointPiste(s: number, couloir: number): UDim2
-	local x, z = Monde.piste:position(s, couloir)
+	local x, z = piste:position(s, couloir)
 	return versCarte(x, z)
+end
+
+local function dessiner(id: string)
+	pisteDessinee = id
+	piste = Pistes.geometrie(id)
+	minX, maxX, minZ, maxZ = piste:boite()
+	echelle = math.min((LARGEUR - 2 * MARGE) / (maxX - minX), (HAUTEUR - 2 * MARGE) / (maxZ - minZ))
+	decalageX = (LARGEUR - (maxX - minX) * echelle) / 2
+	decalageY = (HAUTEUR - (maxZ - minZ) * echelle) / 2
+	trace:ClearAllChildren()
+	-- Le tracé : deux rangées de petits points, corde et extérieur
+	for _, pose in piste:echantillons(12) do
+		for _, couloir in { 0, piste.largeur } do
+			local p = Ui.cadre(
+				trace,
+				"Trace",
+				UDim2.fromOffset(3, 3),
+				versCarte(pose.x + pose.nx * couloir, pose.z + pose.nz * couloir),
+				Couleurs.BLANC,
+				0.35
+			)
+			p.AnchorPoint = Vector2.new(0.5, 0.5)
+		end
+	end
+	-- La ligne d'arrivée
+	local arrivee = Ui.cadre(trace, "Arrivee", UDim2.fromOffset(3, 9), pointPiste(0, piste.largeur / 2), Couleurs.ROSE)
+	arrivee.AnchorPoint = Vector2.new(0.5, 0.5)
 end
 
 function MiniCarte.creer(parent: Instance): Frame
@@ -44,24 +76,8 @@ function MiniCarte.creer(parent: Instance): Frame
 		0.25
 	)
 	Ui.coins(cadre, 14)
-	-- Le tracé : deux rangées de petits points, corde et extérieur
-	for _, pose in Monde.piste:echantillons(12) do
-		for _, couloir in { 0, Monde.piste.largeur } do
-			local p = Ui.cadre(
-				cadre,
-				"Trace",
-				UDim2.fromOffset(3, 3),
-				versCarte(pose.x + pose.nx * couloir, pose.z + pose.nz * couloir),
-				Couleurs.BLANC,
-				0.35
-			)
-			p.AnchorPoint = Vector2.new(0.5, 0.5)
-		end
-	end
-	-- La ligne d'arrivée
-	local arrivee =
-		Ui.cadre(cadre, "Arrivee", UDim2.fromOffset(3, 9), pointPiste(0, Monde.piste.largeur / 2), Couleurs.ROSE)
-	arrivee.AnchorPoint = Vector2.new(0.5, 0.5)
+	trace = Ui.cadre(cadre, "Trace", UDim2.fromScale(1, 1), UDim2.new(), Couleurs.FOND_SOMBRE, 1)
+	dessiner(Etat.pisteId)
 	return cadre
 end
 
@@ -81,6 +97,9 @@ end
 function MiniCarte.mettreAJour()
 	if not cadre then
 		return
+	end
+	if Etat.pisteId ~= pisteDessinee then
+		dessiner(Etat.pisteId)
 	end
 	local vus: { [number]: boolean } = {}
 	for id, e in Rendu.affiche do

@@ -17,7 +17,7 @@
 local process = require("@lune/process")
 local H = require("./harnais")
 local P = H.partage()
-local Piste = H.require(P.Course.Piste)
+local Pistes = H.require(P.Course.Pistes)
 local Courses = H.require(P.Course.Courses)
 local Peloton = H.require(P.Course.Peloton)
 local Simulation = H.require(P.Course.Simulation)
@@ -30,7 +30,6 @@ local K = tonumber(process.args[2]) or 30
 local GAIN = 0.0025
 local GAIN_VICTOIRES = 0.0015
 local TAILLE = Config.TAILLE_PELOTON
-local piste = Piste.stade(Config.LIGNE_DROITE, Config.RAYON_VIRAGE, Config.LARGEUR_PISTE, Config.POSITION_ARRIVEE)
 
 local function evaluer()
 	local sommeRangs, partants, victoires = {}, {}, {}
@@ -45,7 +44,7 @@ local function evaluer()
 		end
 		for graine = 1, K do
 			local defs = Peloton.completer({}, TAILLE, Aleatoire.nouveau(graine * 7919))
-			local sim = Simulation.nouvelle(piste, course, defs, graine, 0)
+			local sim = Simulation.nouvelle(Pistes.geometrie(course.piste), course, defs, graine, 0)
 			while not sim.termine do
 				sim:pas(1 / 30)
 			end

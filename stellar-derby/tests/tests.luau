@@ -8,6 +8,7 @@ local Course = Partage.Course
 local Piste = H.require(Course.Piste)
 local Formules = H.require(Course.Formules)
 local Courses = H.require(Course.Courses)
+local Pistes = H.require(Course.Pistes)
 local Peloton = H.require(Course.Peloton)
 local Simulation = H.require(Course.Simulation)
 local Aleatoire = H.require(Course.Aleatoire)
@@ -76,14 +77,39 @@ H.test("la courbure vaut 1/R dans les virages et 0 ailleurs", function()
 end)
 
 H.test("les stalles de chaque course du calendrier sont sur une ligne droite, loin des virages", function()
-	local piste = pisteStandard()
 	for _, course in Courses.liste do
+		local piste = Pistes.geometrie(course.piste)
 		local u = piste:versU(-course.distance)
 		local t = piste:troncon(-course.distance)
 		assert(t.genre == "droite", `{course.nom} part dans un virage`)
 		local avantVirage = t.debut + t.longueur - u
-		assert(avantVirage >= 30, `{course.nom} part à {avantVirage} m d'un virage`)
+		assert(avantVirage >= 70, `{course.nom} part à {avantVirage} m d'un virage`)
 	end
+end)
+
+H.test("chaque hippodrome a une course par catégorie, et chaque course un hippodrome", function()
+	for _, def in Pistes.liste do
+		local vues = {}
+		for _, course in Courses.dePiste(def.id) do
+			assert(not vues[course.categorie], `{def.nom} : deux courses {course.categorie}`)
+			vues[course.categorie] = true
+		end
+		for _, categorie in Courses.CATEGORIES do
+			assert(vues[categorie], `{def.nom} : pas de course {categorie}`)
+		end
+	end
+	local ids = {}
+	for _, course in Courses.liste do
+		assert(Pistes.existe(course.piste), `{course.nom} : hippodrome inconnu`)
+		assert(not ids[course.id], `identifiant en double : {course.id}`)
+		ids[course.id] = true
+	end
+end)
+
+H.test("la piste par défaut est celle de l'Archipel", function()
+	local a, b = Pistes.geometrie("archipel"), pisteStandard()
+	H.proche(a.longueur, b.longueur, 1e-9)
+	H.proche(a.origine, b.origine, 1e-9)
 end)
 
 print("Formules")
@@ -154,7 +180,7 @@ end)
 
 H.test("toutes les coureuses finissent, en des temps plausibles", function()
 	for _, course in Courses.liste do
-		local sim = Simulation.nouvelle(pisteStandard(), course, pelotonDeBots(7), 7, 3)
+		local sim = Simulation.nouvelle(Pistes.geometrie(course.piste), course, pelotonDeBots(7), 7, 3)
 		courir(sim)
 		local res = sim:resultats()
 		assert(#res == Config.TAILLE_PELOTON)

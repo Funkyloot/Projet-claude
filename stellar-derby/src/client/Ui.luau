@@ -122,6 +122,55 @@ function Ui.ecran(parent: Instance, nom: string, ordre: number): ScreenGui
 	return g
 end
 
+-- Un panneau centré, avec un titre et une croix pour fermer. Le contenu va
+-- dans le cadre renvoyé en second (il défile si besoin). La croix cache le
+-- panneau et appelle `surFermeture`.
+function Ui.panneau(
+	parent: Instance,
+	nom: string,
+	titre: string,
+	taille: UDim2,
+	surFermeture: (() -> ())?
+): (Frame, ScrollingFrame)
+	local p = Ui.cadre(parent, nom, taille, UDim2.fromScale(0.5, 0.5), Couleurs.FOND, 0.02)
+	p.AnchorPoint = Vector2.new(0.5, 0.5)
+	p.Visible = false
+	p.ZIndex = 5
+	Ui.coins(p, 22)
+	Ui.contour(p, Couleurs.ROSE_PALE, 3)
+	local entete = Ui.texte(p, "Titre", titre, 28, Couleurs.ROSE)
+	entete.Position = UDim2.fromOffset(20, 14)
+	entete.Size = UDim2.new(1, -90, 0, 36)
+	entete.TextXAlignment = Enum.TextXAlignment.Left
+	local fermer = Ui.bouton(p, "Fermer", "✕", UDim2.fromOffset(44, 44), Couleurs.ROSE_PALE, Couleurs.TEXTE)
+	fermer.AnchorPoint = Vector2.new(1, 0)
+	fermer.Position = UDim2.new(1, -14, 0, 12)
+	fermer.Activated:Connect(function()
+		p.Visible = false
+		if surFermeture then
+			surFermeture()
+		end
+	end)
+	local contenu = Instance.new("ScrollingFrame")
+	contenu.Name = "Contenu"
+	contenu.BackgroundTransparency = 1
+	contenu.BorderSizePixel = 0
+	contenu.Position = UDim2.fromOffset(18, 66)
+	contenu.Size = UDim2.new(1, -36, 1, -82)
+	contenu.CanvasSize = UDim2.new()
+	contenu.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	contenu.ScrollingDirection = Enum.ScrollingDirection.Y
+	contenu.ScrollBarThickness = 6
+	contenu.ScrollBarImageColor3 = Couleurs.ROSE_PALE
+	contenu.Parent = p
+	local liste = Instance.new("UIListLayout")
+	liste.FillDirection = Enum.FillDirection.Vertical
+	liste.Padding = UDim.new(0, 10)
+	liste.SortOrder = Enum.SortOrder.LayoutOrder
+	liste.Parent = contenu
+	return p, contenu
+end
+
 -- Temps de course : 1:38.42
 function Ui.chrono(secondes: number): string
 	local minutes = math.floor(secondes / 60)

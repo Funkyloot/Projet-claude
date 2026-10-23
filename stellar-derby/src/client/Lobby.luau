@@ -1,5 +1,7 @@
 --!strict
--- Lobby — préparer la prochaine course : stratégie, profil, prête ?
+-- Lobby — préparer la prochaine course libre : stratégie, profil, robe,
+-- prête ? Seulement pour les courses libres : la carrière et le tutoriel
+-- ont leurs propres écrans.
 --
 -- L'interface n'affiche que ce que le serveur a validé (attributs du
 -- joueur) : un clic envoie une demande, et c'est la réponse qui rafraîchit
@@ -17,6 +19,9 @@ local Peloton = require(Course:WaitForChild("Peloton"))
 local Strategies = require(Course:WaitForChild("Strategies"))
 
 local Etat = require(script.Parent:WaitForChild("Etat"))
+local Notifications = require(script.Parent:WaitForChild("Notifications"))
+local Profil = require(script.Parent:WaitForChild("Profil"))
+local Requetes = require(script.Parent:WaitForChild("Requetes"))
 local Ui = require(script.Parent:WaitForChild("Ui"))
 
 local METEOS = {
@@ -24,6 +29,7 @@ local METEOS = {
 	matin = "🌅 au petit matin",
 	couchant = "🌇 au couchant",
 	pluie = "🌧️ sous la pluie",
+	nuit = "🌙 de nuit, aux lanternes",
 }
 
 local Lobby = {}
@@ -87,6 +93,15 @@ local function rafraichir()
 	boutonPret.Text = if pret then "✔ Prête !" else "Prête ?"
 	boutonPret.BackgroundColor3 = if pret then Couleurs.ENDURANCE_PLEINE else Couleurs.ROSE
 	boutonPret.Visible = participer
+	-- Les robes qu'on ne possède pas encore sont grisées (boutique)
+	for id, pastille in pastillesRobe do
+		local possedee = Profil.possede("robes", id)
+		pastille.AutoButtonColor = possedee
+		local cadenas = pastille:FindFirstChild("Cadenas") :: TextLabel?
+		if cadenas then
+			cadenas.Visible = not possedee
+		end
+	end
 end
 
 local function rafraichirCourse()
@@ -99,7 +114,7 @@ local function rafraichirCourse()
 end
 
 function Lobby.creer(parent: ScreenGui)
-	panneau = Ui.cadre(parent, "Lobby", UDim2.fromOffset(600, 680), UDim2.new(0, 24, 0.5, 0), Couleurs.FOND, 0.04)
+	panneau = Ui.cadre(parent, "Lobby", UDim2.fromOffset(600, 706), UDim2.new(0, 24, 0.5, 0), Couleurs.FOND, 0.04)
 	panneau.AnchorPoint = Vector2.new(0, 0.5)
 	panneau.Visible = false
 	Ui.coins(panneau, 22)
@@ -108,6 +123,9 @@ function Lobby.creer(parent: ScreenGui)
 	Ui.liste(panneau, Enum.FillDirection.Vertical, 8)
 
 	local entete = Ui.texte(panneau, "Entete", "★ PROCHAINE COURSE ★", 15, Couleurs.TEXTE_DOUX)
+	Etat.ecouter("session", function()
+		entete.Text = if Etat.titre ~= "" then `★ {string.upper(Etat.titre)} ★` else "★ PROCHAINE COURSE ★"
+	end)
 	entete.LayoutOrder = 1
 	nomCourse = Ui.texte(panneau, "Nom", "", 32, Couleurs.ROSE)
 	nomCourse.LayoutOrder = 2
@@ -186,8 +204,15 @@ function Lobby.creer(parent: ScreenGui)
 		pastille.Parent = rangeeRobes
 		Ui.coins(pastille, 20)
 		Ui.contour(pastille, Couleurs.TEXTE_DOUX, 1)
+		local cadenas = Ui.texte(pastille, "Cadenas", "🔒", 16, Couleurs.BLANC)
+		cadenas.Size = UDim2.fromScale(1, 1)
+		cadenas.Visible = false
 		pastille.Activated:Connect(function()
-			demander({ robe = robe.id })
+			if Profil.possede("robes", robe.id) then
+				demander({ robe = robe.id })
+			else
+				Notifications.afficher(`La robe {robe.nom} s'obtient à la boutique.`, "info")
+			end
 		end)
 		pastillesRobe[robe.id] = pastille
 	end
@@ -208,6 +233,16 @@ function Lobby.creer(parent: ScreenGui)
 		demander({ pret = joueur:GetAttribute("Pret") ~= true })
 	end)
 
+	local quitter =
+		Ui.bouton(panneau, "Quitter", "↩ Retour à l'Académie", UDim2.new(1, 0, 0, 40), Couleurs.FOND_SOMBRE)
+	quitter.LayoutOrder = 14
+	quitter.Activated:Connect(function()
+		local reponse = Requetes.envoyer("course.quitter")
+		if not reponse.ok then
+			Notifications.afficher(reponse.erreur or "Impossible pour l'instant.", "alerte")
+		end
+	end)
+
 	local aide = Ui.texte(
 		panneau,
 		"Aide",
@@ -224,19 +259,26 @@ function Lobby.creer(parent: ScreenGui)
 	end
 	Etat.ecouter("course", rafraichirCourse)
 	Etat.ecouter("phase", function(phase: string)
-		panneau.Visible = phase == "lobby"
-		if phase == "lobby" then
+		panneau.Visible = phase == "lobby" and Etat.genre == "publique"
+		if panneau.Visible then
 			rafraichirCourse()
 			rafraichir()
 		end
+	end)
+	Profil.ecouter(function()
+		rafraichir()
 	end)
 	rafraichir()
 end
 
 function Lobby.mettreAJour()
 	if panneau and panneau.Visible then
-		local reste = math.max(0, math.ceil(Etat.finPhase - Etat.maintenant()))
-		compteur.Text = `Départ dans {reste} s`
+		if Etat.finPhase > 0 then
+			local reste = math.max(0, math.ceil(Etat.finPhase - Etat.maintenant()))
+			compteur.Text = `Départ dans {reste} s`
+		else
+			compteur.Text = "En attente des partantes : inscris-toi pour lancer la course !"
+		end
 	end
 end
 

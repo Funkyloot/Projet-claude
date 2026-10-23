@@ -1,6 +1,10 @@
 --!strict
 -- Ambiance — lumière et atmosphère selon la météo de la course.
--- La pluie elle-même est un effet client (voir client/Effets).
+--
+-- Appliquée par le client : plusieurs courses tournent en même temps, sous
+-- des météos différentes, et chacun voit celle de la course qu'il regarde
+-- (à l'Académie, le plein soleil). La pluie elle-même est un effet client
+-- (voir client/Effets).
 
 local Lighting = game:GetService("Lighting")
 
@@ -43,6 +47,15 @@ local REGLAGES: { [string]: Reglage } = {
 		densite = 0.3,
 		brume = 1.5,
 		teinte = Color3.fromRGB(255, 190, 150),
+	},
+	nuit = {
+		heure = 21.6,
+		luminosite = 0.6,
+		ambiance = Color3.fromRGB(70, 80, 120),
+		exterieur = Color3.fromRGB(80, 90, 140),
+		densite = 0.32,
+		brume = 1.2,
+		teinte = Color3.fromRGB(120, 140, 210),
 	},
 	pluie = {
 		heure = 14,

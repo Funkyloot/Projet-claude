@@ -115,12 +115,42 @@ local function exiger(module)
 		Color3 = roblox.Color3,
 		Enum = roblox.Enum,
 		Font = roblox.Font,
+		NumberSequence = roblox.NumberSequence,
+		ColorSequence = roblox.ColorSequence,
+		NumberRange = roblox.NumberRange,
 	}
 	cache[module] = luau.load(module.Source, { debugName = module:GetFullName(), environment = env })()
 	return cache[module]
 end
 
-local decor = place:GetService("Workspace").Hippodrome.Decor
+-- Tous les dossiers de décor : les trois hippodromes et l'Académie
+local workspace = place:GetService("Workspace")
+local decors = {}
+for _, hippodrome in workspace.Hippodromes:GetChildren() do
+	table.insert(decors, hippodrome.Decor)
+end
+table.insert(decors, workspace.Academie.Decor)
+-- Une vue d'ensemble : les enfants de tous les dossiers de décor
+local decor = {
+	GetChildren = function()
+		local liste = {}
+		for _, d in decors do
+			for _, enfant in d:GetChildren() do
+				table.insert(liste, enfant)
+			end
+		end
+		return liste
+	end,
+	GetDescendants = function()
+		local liste = {}
+		for _, d in decors do
+			for _, enfant in d:GetDescendants() do
+				table.insert(liste, enfant)
+			end
+		end
+		return liste
+	end,
+}
 local arbresAvant = 0
 for _, m in decor:GetChildren() do
 	if m.Name == "Arbre" then

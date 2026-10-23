@@ -17,7 +17,7 @@ local H = require("../tests/harnais")
 local Partage = H.partage()
 local C = Partage.Course
 local Config = H.require(Partage.Config)
-local Piste = H.require(C.Piste)
+local Pistes = H.require(C.Pistes)
 local Courses = H.require(C.Courses)
 local Peloton = H.require(C.Peloton)
 local Simulation = H.require(C.Simulation)
@@ -30,8 +30,8 @@ local sortie = process.args[1] or "build/rediffusion.json"
 local PAS = 1 / Config.FREQUENCE_SIMULATION
 local IMAGES_PAR_SECONDE = 6
 local GRAINES = { alizes = 11, aube = 7, archipel = 3, marees = 21 }
-
-local piste = Piste.stade(Config.LIGNE_DROITE, Config.RAYON_VIRAGE, Config.LARGEUR_PISTE, Config.POSITION_ARRIVEE)
+-- L'aperçu dessine une seule piste : celle de l'Archipel et ses quatre courses
+local piste = Pistes.geometrie("archipel")
 
 local function arrondi(x: number, decimales: number): number
 	local f = 10 ^ decimales
@@ -162,7 +162,7 @@ local function enregistrer(course)
 end
 
 local courses = {}
-for _, course in Courses.liste do
+for _, course in Courses.dePiste("archipel") do
 	table.insert(courses, enregistrer(course))
 	print(`{course.nom} : {#courses[#courses].images} images, {#courses[#courses].commentaires} commentaires`)
 end

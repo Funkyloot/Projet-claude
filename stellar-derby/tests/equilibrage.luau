@@ -18,7 +18,7 @@ local H = require("./harnais")
 
 local Partage = H.partage()
 local Course = Partage.Course
-local Piste = H.require(Course.Piste)
+local Pistes = H.require(Course.Pistes)
 local Courses = H.require(Course.Courses)
 local Peloton = H.require(Course.Peloton)
 local Simulation = H.require(Course.Simulation)
@@ -30,8 +30,6 @@ local N = tonumber(process.args[1]) or 300
 local ECRIRE = table.find(process.args, "--ecrire") ~= nil
 local PAS = 1 / Config.FREQUENCE_SIMULATION
 local TAILLE = Config.TAILLE_PELOTON
-
-local piste = Piste.stade(Config.LIGNE_DROITE, Config.RAYON_VIRAGE, Config.LARGEUR_PISTE, Config.POSITION_ARRIVEE)
 
 local lignes = {}
 local function sortie(texte: string)
@@ -61,12 +59,20 @@ sortie("1,00 = juste part ; au-dessus, la stratégie est avantagée.")
 
 -- ─────────────── 1. Stratégies et stalles, par distance ───────────────
 
-local rangStallesTotal = {}
-for i = 1, TAILLE do
-	rangStallesTotal[i] = 0
+-- Rang cumulé par numéro de stalle, pour chaque hippodrome et au total
+local rangStalles = { tout = {} }
+local nombreCourses = { tout = 0 }
+for _, def in Pistes.liste do
+	rangStalles[def.id] = {}
+	nombreCourses[def.id] = 0
+end
+for _, liste in rangStalles do
+	for i = 1, TAILLE do
+		liste[i] = 0
+	end
 end
 
-for _, course in Courses.liste do
+for indiceCourse, course in Courses.liste do
 	local victoires, partants, podiums, sommeRangs = {}, {}, {}, {}
 	for _, id in Strategies.ordre do
 		victoires[id], partants[id], podiums[id], sommeRangs[id] = 0, 0, 0, 0
@@ -79,8 +85,11 @@ for _, course in Courses.liste do
 	local sommeSprint, nbSprint = 0, 0
 
 	for graine = 1, N do
-		local defs = Peloton.completer({}, TAILLE, Aleatoire.nouveau(graine * 7919))
-		local sim = Simulation.nouvelle(piste, course, defs, graine, 0)
+		-- Un peloton différent pour chaque course : sinon la même coureuse
+		-- reprendrait la même stalle d'une course à l'autre, et les rangs par
+		-- stalle ne seraient plus indépendants entre les courses.
+		local defs = Peloton.completer({}, TAILLE, Aleatoire.nouveau(graine * 7919 + indiceCourse * 1000003))
+		local sim = Simulation.nouvelle(Pistes.geometrie(course.piste), course, defs, graine, 0)
 		local debutSprint = {}
 		while not sim.termine do
 			for _, e in sim:pas(PAS) do
@@ -103,7 +112,8 @@ for _, course in Courses.liste do
 			partants[r.strategie] += 1
 			sommeRangs[r.strategie] += r.rang
 			rangParStalle[r.numero] += r.rang
-			rangStallesTotal[r.numero] += r.rang
+			rangStalles.tout[r.numero] += r.rang
+			rangStalles[course.piste][r.numero] += r.rang
 			if r.rang == 1 then
 				victoires[r.strategie] += 1
 			end
@@ -118,7 +128,10 @@ for _, course in Courses.liste do
 	end
 
 	sortie("")
-	sortie(`## {course.nom} — {course.distance} m ({course.categorie}, terrain {course.etat})`)
+	nombreCourses.tout += N
+	nombreCourses[course.piste] += N
+	local hippodrome = (Pistes.parId(course.piste) :: any).nom
+	sortie(`## {course.nom} — {course.distance} m ({course.categorie}, terrain {course.etat}, {hippodrome})`)
 	sortie("")
 	sortie("| Stratégie | Partantes | Victoires | Indice | Podiums | Rang moyen |")
 	sortie("|---|---:|---:|---:|---:|---:|")
@@ -158,17 +171,23 @@ for _, course in Courses.liste do
 	)
 end
 
--- ─────────────── Équité des stalles, toutes distances ───────────────
+-- ─────────────── Équité des stalles, par hippodrome et au total ───────────────
+
+-- Seuil du khi² à 1 % pour TAILLE − 1 degrés de liberté (approximation de
+-- Wilson–Hilferty, précise à mieux que 1 % ici)
+local k = TAILLE - 1
+local seuil = k * (1 - 2 / (9 * k) + 2.326 * math.sqrt(2 / (9 * k))) ^ 3
 
 sortie("")
 sortie("## Équité des stalles")
 sortie("")
 sortie(
-	`Rang moyen de chaque numéro de stalle sur les {#Courses.liste * N} courses ci-dessus. `
-		.. `Une course équitable donne {string.format("%.1f", (TAILLE + 1) / 2)} partout, au hasard près.`
+	`Rang moyen de chaque numéro de stalle, par hippodrome puis sur toutes les courses ci-dessus. `
+		.. `Une course équitable donne {string.format("%.1f", (TAILLE + 1) / 2)} partout, au hasard près. `
+		.. string.format("Test du khi² sur les %d stalles, seuil %.1f (risque 1 %%).", TAILLE, seuil)
 )
 sortie("")
-sortie("| Stalle | " .. table.concat(
+sortie("| Hippodrome | " .. table.concat(
 	(function()
 		local t = {}
 		for i = 1, TAILLE do
@@ -177,32 +196,36 @@ sortie("| Stalle | " .. table.concat(
 		return t
 	end)(),
 	" | "
-) .. " |")
-sortie("|---|" .. string.rep("---:|", TAILLE))
-local ligneStalles, khi2 = {}, 0
--- Écart-type du rang d'une partante tirée au hasard parmi TAILLE : √((n²−1)/12)
-local erreur = math.sqrt((TAILLE ^ 2 - 1) / 12) / math.sqrt(#Courses.liste * N)
-for i = 1, TAILLE do
-	local moyenne = rangStallesTotal[i] / (#Courses.liste * N)
-	khi2 += ((moyenne - (TAILLE + 1) / 2) / erreur) ^ 2
-	table.insert(ligneStalles, string.format("%.2f", moyenne))
+) .. " | Khi² |")
+sortie("|---|" .. string.rep("---:|", TAILLE) .. "---:|")
+local avantagees = {}
+local groupes = {}
+for _, def in Pistes.liste do
+	table.insert(groupes, { id = def.id, nom = def.nom })
 end
-sortie("| Rang moyen | " .. table.concat(ligneStalles, " | ") .. " |")
--- Seuil du khi² à 1 % pour TAILLE − 1 degrés de liberté (approximation de
--- Wilson–Hilferty, précise à mieux que 1 % ici)
-local k = TAILLE - 1
-local seuil = k * (1 - 2 / (9 * k) + 2.326 * math.sqrt(2 / (9 * k))) ^ 3
+table.insert(groupes, { id = "tout", nom = "**Toutes**" })
+for _, g in groupes do
+	local n = nombreCourses[g.id]
+	if n > 0 then
+		-- Écart-type du rang d'une partante tirée au hasard parmi TAILLE : √((n²−1)/12)
+		local erreur = math.sqrt((TAILLE ^ 2 - 1) / 12) / math.sqrt(n)
+		local ligne, khi2 = {}, 0
+		for i = 1, TAILLE do
+			local moyenne = rangStalles[g.id][i] / n
+			khi2 += ((moyenne - (TAILLE + 1) / 2) / erreur) ^ 2
+			table.insert(ligne, string.format("%.2f", moyenne))
+		end
+		sortie(string.format("| %s | %s | %.1f |", g.nom, table.concat(ligne, " | "), khi2))
+		if khi2 > seuil then
+			table.insert(avantagees, g.nom)
+		end
+	end
+end
 sortie("")
 sortie(
-	string.format(
-		"Test du khi² sur les %d stalles : %.1f, pour un seuil de %.1f (risque 1 %%). %s",
-		TAILLE,
-		khi2,
-		seuil,
-		if khi2 <= seuil
-			then "**Aucune stalle n'est avantagée** : les écarts restants sont ceux du hasard."
-			else "**Une stalle reste avantagée : à corriger.**"
-	)
+	if #avantagees == 0
+		then "**Aucune stalle n'est avantagée**, sur aucun hippodrome : les écarts restants sont ceux du hasard."
+		else `**Une stalle reste avantagée ({table.concat(avantagees, ", ")}) : à corriger.**`
 )
 
 -- ─────────────── 2. Profils joueurs, joués par l'IA ───────────────
@@ -229,7 +252,13 @@ local function essai(profil, controle: string, n: number): (number, number)
 			competences = Peloton.competencesPour(strategie, rng),
 			controle = controle,
 		}
-		local sim = Simulation.nouvelle(piste, course, Peloton.completer({ joueuse }, TAILLE, rng), graine, 0)
+		local sim = Simulation.nouvelle(
+			Pistes.geometrie(course.piste),
+			course,
+			Peloton.completer({ joueuse }, TAILLE, rng),
+			graine,
+			0
+		)
 		courir(sim)
 		local rang = sim.coureuses[1].rang
 		sommeRangs += rang

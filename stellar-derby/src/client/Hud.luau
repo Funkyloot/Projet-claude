@@ -16,7 +16,6 @@ local UserInputService = game:GetService("UserInputService")
 
 local Partage = ReplicatedStorage:WaitForChild("Partage")
 local Couleurs = require(Partage:WaitForChild("Couleurs"))
-local Monde = require(Partage:WaitForChild("Monde"))
 local Course = Partage:WaitForChild("Course")
 local Competences = require(Course:WaitForChild("Competences"))
 local Formules = require(Course:WaitForChild("Formules"))
@@ -171,7 +170,7 @@ end
 -- Phase lisible : « Dernier virage » parle plus que « Finale ».
 local function libellePhase(d: number, distance: number): string
 	local restant = distance - d
-	local piste = Monde.piste
+	local piste = Etat.repere().piste
 	if restant <= piste.ligneDroiteFinale then
 		return "Dernière ligne droite"
 	elseif restant <= piste.ligneDroiteFinale + piste.dernierVirage then

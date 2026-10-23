@@ -10,10 +10,16 @@
 -- sur des oreilles et une queue fabriquées par le code : une course ne doit
 -- jamais attendre un accessoire.
 --
--- Les modèles sont créés par le serveur (donc répliqués à tout le monde) puis
--- laissés immobiles : ce sont les clients qui les déplacent localement à
--- chaque image, d'après les instantanés de la simulation. Le serveur ne
--- touche plus à leur position une fois la course lancée.
+-- Les modèles sont créés par le serveur dans le dossier de leur course
+-- (ReplicatedStorage.Reseau.Sessions.<id>.Modeles), donc répliqués mais
+-- hors du monde : chaque client qui regarde cette course en fait une copie
+-- locale qu'il déplace à chaque image, d'après les instantanés de la
+-- simulation. Plusieurs courses peuvent ainsi se courir en même temps sur
+-- le même hippodrome sans que leurs coureuses se croisent.
+--
+-- Une fonctionnalité peut ajouter sa touche à chaque modèle (une tenue, un
+-- effet) avec Coureuses.surCreation(fonction) : la fonction reçoit le modèle
+-- et sa fiche, juste avant que le modèle ne soit publié.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,7 +40,14 @@ export type Fiche = {
 	userId: number?,
 	apparence: number?,
 	robe: string?, -- choisie par la joueuse ; tirée au hasard pour un bot
+	tenue: string?, -- tenue équipée par la joueuse (voir Coureuses.surCreation)
 }
+
+local surCreations: { (Model, Fiche) -> () } = {}
+
+function Coureuses.surCreation(fonction: (Model, Fiche) -> ())
+	table.insert(surCreations, fonction)
+end
 
 local descriptionsJoueurs: { [number]: HumanoidDescription } = {}
 
@@ -292,6 +305,16 @@ function Coureuses.creer(fiche: Fiche, cadreDepart: CFrame, parent: Instance): M
 		ajouterOreilles(tete, robe.couleur)
 	end
 	ajouterDossard(torse, fiche.numero, fiche.cadre)
+
+	for _, fonction in surCreations do
+		local ok, erreur = pcall(function(): string?
+			fonction(modele, fiche)
+			return nil
+		end)
+		if not ok then
+			warn(`[Coureuses] habillage complémentaire : {erreur}`)
+		end
+	end
 
 	modele.Parent = parent
 	return modele

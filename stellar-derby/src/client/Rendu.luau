@@ -8,6 +8,11 @@
 -- Rendu.affiche contient, pour chaque coureuse, l'état tel qu'il est montré
 -- à l'écran à cette image : la caméra, le HUD et la mini-carte s'en servent
 -- pour rester cohérents avec ce que le joueur voit.
+--
+-- Les modèles des coureuses arrivent du serveur dans le dossier de la
+-- session (hors du monde). Le client en fait une copie locale, qu'il est
+-- seul à voir : c'est ce qui permet à plusieurs courses de se courir en même
+-- temps sur le même hippodrome. Il bâtit aussi les stalles de sa course.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -16,6 +21,7 @@ local Partage = ReplicatedStorage:WaitForChild("Partage")
 local Config = require(Partage:WaitForChild("Config"))
 local Couleurs = require(Partage:WaitForChild("Couleurs"))
 local Monde = require(Partage:WaitForChild("Monde"))
+local Stalles = require(Partage:WaitForChild("Stalles"))
 local Paquet = require(Partage:WaitForChild("Course"):WaitForChild("Paquet"))
 
 local Etat = require(script.Parent:WaitForChild("Etat"))
@@ -62,6 +68,13 @@ local Rendu = {
 
 local marionnettes: { [number]: Marionnette } = {}
 local generation = 0 -- change à chaque nouveau peloton : les chargements en retard s'annulent
+
+-- Le dossier local des copies et des stalles (le serveur n'y touche jamais)
+local dossierLocal = Instance.new("Folder")
+dossierLocal.Name = "CourseLocale"
+dossierLocal.Parent = Workspace
+local stalles: Model? = nil
+local stallesCourse = -1 -- numéro de course pour lequel les stalles sont bâties
 
 local function chargerAnimation(animateur: Animator, id: string, priorite: Enum.AnimationPriority): AnimationTrack?
 	local animation = Instance.new("Animation")
@@ -185,24 +198,57 @@ local function preparer(id: number, modele: Model): Marionnette?
 	return m
 end
 
+local function retirerStalles()
+	local s = stalles
+	if s then
+		s:Destroy()
+	end
+	stalles = nil
+	stallesCourse = -1
+end
+
 local function vider()
 	generation += 1
 	table.clear(marionnettes)
 	table.clear(Rendu.affiche)
+	dossierLocal:ClearAllChildren()
+	stalles = nil
+	stallesCourse = -1
+end
+
+local function batirStalles()
+	local course = Etat.course()
+	if not course or #Etat.peloton == 0 or stallesCourse == Etat.numeroCourse then
+		return
+	end
+	retirerStalles()
+	stalles = Stalles.construire(Etat.repere(), course.distance, #Etat.peloton, dossierLocal)
+	stallesCourse = Etat.numeroCourse
 end
 
 local function chargerPeloton()
 	vider()
 	local maGeneration = generation
-	local dossier = Workspace:WaitForChild("Coureuses")
+	local source = Etat.modeles()
+	if not source or #Etat.peloton == 0 then
+		return
+	end
+	if Etat.enCourse() then
+		batirStalles()
+	end
 	for _, partante in Etat.peloton do
 		task.spawn(function()
-			local modele = dossier:WaitForChild(`Coureuse_{partante.id}`, 15) :: Model?
-			if modele and maGeneration == generation then
-				local m = preparer(partante.id, modele)
-				if m and maGeneration == generation then
-					marionnettes[partante.id] = m
-				end
+			local modele = source:WaitForChild(`Coureuse_{partante.id}`, 20) :: Model?
+			if not modele or maGeneration ~= generation then
+				return
+			end
+			local copie = modele:Clone() :: Model
+			copie.Parent = dossierLocal
+			local m = preparer(partante.id, copie)
+			if m and maGeneration == generation then
+				marionnettes[partante.id] = m
+			elseif maGeneration ~= generation then
+				copie:Destroy()
 			end
 		end)
 	end
@@ -272,6 +318,7 @@ function Rendu.mettreAJour(_dt: number)
 	if not course or not Etat.enCourse() then
 		return
 	end
+	local repere = Etat.repere()
 	local heure = Etat.maintenant() - Config.RETARD_INTERPOLATION
 	local a, b, alpha = Etat.encadrer(heure)
 	if not a or not b then
@@ -293,8 +340,8 @@ function Rendu.mettreAJour(_dt: number)
 		-- Orientation : la tangente, plus un soupçon de dérive latérale
 		local duree = b.heure - a.heure
 		local vLaterale = if duree > 0 then (eb.couloir - ea.couloir) / duree else 0
-		local position = Monde.point(s, couloir, Monde.SOL)
-		local direction = Monde.tangente(s) * math.max(v, 1) + Monde.exterieur(s) * vLaterale
+		local position = repere:point(s, couloir, Monde.SOL)
+		local direction = repere:tangente(s) * math.max(v, 1) + repere:exterieur(s) * vLaterale
 		local cadre = CFrame.lookAt(position, position + direction)
 
 		local e: Affiche = {
@@ -325,9 +372,40 @@ function Rendu.mettreAJour(_dt: number)
 	end
 end
 
+-- Le dossier de l'hippodrome de la course regardée.
+function Rendu.hippodrome(): Instance?
+	local hippodromes = Workspace:FindFirstChild("Hippodromes")
+	return hippodromes and hippodromes:FindFirstChild(Etat.pisteId)
+end
+
+-- Le modèle (copie locale) d'une coureuse, s'il est chargé.
+function Rendu.modeleDe(id: number): Model?
+	local m = marionnettes[id]
+	return m and m.modele
+end
+
+-- Pose une coureuse à un endroit (podium, scène du concert…) et joue une
+-- animation de fête ou de salut.
+function Rendu.poser(id: number, cadre: CFrame, fete: boolean)
+	local m = marionnettes[id]
+	if not m then
+		return
+	end
+	m.racine.CFrame = cadre + Vector3.new(0, m.hauteur, 0)
+	local course = m.course
+	if course then
+		course:Stop(0.2)
+	end
+	local animation = if fete then m.fete else m.salut
+	if animation then
+		animation.Looped = true
+		animation:Play(0.3)
+	end
+end
+
 -- Les trois premières montent sur le podium.
 local function podium()
-	local hippodrome = Workspace:FindFirstChild("Hippodrome")
+	local hippodrome = Rendu.hippodrome()
 	local modelePodium = hippodrome and hippodrome:FindFirstChild("Podium")
 	if not modelePodium then
 		return
@@ -360,15 +438,25 @@ end
 
 function Rendu.demarrer()
 	Etat.ecouter("peloton", chargerPeloton)
+	Etat.ecouter("session", vider)
 	Etat.ecouter("resultats", function()
 		if Etat.phase == "resultats" then
 			podium()
 		end
 	end)
 	Etat.ecouter("phase", function(phase: string)
-		if phase == "resultats" then
+		if phase == "presentation" or phase == "stalles" then
+			batirStalles()
+		elseif phase == "course" then
+			batirStalles()
+			local s = stalles
+			if s then
+				Stalles.ouvrir(s)
+				stalles = nil
+			end
+		elseif phase == "resultats" then
 			podium()
-		elseif phase == "lobby" then
+		elseif phase == "lobby" or phase == "aucune" or phase == "fin" then
 			vider()
 		end
 	end)

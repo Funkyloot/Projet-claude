@@ -108,8 +108,11 @@ Peloton.NOMS = {
 local STATS = { "vitesse", "souffle", "puissance", "coeur", "instinct" }
 
 -- Stats d'un bot : exactement le même total que les joueuses (personne
--- n'est avantagée), réparti au hasard mais sans extrêmes absurdes.
-function Peloton.statsBot(rng: Aleatoire.Aleatoire): Stats
+-- n'est avantagée), réparti au hasard mais sans extrêmes absurdes. Un autre
+-- total ne sert qu'aux courses de carrière, où l'on affronte des bots du
+-- niveau de sa propre coureuse.
+function Peloton.statsBot(rng: Aleatoire.Aleatoire, total: number?): Stats
+	local cible = total or Peloton.TOTAL_STATS
 	local poids = {}
 	local somme = 0
 	for i = 1, #STATS do
@@ -119,11 +122,11 @@ function Peloton.statsBot(rng: Aleatoire.Aleatoire): Stats
 	local stats = {} :: any
 	local reparti = 0
 	for i, nom in STATS do
-		stats[nom] = math.floor(Peloton.TOTAL_STATS * poids[i] / somme + 0.5)
+		stats[nom] = math.floor(cible * poids[i] / somme + 0.5)
 		reparti += stats[nom]
 	end
 	-- Les arrondis peuvent faire déborder d'un ou deux points : on corrige
-	stats[STATS[#STATS]] += Peloton.TOTAL_STATS - reparti
+	stats[STATS[#STATS]] += cible - reparti
 	return stats :: Stats
 end
 
@@ -131,8 +134,14 @@ function Peloton.competencesPour(strategie: string, rng: Aleatoire.Aleatoire): {
 	return { Strategies.obtenir(strategie).signature, rng:choisir(Competences.generales) }
 end
 
--- Complète `joueuses` avec des bots jusqu'à `taille` partantes.
-function Peloton.completer(joueuses: { Definition }, taille: number, rng: Aleatoire.Aleatoire): { Definition }
+-- Complète `joueuses` avec des bots jusqu'à `taille` partantes. `totalBots`
+-- ne sert qu'en carrière (voir statsBot) : partout ailleurs, 3 000.
+function Peloton.completer(
+	joueuses: { Definition },
+	taille: number,
+	rng: Aleatoire.Aleatoire,
+	totalBots: number?
+): { Definition }
 	local definitions = table.clone(joueuses)
 	local pris: { [string]: boolean } = {}
 	for _, j in joueuses do
@@ -152,7 +161,7 @@ function Peloton.completer(joueuses: { Definition }, taille: number, rng: Aleato
 			table.insert(definitions, {
 				nom = nom,
 				strategie = strategie,
-				stats = Peloton.statsBot(rng),
+				stats = Peloton.statsBot(rng, totalBots),
 				competences = Peloton.competencesPour(strategie, rng),
 				controle = "ia",
 				apparence = rng:entier(1, 1e6),

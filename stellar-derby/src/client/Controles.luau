@@ -16,7 +16,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Partage = ReplicatedStorage:WaitForChild("Partage")
-local Monde = require(Partage:WaitForChild("Monde"))
 local Reseau = require(Partage:WaitForChild("Reseau"))
 local Formules = require(Partage:WaitForChild("Course"):WaitForChild("Formules"))
 
@@ -54,7 +53,7 @@ function Controles.couloir(sensEcran: number)
 	if not e then
 		return
 	end
-	local droiteVersExterieur = e.cadre.RightVector:Dot(Monde.exterieur(e.s)) > 0
+	local droiteVersExterieur = e.cadre.RightVector:Dot(Etat.repere():exterieur(e.s)) > 0
 	envoyer("couloir", if droiteVersExterieur then sensEcran else -sensEcran)
 end
 
