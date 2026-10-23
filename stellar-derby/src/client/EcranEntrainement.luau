@@ -188,9 +188,16 @@ local function texteGain(reponse: { [string]: any }): string
 			table.insert(lignes, "Tu as beaucoup travaillé aujourd'hui : les étoiles sont réduites jusqu'à demain.")
 		end
 	end
-	if type(reponse.gain) == "number" and type(reponse.stat) == "string" then
+	if reponse.blessure == true then
+		table.insert(lignes, "Aïe, une petite blessure : pas de progrès ce tour-ci. Pense à te reposer.")
+	elseif type(reponse.gain) == "number" and type(reponse.stat) == "string" then
 		local jeu = E.JEUX[reponse.stat]
-		table.insert(lignes, `{jeu and jeu.stat or reponse.stat} +{reponse.gain}`)
+		local ligne = `{jeu and jeu.stat or reponse.stat} +{reponse.gain}`
+		local lie = if type(reponse.lie) == "string" then E.JEUX[reponse.lie] else nil
+		if lie and type(reponse.gainLie) == "number" and reponse.gainLie > 0 then
+			ligne ..= `   {lie.stat} +{reponse.gainLie}`
+		end
+		table.insert(lignes, ligne)
 	end
 	return table.concat(lignes, "\n")
 end

@@ -7,6 +7,8 @@
 --   Profils.modifier(joueur, fonction) applique une modification, puis l'envoie
 --                                      au client et la sauvegarde plus tard
 --   Profils.surChargement(fonction)    appelée quand les données d'un joueur arrivent
+--   Profils.avantDepart(fonction)      appelée quand un joueur part, juste avant
+--                                      la dernière sauvegarde (on peut encore modifier)
 --   Profils.surRequete(nom, fonction)  branche une requête du client (voir plus bas)
 --   Profils.notifier(joueur, texte)    un message éphémère à l'écran
 --   Profils.signal(joueur, nom, data)  un message propre à une fonctionnalité
@@ -45,6 +47,7 @@ type Fiche = {
 
 local fiches: { [Player]: Fiche } = {}
 local surCharge: { (Player, Schema.Donnees) -> () } = {}
+local avantDeparts: { (Player) -> () } = {}
 local requetes: { [string]: Requete } = {}
 local quotas: { [Player]: { debut: number, compte: number } } = {}
 local canalProfil = Reseau.profil()
@@ -143,6 +146,13 @@ function Profils.surChargement(fonction: (Player, Schema.Donnees) -> ())
 	end
 end
 
+-- Appelée quand un joueur quitte le jeu, avant sa dernière sauvegarde : le
+-- dernier moment pour écrire quelque chose (une course de carrière que
+-- l'IA finit pour lui…). Doit rester rapide et ne pas attendre.
+function Profils.avantDepart(fonction: (Player) -> ())
+	table.insert(avantDeparts, fonction)
+end
+
 function Profils.surRequete(nom: string, fonction: Requete)
 	assert(requetes[nom] == nil, `requête « {nom} » branchée deux fois`)
 	requetes[nom] = fonction
@@ -205,6 +215,15 @@ local function arrivee(joueur: Player)
 end
 
 local function depart(joueur: Player)
+	for _, fonction in avantDeparts do
+		local ok, erreur = pcall(function(): string?
+			fonction(joueur)
+			return nil
+		end)
+		if not ok then
+			warn(`[Profils] avant le départ de {joueur.Name} : {erreur}`)
+		end
+	end
 	sauver(joueur, true)
 	fiches[joueur] = nil
 	quotas[joueur] = nil
