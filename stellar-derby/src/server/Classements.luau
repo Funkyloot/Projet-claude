@@ -93,7 +93,7 @@ local function ecrire(joueur: Player, forcer: boolean)
 		return
 	end
 	local idSaison = Saisons.id(os.time())
-	local miennes = ecrites[joueur] or {}
+	local miennes: { [string]: Ecriture } = ecrites[joueur] or {}
 	ecrites[joueur] = miennes
 	for _, classement in Classement.LISTE do
 		local valeur = Classement.valeur(classement, d, idSaison)
