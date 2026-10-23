@@ -158,8 +158,9 @@ end
 local function reevaluer()
 	local phase = Etat.phase
 	Controles.activer((phase == "stalles" or phase == "course") and Etat.monId ~= 0)
-	-- Pendant la présentation et les résultats, le personnage ne bouge pas non plus
-	personnageLibre(phase == "lobby")
+	-- À l'Académie et au lobby, on se promène ; pendant la présentation, la
+	-- course et les résultats, le personnage ne bouge pas
+	personnageLibre(phase == "lobby" or phase == "aucune")
 end
 
 function Controles.demarrer()
