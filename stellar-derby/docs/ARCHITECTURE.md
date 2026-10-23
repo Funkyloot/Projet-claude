@@ -270,7 +270,30 @@ téléphone d'abord :
 - textes d'au moins 14 px ;
 - rien d'indispensable au survol.
 
-## 6. Le réseau
+## 6. Catalogues partagés et contrats entre fonctionnalités
+
+| Catalogue | Contenu |
+|---|---|
+| `shared/Jeu/Catalogue` | tout ce qui se possède : robes, tenues, bâtons, effets. Prix, niveau requis, couleurs `{ r, g, b }`. La boutique les vend, le concert lit la couleur du bâton équipé, les cinématiques lisent l'effet équipé, les tenues sont dessinées par `Coureuses.surCreation`. |
+| `shared/Jeu/Titres` | les titres. `Titres.nouveaux(d)` donne les titres à condition désormais mérités. `Titres.donner(d, id, os.time())` accorde un titre donné par un service (par exemple « destin » quand on bat une rivale). |
+
+**Qui accorde quel titre** :
+- les titres à condition : ServiceRivales, régulièrement ;
+- « grandprix » : Recompenses ;
+- « saison » : Classements ;
+- « streameuse » : ModeLive ;
+- « destin » : ServiceRivales.
+
+**Contrat entraînement ↔ carrière** :
+- `ServiceEntrainement.definirCarriere(fonction(joueur, stat, qualite) -> table?)` :
+  la carrière branche ici le gain de stats d'un tour d'entraînement. Ce que
+  la fonction renvoie est ajouté à la réponse de `entrainement.terminer` ;
+  nil refuse l'entraînement en carrière.
+- Côté client, `EcranEntrainement.jouer(stat, "carriere")` joue le
+  mini-jeu et renvoie la réponse du serveur, ou nil si le joueur
+  abandonne.
+
+## 7. Le réseau
 
 Voir l'en-tête de `shared/Reseau.luau` : canaux, attributs d'une session
 et du joueur.
@@ -279,7 +302,7 @@ Une fonctionnalité qui a besoin d'un état partagé par session peut poser
 ses propres attributs sur `session.dossier`, avec un nom à elle
 (`Concert`, `Duo`…), en JSON si c'est une table.
 
-## 7. La sauvegarde
+## 8. La sauvegarde
 
 Les champs sont décrits dans `shared/Jeu/Schema.luau`.
 
@@ -301,7 +324,7 @@ Les champs sont décrits dans `shared/Jeu/Schema.luau`.
 1. l'ajouter à `Schema.nouveau()` et à `Schema.nettoyer()` ;
 2. ajouter un test dans `tests/jeu.luau`.
 
-## 8. Vérifier
+## 9. Vérifier
 
 Depuis `stellar-derby/` :
 

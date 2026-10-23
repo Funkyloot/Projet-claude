@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Partage = ReplicatedStorage:WaitForChild("Partage")
 local Economie = require(Partage:WaitForChild("Jeu"):WaitForChild("Economie"))
 local Saisons = require(Partage:WaitForChild("Jeu"):WaitForChild("Saisons"))
+local Titres = require(Partage:WaitForChild("Jeu"):WaitForChild("Titres"))
 
 local Profils = require(script.Parent:WaitForChild("Profils"))
 local Sessions = require(script.Parent:WaitForChild("Sessions"))
@@ -63,6 +64,16 @@ local function apresCourse(session: Sessions.Session, resultats: { any })
 					d.saison.points += points
 				end
 			end)
+			-- Gagner un Grand Prix du week-end vaut un titre
+			if r.rang == 1 and session.options.grandPrix then
+				local nouveau = false
+				Profils.modifier(joueur, function(d)
+					nouveau = Titres.donner(d, "grandprix", os.time())
+				end)
+				if nouveau then
+					Profils.notifier(joueur, "Nouveau titre : Reine du week-end", "titre")
+				end
+			end
 			local libelle = if r.rang == 1 then "Victoire" elseif r.rang <= 3 then `{r.rang}ᵉ place` else "Course"
 			Profils.crediter(joueur, gain.etoiles, gain.xp, libelle)
 		end

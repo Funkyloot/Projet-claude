@@ -12,6 +12,8 @@ local Jeu = Partage.Jeu
 local Schema = H.require(Jeu.Schema)
 local Economie = H.require(Jeu.Economie)
 local Saisons = H.require(Jeu.Saisons)
+local Catalogue = H.require(Jeu.Catalogue)
+local Titres = H.require(Jeu.Titres)
 
 print("Sauvegarde")
 
@@ -151,6 +153,73 @@ H.test("les points de saison récompensent le classement", function()
 	assert(Saisons.pointsCourse(1, 12, false) > Saisons.pointsCourse(2, 12, false))
 	assert(Saisons.pointsCourse(12, 12, false) > 0)
 	assert(Saisons.pointsCourse(1, 12, true) == 2 * Saisons.pointsCourse(1, 12, false))
+end)
+
+print("Catalogue et titres")
+
+H.test("ce qui est offert dans le catalogue est possédé dès le départ", function()
+	local d = Schema.nouveau()
+	for _, categorie in Catalogue.CATEGORIES do
+		for id in Catalogue.offerts(categorie) do
+			assert(d.possessions[categorie][id], `{categorie}/{id} offert mais pas possédé`)
+		end
+		for id in d.possessions[categorie] do
+			assert(Catalogue.existe(categorie, id), `{categorie}/{id} possédé mais absent du catalogue`)
+		end
+	end
+	for categorie, id in
+		{
+			robes = d.equipement.robe,
+			tenues = d.equipement.tenue,
+			batons = d.equipement.baton,
+			effets = d.equipement.effet,
+		}
+	do
+		assert(Catalogue.existe(categorie, id), `équipement par défaut inconnu : {categorie}/{id}`)
+	end
+end)
+
+H.test("les robes du catalogue sont les dix robes du jeu", function()
+	local attendues = { "noir", "bai", "alezan", "cuivre", "isabelle", "gris", "rose", "framboise", "prune", "nuit" }
+	local robes = Catalogue.deCategorie("robes")
+	assert(#robes == #attendues)
+	for _, id in attendues do
+		assert(Catalogue.existe("robes", id), id)
+	end
+end)
+
+H.test("identifiants uniques, prix et niveaux positifs", function()
+	local vus = {}
+	for _, o in Catalogue.liste do
+		local cle = o.categorie .. "/" .. o.id
+		assert(not vus[cle], `doublon : {cle}`)
+		vus[cle] = true
+		assert(o.prix >= 0 and o.niveau >= 0 and #o.couleur == 3)
+	end
+	local titres = {}
+	for _, t in Titres.liste do
+		assert(not titres[t.id], `titre en double : {t.id}`)
+		titres[t.id] = true
+	end
+end)
+
+H.test("les titres à condition se gagnent quand on les mérite, une seule fois", function()
+	local d = Schema.nouveau()
+	assert(#Titres.nouveaux(d) == 0, "titre gagné sans rien faire")
+	d.stats.courses = 1
+	d.stats.victoires = 1
+	local ids = {}
+	for _, t in Titres.nouveaux(d) do
+		ids[t.id] = true
+	end
+	assert(ids.debutante and ids.premiere and not ids.championne)
+	for id in ids do
+		assert(Titres.donner(d, id, 100))
+	end
+	assert(#Titres.nouveaux(d) == 0, "titre regagné")
+	assert(not Titres.donner(d, "premiere", 200), "titre donné deux fois")
+	assert(Titres.donner(d, "destin", 300) and d.titres.destin == 300)
+	assert(not Titres.donner(d, "inconnu", 1))
 end)
 
 if not H.bilan() then
